@@ -1,5 +1,0 @@
----
-"whatzapp": patch
----
-
-initialized project
