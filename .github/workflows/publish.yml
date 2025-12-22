@@ -19,8 +19,10 @@ jobs:
         with:
           node-version: 22
           cache: "pnpm"
-          registry-url: "https://registry.npmjs.org"
       - run: pnpm install --frozen-lockfile
+      - name: Setup npm authentication for pnpm
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > $HOME/.npmrc
       - name: Create Release Pull Request or Publish
         id: changesets
         uses: changesets/action@v1
