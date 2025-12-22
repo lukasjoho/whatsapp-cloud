@@ -1,0 +1,5 @@
+---
+"whatzapp": patch
+---
+
+make public
