@@ -1,5 +1,12 @@
 # whatzapp
 
+## 0.0.4
+
+### Patch Changes
+
+- b1f5fa8: add readme
+- a752277: add business namespace
+
 ## 0.0.3
 
 ### Patch Changes
