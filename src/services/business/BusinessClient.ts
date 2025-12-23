@@ -3,14 +3,7 @@ import type { HttpClient } from "../../client/HttpClient";
 /**
  * Business client - wraps HttpClient with Business Portfolio ID as base endpoint
  *
- * This client automatically prepends `/${businessId}` to all request paths,
- * so methods can use relative paths like `/whatsapp_business_accounts` instead of `/${businessId}/whatsapp_business_accounts`.
- *
- * Note: The businessId is the Business Portfolio ID (not the WABA ID).
- * This is used in endpoints like GET /<Business-ID>/whatsapp_business_accounts.
- *
- * This treats businessId as a "client" for the business namespace - different
- * businessIds represent different Business Portfolio endpoints.
+ * This client automatically prepends `/${businessId}` to all request paths.
  */
 export class BusinessClient {
   constructor(
@@ -39,4 +32,3 @@ export class BusinessClient {
     return this.httpClient.patch<T>(`/${this.businessId}${path}`, body);
   }
 }
-

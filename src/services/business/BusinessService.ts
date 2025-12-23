@@ -7,41 +7,39 @@ import type { BusinessAccountsListResponse } from "../../types/business/account"
 /**
  * Business service for managing Business Portfolios
  *
- * The service validates that businessId (Business Portfolio ID) is set at the client level
- * and creates a BusinessClient instance.
- *
- * Note: businessId in the client config represents the Business Portfolio ID.
- * The Business Portfolio ID is used in endpoints like GET /<Business-ID>/whatsapp_business_accounts.
- *
- * BusinessClient treats businessId as a "client" for the business namespace - different
- * businessIds represent different Business Portfolio endpoints.
+ * This service handles Business Portfolio operations like listing WABAs.
+ * It supports both a globally configured businessId (in WhatsAppClient)
+ * and per-request businessId overrides.
  */
 export class BusinessService {
-  private readonly businessClient: BusinessClient;
+  constructor(private readonly httpClient: HttpClient) {}
 
-  constructor(httpClient: HttpClient) {
-    // Validate that businessId (Business Portfolio ID) is set at client level
-    if (!httpClient.businessId) {
+  /**
+   * Helper to create a Scoped Client (prefer override, fallback to config)
+   */
+  private getClient(overrideId?: string): BusinessClient {
+    const id = overrideId || this.httpClient.businessId;
+    if (!id) {
       throw new WhatsAppValidationError(
-        "businessId (Business Portfolio ID) is required for BusinessService. Provide it in WhatsAppClient config.",
+        "businessId (Business Portfolio ID) is required. Provide it in WhatsAppClient config or as a parameter.",
         "businessId"
       );
     }
 
-    // Create business client with Business Portfolio ID baked in
-    this.businessClient = new BusinessClient(
-      httpClient,
-      httpClient.businessId
-    );
+    // Just wrap the existing httpClient
+    return new BusinessClient(this.httpClient, id);
   }
 
   /**
    * List WhatsApp Business Accounts (WABAs) for a Business Portfolio
    *
+   * @param businessId - Optional Business Portfolio ID (overrides client config)
    * @returns List of WABAs associated with the Business Portfolio
    */
-  async listAccounts(): Promise<BusinessAccountsListResponse> {
-    return listAccounts(this.businessClient);
+  async listAccounts(
+    businessId?: string
+  ): Promise<BusinessAccountsListResponse> {
+    const client = this.getClient(businessId);
+    return listAccounts(client);
   }
 }
-

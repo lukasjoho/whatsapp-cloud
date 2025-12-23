@@ -1,4 +1,4 @@
-import type { HttpClient } from "../../client/HttpClient";
+import { HttpClient } from "../../client/HttpClient";
 import { sendText } from "./methods/send-text";
 import { sendImage } from "./methods/send-image";
 import { sendLocation } from "./methods/send-location";
@@ -16,62 +16,82 @@ import type { MessageResponse } from "../../types/messages/response";
 /**
  * Messages service for sending WhatsApp messages
  *
- * The service validates that phoneNumberId is set at the client level and creates
- * a MessagesClient instance. MessagesClient treats phoneNumberId as a "client" for
- * the messaging namespace - different phoneNumberIds represent different endpoints.
+ * This service handles message operations.
+ * It supports both a globally configured phoneNumberId (in WhatsAppClient)
+ * and per-request phoneNumberId overrides.
  */
 export class MessagesService {
-  private readonly messagesClient: MessagesClient;
+  constructor(private readonly httpClient: HttpClient) {}
 
-  constructor(httpClient: HttpClient) {
-    // Validate that phoneNumberId is set at client level
-    if (!httpClient.phoneNumberId) {
+  /**
+   * Helper to create a Scoped Client (prefer override, fallback to config)
+   */
+  private getClient(overrideId?: string): MessagesClient {
+    const id = overrideId || this.httpClient.phoneNumberId;
+    if (!id) {
       throw new WhatsAppValidationError(
-        "phoneNumberId is required for MessagesService. Provide it in WhatsAppClient config.",
+        "phoneNumberId is required. Provide it in WhatsAppClient config or as a parameter.",
         "phoneNumberId"
       );
     }
 
-    // Create messages client with phone number ID baked in
-    this.messagesClient = new MessagesClient(
-      httpClient,
-      httpClient.phoneNumberId
-    );
+    // Just wrap the existing httpClient
+    return new MessagesClient(this.httpClient, id);
   }
 
   /**
    * Send a text message
    *
    * @param request - Text message request (to, text)
+   * @param phoneNumberId - Optional phone number ID (overrides client config)
    */
-  async sendText(request: SendTextRequest): Promise<MessageResponse> {
-    return sendText(this.messagesClient, request);
+  async sendText(
+    request: SendTextRequest,
+    phoneNumberId?: string
+  ): Promise<MessageResponse> {
+    const client = this.getClient(phoneNumberId);
+    return sendText(client, request);
   }
 
   /**
    * Send an image message
    *
    * @param request - Image message request (to, image)
+   * @param phoneNumberId - Optional phone number ID (overrides client config)
    */
-  async sendImage(request: SendImageRequest): Promise<MessageResponse> {
-    return sendImage(this.messagesClient, request);
+  async sendImage(
+    request: SendImageRequest,
+    phoneNumberId?: string
+  ): Promise<MessageResponse> {
+    const client = this.getClient(phoneNumberId);
+    return sendImage(client, request);
   }
 
   /**
    * Send a location message
    *
    * @param request - Location message request (to, location)
+   * @param phoneNumberId - Optional phone number ID (overrides client config)
    */
-  async sendLocation(request: SendLocationRequest): Promise<MessageResponse> {
-    return sendLocation(this.messagesClient, request);
+  async sendLocation(
+    request: SendLocationRequest,
+    phoneNumberId?: string
+  ): Promise<MessageResponse> {
+    const client = this.getClient(phoneNumberId);
+    return sendLocation(client, request);
   }
 
   /**
    * Send a reaction message
    *
    * @param request - Reaction message request (to, reaction)
+   * @param phoneNumberId - Optional phone number ID (overrides client config)
    */
-  async sendReaction(request: SendReactionRequest): Promise<MessageResponse> {
-    return sendReaction(this.messagesClient, request);
+  async sendReaction(
+    request: SendReactionRequest,
+    phoneNumberId?: string
+  ): Promise<MessageResponse> {
+    const client = this.getClient(phoneNumberId);
+    return sendReaction(client, request);
   }
 }

@@ -4,7 +4,7 @@ import type { BusinessAccountsListResponse } from "../../../types/business/accou
 /**
  * List WhatsApp Business Accounts (WABAs) for a Business Portfolio
  *
- * @param businessClient - Business client with Business Portfolio ID baked in
+ * @param businessClient - Scoped business client
  * @returns List of WABAs associated with the Business Portfolio
  */
 export async function listAccounts(
@@ -15,4 +15,3 @@ export async function listAccounts(
     "/whatsapp_business_accounts"
   );
 }
-

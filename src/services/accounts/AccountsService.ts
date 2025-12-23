@@ -7,41 +7,39 @@ import type { PhoneNumberListResponse } from "../../types/accounts/phone-number"
 /**
  * Accounts service for managing WhatsApp Business Accounts
  *
- * The service validates that businessAccountId (WABA ID - WhatsApp Business Account ID) is set
- * at the client level and creates an AccountsClient instance.
- *
- * Note: businessAccountId in the client config represents the WABA ID, not the Business Portfolio ID.
- * The WABA ID is used in endpoints like GET /<WABA_ID>/phone_numbers.
- *
- * AccountsClient treats wabaId as a "client" for the accounts namespace - different
- * wabaIds represent different WhatsApp Business Account endpoints.
+ * This service handles WABA operations like listing phone numbers.
+ * It supports both a globally configured businessAccountId (in WhatsAppClient)
+ * and per-request businessAccountId overrides.
  */
 export class AccountsService {
-  private readonly accountsClient: AccountsClient;
+  constructor(private readonly httpClient: HttpClient) {}
 
-  constructor(httpClient: HttpClient) {
-    // Validate that businessAccountId (WABA ID) is set at client level
-    // This is the WhatsApp Business Account ID, not the Business Portfolio ID
-    if (!httpClient.businessAccountId) {
+  /**
+   * Helper to create a Scoped Client (prefer override, fallback to config)
+   */
+  private getClient(overrideId?: string): AccountsClient {
+    const id = overrideId || this.httpClient.businessAccountId;
+    if (!id) {
       throw new WhatsAppValidationError(
-        "businessAccountId (WABA ID - WhatsApp Business Account ID) is required for AccountsService. Provide it in WhatsAppClient config.",
+        "businessAccountId (WABA ID) is required. Provide it in WhatsAppClient config or as a parameter.",
         "businessAccountId"
       );
     }
 
-    // Create accounts client with WABA ID baked in
-    this.accountsClient = new AccountsClient(
-      httpClient,
-      httpClient.businessAccountId
-    );
+    // Just wrap the existing httpClient
+    return new AccountsClient(this.httpClient, id);
   }
 
   /**
    * List phone numbers for a WhatsApp Business Account
    *
+   * @param businessAccountId - Optional WABA ID (overrides client config)
    * @returns List of phone numbers associated with the WABA
    */
-  async listPhoneNumbers(): Promise<PhoneNumberListResponse> {
-    return listPhoneNumbers(this.accountsClient);
+  async listPhoneNumbers(
+    businessAccountId?: string
+  ): Promise<PhoneNumberListResponse> {
+    const client = this.getClient(businessAccountId);
+    return listPhoneNumbers(client);
   }
 }

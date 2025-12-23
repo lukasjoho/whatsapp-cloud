@@ -4,7 +4,7 @@ import type { PhoneNumberListResponse } from "../../../types/accounts/phone-numb
 /**
  * List phone numbers for a WhatsApp Business Account
  *
- * @param accountsClient - Accounts client with WABA ID baked in
+ * @param accountsClient - Scoped accounts client
  * @returns List of phone numbers associated with the WABA
  */
 export async function listPhoneNumbers(
@@ -13,4 +13,3 @@ export async function listPhoneNumbers(
   // Make API request - accountsClient handles the WABA ID prefix automatically
   return accountsClient.get<PhoneNumberListResponse>("/phone_numbers");
 }
-

@@ -2,12 +2,8 @@ import type { HttpClient } from "../../client/HttpClient";
 
 /**
  * Messages client - wraps HttpClient with phone number ID as base endpoint
- *
- * This client automatically prepends `/${phoneNumberId}` to all request paths,
- * so methods can use relative paths like `/messages` instead of `/${phoneNumberId}/messages`.
- *
- * This treats phoneNumberId as a "client" for the messaging namespace - different
- * phoneNumberIds represent different messaging endpoints.
+ * 
+ * This client automatically prepends `/${phoneNumberId}` to all request paths.
  */
 export class MessagesClient {
   constructor(
