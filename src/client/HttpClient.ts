@@ -1,5 +1,12 @@
 import type { ClientConfig } from "../types/client";
 
+interface APIErrorResponse {
+  error?: {
+    message?: string;
+    code?: number;
+  };
+}
+
 /**
  * HTTP client for making requests to the WhatsApp Cloud API
  */
@@ -42,12 +49,12 @@ export class HttpClient {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({
+      const error = (await response.json().catch(() => ({
         error: {
           message: response.statusText,
           code: response.status,
         },
-      }));
+      }))) as APIErrorResponse;
       throw new Error(
         `API Error: ${error.error?.message || response.statusText} (${
           error.error?.code || response.status
@@ -63,6 +70,7 @@ export class HttpClient {
    */
   async get<T>(path: string): Promise<T> {
     const url = `${this.baseURL}/${this.apiVersion}${path}`;
+    console.log("Token: ", this.accessToken);
 
     const response = await fetch(url, {
       method: "GET",
@@ -72,12 +80,12 @@ export class HttpClient {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({
+      const error = (await response.json().catch(() => ({
         error: {
           message: response.statusText,
           code: response.status,
         },
-      }));
+      }))) as APIErrorResponse;
       throw new Error(
         `API Error: ${error.error?.message || response.statusText} (${
           error.error?.code || response.status
@@ -104,12 +112,12 @@ export class HttpClient {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({
+      const error = (await response.json().catch(() => ({
         error: {
           message: response.statusText,
           code: response.status,
         },
-      }));
+      }))) as APIErrorResponse;
       throw new Error(
         `API Error: ${error.error?.message || response.statusText} (${
           error.error?.code || response.status
