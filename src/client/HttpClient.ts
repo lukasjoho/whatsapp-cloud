@@ -1,0 +1,118 @@
+import type { ClientConfig } from "../types/client";
+
+/**
+ * HTTP client for making requests to the WhatsApp Cloud API
+ */
+export class HttpClient {
+  private readonly baseURL: string;
+  private readonly accessToken: string;
+  public readonly phoneNumberId?: string;
+  public readonly businessAccountId?: string;
+  public readonly apiVersion: string;
+
+  constructor(config: ClientConfig) {
+    this.accessToken = config.accessToken;
+    if (config.phoneNumberId !== undefined) {
+      this.phoneNumberId = config.phoneNumberId;
+    }
+    if (config.businessAccountId !== undefined) {
+      this.businessAccountId = config.businessAccountId;
+    }
+    this.apiVersion = config.apiVersion ?? "v18.0";
+    this.baseURL = config.baseURL ?? "https://graph.facebook.com";
+  }
+
+  /**
+   * Make a POST request
+   */
+  async post<T>(path: string, body: unknown): Promise<T> {
+    const url = `${this.baseURL}/${this.apiVersion}${path}`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.accessToken}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        error: {
+          message: response.statusText,
+          code: response.status,
+        },
+      }));
+      throw new Error(
+        `API Error: ${error.error?.message || response.statusText} (${
+          error.error?.code || response.status
+        })`
+      );
+    }
+
+    return response.json() as Promise<T>;
+  }
+
+  /**
+   * Make a GET request
+   */
+  async get<T>(path: string): Promise<T> {
+    const url = `${this.baseURL}/${this.apiVersion}${path}`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${this.accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        error: {
+          message: response.statusText,
+          code: response.status,
+        },
+      }));
+      throw new Error(
+        `API Error: ${error.error?.message || response.statusText} (${
+          error.error?.code || response.status
+        })`
+      );
+    }
+
+    return response.json() as Promise<T>;
+  }
+
+  /**
+   * Make a PATCH request
+   */
+  async patch<T>(path: string, body: unknown): Promise<T> {
+    const url = `${this.baseURL}/${this.apiVersion}${path}`;
+
+    const response = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.accessToken}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        error: {
+          message: response.statusText,
+          code: response.status,
+        },
+      }));
+      throw new Error(
+        `API Error: ${error.error?.message || response.statusText} (${
+          error.error?.code || response.status
+        })`
+      );
+    }
+
+    return response.json() as Promise<T>;
+  }
+}

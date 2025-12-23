@@ -18,5 +18,8 @@
     "@changesets/cli": "^2.29.8",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "zod": "^4.2.1"
   }
 }
