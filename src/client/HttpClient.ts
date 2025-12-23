@@ -5,9 +5,10 @@ import type { ClientConfig } from "../types/client";
  */
 export class HttpClient {
   private readonly baseURL: string;
-  private readonly accessToken: string;
+  public readonly accessToken: string;
   public readonly phoneNumberId?: string;
   public readonly businessAccountId?: string;
+  public readonly businessId?: string;
   public readonly apiVersion: string;
 
   constructor(config: ClientConfig) {
@@ -17,6 +18,9 @@ export class HttpClient {
     }
     if (config.businessAccountId !== undefined) {
       this.businessAccountId = config.businessAccountId;
+    }
+    if (config.businessId !== undefined) {
+      this.businessId = config.businessId;
     }
     this.apiVersion = config.apiVersion ?? "v18.0";
     this.baseURL = config.baseURL ?? "https://graph.facebook.com";

@@ -3,8 +3,10 @@ import type { ClientConfig } from "../types/client";
 import { HttpClient } from "./HttpClient";
 import { MessagesService } from "../services/messages/index";
 import { AccountsService } from "../services/accounts/index";
+import { BusinessService } from "../services/business/index";
 import { ZodError } from "zod";
 import { transformZodError } from "../utils/zod-error";
+import type { DebugTokenResponse } from "../types/debug";
 
 /**
  * WhatsApp Cloud API client
@@ -12,6 +14,7 @@ import { transformZodError } from "../utils/zod-error";
 export class WhatsAppClient {
   public readonly messages: MessagesService;
   public readonly accounts: AccountsService;
+  public readonly business: BusinessService;
 
   private readonly httpClient: HttpClient;
 
@@ -33,5 +36,20 @@ export class WhatsAppClient {
     // Initialize services (namespaces)
     this.messages = new MessagesService(this.httpClient);
     this.accounts = new AccountsService(this.httpClient);
+    this.business = new BusinessService(this.httpClient);
+  }
+
+  /**
+   * Debug the current access token
+   *
+   * This method calls the Graph API debug_token endpoint to inspect the access token
+   * used by this client. Useful for understanding token permissions, expiration, and validity.
+   *
+   * @returns Debug information about the access token
+   */
+  async debugToken(): Promise<DebugTokenResponse> {
+    return this.httpClient.get<DebugTokenResponse>(
+      `/debug_token?input_token=${this.httpClient.accessToken}`
+    );
   }
 }

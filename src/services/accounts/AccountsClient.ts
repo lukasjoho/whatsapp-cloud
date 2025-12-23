@@ -6,6 +6,9 @@ import type { HttpClient } from "../../client/HttpClient";
  * This client automatically prepends `/${wabaId}` to all request paths,
  * so methods can use relative paths like `/phone_numbers` instead of `/${wabaId}/phone_numbers`.
  *
+ * Note: The wabaId is the WhatsApp Business Account ID (not the Business Portfolio ID).
+ * This is used in endpoints like GET /<WABA_ID>/phone_numbers.
+ *
  * This treats wabaId as a "client" for the accounts namespace - different
  * wabaIds represent different WhatsApp Business Account endpoints.
  */

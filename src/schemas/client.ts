@@ -38,6 +38,12 @@ export const clientConfigSchema = z.object({
     .refine((val) => val === undefined || val.trim().length > 0, {
       message: "businessAccountId cannot be empty or whitespace only",
     }),
+  businessId: z
+    .string()
+    .optional()
+    .refine((val) => val === undefined || val.trim().length > 0, {
+      message: "businessId cannot be empty or whitespace only",
+    }),
   apiVersion: z.string().default("v18.0"),
   baseURL: z.string().url().default("https://graph.facebook.com"),
   timeout: z.number().positive().optional(),
