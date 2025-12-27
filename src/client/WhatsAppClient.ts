@@ -4,6 +4,7 @@ import { HttpClient } from "./HttpClient";
 import { MessagesService } from "../services/messages/index";
 import { AccountsService } from "../services/accounts/index";
 import { BusinessService } from "../services/business/index";
+import { TemplatesService } from "../services/templates/index";
 import { ZodError } from "zod";
 import { transformZodError } from "../utils/zod-error";
 import type { DebugTokenResponse } from "../types/debug";
@@ -15,6 +16,7 @@ export class WhatsAppClient {
   public readonly messages: MessagesService;
   public readonly accounts: AccountsService;
   public readonly business: BusinessService;
+  public readonly templates: TemplatesService;
 
   private readonly httpClient: HttpClient;
 
@@ -37,6 +39,7 @@ export class WhatsAppClient {
     this.messages = new MessagesService(this.httpClient);
     this.accounts = new AccountsService(this.httpClient);
     this.business = new BusinessService(this.httpClient);
+    this.templates = new TemplatesService(this.httpClient);
   }
 
   /**
