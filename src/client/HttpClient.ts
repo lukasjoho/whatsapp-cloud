@@ -70,7 +70,6 @@ export class HttpClient {
    */
   async get<T>(path: string): Promise<T> {
     const url = `${this.baseURL}/${this.apiVersion}${path}`;
-    console.log("Token: ", this.accessToken);
 
     const response = await fetch(url, {
       method: "GET",
@@ -109,6 +108,36 @@ export class HttpClient {
         Authorization: `Bearer ${this.accessToken}`,
       },
       body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const error = (await response.json().catch(() => ({
+        error: {
+          message: response.statusText,
+          code: response.status,
+        },
+      }))) as APIErrorResponse;
+      throw new Error(
+        `API Error: ${error.error?.message || response.statusText} (${
+          error.error?.code || response.status
+        })`
+      );
+    }
+
+    return response.json() as Promise<T>;
+  }
+
+  /**
+   * Make a DELETE request
+   */
+  async delete<T>(path: string): Promise<T> {
+    const url = `${this.baseURL}/${this.apiVersion}${path}`;
+
+    const response = await fetch(url, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${this.accessToken}`,
+      },
     });
 
     if (!response.ok) {
