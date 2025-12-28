@@ -1,0 +1,214 @@
+import type { HttpClient } from "../../client/HttpClient";
+import { extractMessages } from "./utils/extract-messages";
+import { extractStatuses } from "./utils/extract-statuses";
+import { verifyWebhook } from "./utils/verify";
+import { webhookPayloadSchema } from "../../schemas/webhooks/payload";
+import type {
+  WebhookPayload,
+  IncomingTextMessage,
+  IncomingMessage,
+} from "../../types/webhooks";
+
+/**
+ * Context provided to message handlers
+ * Contains metadata and contact info (message is passed separately)
+ */
+export type MessageContext = {
+  metadata: {
+    phoneNumberId: string;
+    displayPhoneNumber: string;
+    wabaId: string;
+  };
+  contact?: {
+    name: string;
+    waId: string;
+  };
+};
+
+/**
+ * Handler functions for different message types
+ * Receives message and context separately - message is the focus, context is optional metadata
+ */
+export type MessageHandlers = {
+  text?: (
+    message: IncomingTextMessage,
+    context: MessageContext
+  ) => Promise<void> | void;
+  // Future: image, audio, video, etc.
+};
+
+/**
+ * Options for handle() method
+ */
+export type HandleOptions = {
+  /**
+   * Error handler called when a message handler throws an error
+   * If not provided, errors are logged and processing continues
+   */
+  onError?: (error: Error, message: IncomingMessage) => void;
+};
+
+/**
+ * Webhooks service for handling incoming webhook payloads
+ *
+ * Provides utilities for extracting messages and a convenience handler
+ * for type-safe message processing.
+ */
+export class WebhooksService {
+  constructor(private readonly httpClient: HttpClient) {}
+
+  /**
+   * Verify webhook GET request from Meta
+   *
+   * Meta sends GET requests to verify webhook endpoints during setup.
+   * Returns the challenge string if valid, null if invalid.
+   *
+   * @param query - Query parameters from GET request
+   * @param verifyToken - Your verification token (stored on your server)
+   * @returns Challenge string if valid, null if invalid
+   */
+  verify(
+    query: {
+      "hub.mode"?: string;
+      "hub.verify_token"?: string;
+      "hub.challenge"?: string;
+    },
+    verifyToken: string
+  ): string | null {
+    return verifyWebhook(query, verifyToken);
+  }
+
+  /**
+   * Extract all incoming messages from webhook payload
+   *
+   * Low-level utility that flattens the nested webhook structure
+   * and returns messages directly.
+   *
+   * @param payload - Webhook payload from Meta
+   * @returns Flat array of incoming messages
+   */
+  extractMessages(payload: WebhookPayload): IncomingMessage[] {
+    return extractMessages(payload);
+  }
+
+  /**
+   * Extract status updates from webhook payload
+   *
+   * Low-level utility for extracting status updates for outgoing messages.
+   *
+   * @param payload - Webhook payload from Meta
+   * @returns Flat array of status updates
+   */
+  extractStatuses(payload: WebhookPayload): unknown[] {
+    return extractStatuses(payload);
+  }
+
+  /**
+   * Validate webhook payload structure
+   *
+   * Validates the payload against the schema. Logs errors if malformed
+   * but doesn't throw, allowing processing to continue.
+   *
+   * @param payload - Raw payload to validate
+   * @returns Validated payload if valid, original payload if invalid (with logged error)
+   */
+  private validatePayload(payload: unknown): WebhookPayload {
+    const result = webhookPayloadSchema.safeParse(payload);
+    if (!result.success) {
+      console.error(
+        "Webhook payload validation failed:",
+        result.error.format()
+      );
+      // Return as-is (TypeScript will treat it as WebhookPayload, but it's actually invalid)
+      // This allows processing to continue, but handlers should be defensive
+      return payload as WebhookPayload;
+    }
+    return result.data;
+  }
+
+  /**
+   * Handle webhook payload with type-safe callbacks
+   *
+   * High-level convenience method that extracts messages and dispatches
+   * them to appropriate handlers based on message type.
+   *
+   * **Important**: This method returns quickly to allow fast webhook responses.
+   * Handlers are processed asynchronously. If you need to await handler completion,
+   * use the low-level `extractMessages()` method instead.
+   *
+   * @param payload - Webhook payload from Meta (will be validated)
+   * @param handlers - Object with handler functions for each message type
+   * @param options - Optional error handling configuration
+   */
+  handle(
+    payload: unknown,
+    handlers: MessageHandlers,
+    options?: HandleOptions
+  ): void {
+    // Validate payload (logs error if malformed, but continues)
+    const validatedPayload = this.validatePayload(payload);
+
+    // Extract metadata and contacts from payload for context
+    for (const entry of validatedPayload.entry) {
+      for (const change of entry.changes) {
+        if (change.field === "messages" && change.value.messages) {
+          const metadata = {
+            phoneNumberId: change.value.metadata.phone_number_id,
+            displayPhoneNumber: change.value.metadata.display_phone_number,
+            wabaId: entry.id,
+          };
+
+          const contacts = change.value.contacts || [];
+
+          // Process each message with its context
+          for (const message of change.value.messages) {
+            // Find contact for this message (match by wa_id)
+            const contact = contacts.find((c) => c.wa_id === message.from);
+
+            // Build context (metadata + contact, no message duplication)
+            const context: MessageContext = {
+              metadata,
+              ...(contact && {
+                contact: {
+                  name: contact.profile.name,
+                  waId: contact.wa_id,
+                },
+              }),
+            };
+
+            // Process handler asynchronously (don't await)
+            // This allows long-running handlers without blocking webhook response
+            Promise.resolve()
+              .then(async () => {
+                // Type-safe dispatch based on message type
+                switch (message.type) {
+                  case "text":
+                    if (handlers.text) {
+                      await handlers.text(message, context);
+                    }
+                    break;
+
+                  // Future: image, audio, video, etc.
+                  default:
+                    // Unhandled message type - silently continue
+                    break;
+                }
+              })
+              .catch((error) => {
+                // Handle errors in handler execution
+                if (options?.onError) {
+                  options.onError(error as Error, message);
+                } else {
+                  // Default: log and continue (don't break webhook response)
+                  console.error(
+                    `Error handling ${message.type} message ${message.id}:`,
+                    error
+                  );
+                }
+              });
+          }
+        }
+      }
+    }
+  }
+}
