@@ -68,9 +68,37 @@ for (const message of messages) {
 }
 ```
 
+## Media Downloads
+
+Download media files (images, audio, video, documents) from incoming messages:
+
+```typescript
+client.webhooks.handle(req.body, {
+  image: async (message, context) => {
+    // Download the image
+    const imageData = await client.webhooks.downloadMedia(message.image.id);
+
+    // Upload to your storage (S3, Cloudinary, etc.)
+    await s3.upload({
+      key: `images/${message.image.id}`,
+      body: Buffer.from(imageData),
+      contentType: message.image.mime_type || "image/jpeg",
+    });
+  },
+
+  audio: async (message, context) => {
+    const audioData = await client.webhooks.downloadMedia(message.audio.id);
+    // Process audio file...
+  },
+});
+```
+
+**Note:** Media files are only available for a limited time. Download them as soon as possible after receiving the webhook.
+
 ## API Reference
 
 - `client.webhooks.verify(query, token)` - Verify GET request, returns challenge or null
 - `client.webhooks.extractMessages(payload)` - Extract messages from payload
 - `client.webhooks.extractStatuses(payload)` - Extract status updates
 - `client.webhooks.handle(payload, handlers, options?)` - Handle with type-safe callbacks
+- `client.webhooks.downloadMedia(mediaId)` - Download media file by ID, returns ArrayBuffer

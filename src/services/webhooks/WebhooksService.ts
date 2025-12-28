@@ -6,6 +6,8 @@ import { webhookPayloadSchema } from "../../schemas/webhooks/payload";
 import type {
   WebhookPayload,
   IncomingTextMessage,
+  IncomingAudioMessage,
+  IncomingImageMessage,
   IncomingMessage,
 } from "../../types/webhooks";
 
@@ -34,7 +36,14 @@ export type MessageHandlers = {
     message: IncomingTextMessage,
     context: MessageContext
   ) => Promise<void> | void;
-  // Future: image, audio, video, etc.
+  audio?: (
+    message: IncomingAudioMessage,
+    context: MessageContext
+  ) => Promise<void> | void;
+  image?: (
+    message: IncomingImageMessage,
+    context: MessageContext
+  ) => Promise<void> | void;
 };
 
 /**
@@ -101,6 +110,37 @@ export class WebhooksService {
    */
   extractStatuses(payload: WebhookPayload): unknown[] {
     return extractStatuses(payload);
+  }
+
+  /**
+   * Download media file by media ID
+   *
+   * Downloads media files (images, audio, video, documents) from WhatsApp servers.
+   * Uses the access token from the client configuration automatically.
+   *
+   * @param mediaId - Media ID from incoming message (e.g., message.image.id, message.audio.id)
+   * @returns Promise resolving to ArrayBuffer containing the media file
+   * @throws Error if download fails or media ID is invalid
+   *
+   * @example
+   * ```typescript
+   * client.webhooks.handle(req.body, {
+   *   image: async (message, context) => {
+   *     const mediaData = await client.webhooks.downloadMedia(message.image.id);
+   *     // Upload to S3, save to disk, etc.
+   *     await s3.upload({ key: message.image.id, body: Buffer.from(mediaData) });
+   *   },
+   * });
+   * ```
+   */
+  async downloadMedia(mediaId: string): Promise<ArrayBuffer> {
+    if (!mediaId || mediaId.trim().length === 0) {
+      throw new Error("Media ID is required");
+    }
+
+    // WhatsApp API endpoint: GET /{version}/{media-id}
+    // Use HttpClient's getBinary method which handles baseURL, apiVersion, and auth automatically
+    return this.httpClient.getBinary(`/${mediaId}`);
   }
 
   /**
@@ -188,7 +228,18 @@ export class WebhooksService {
                     }
                     break;
 
-                  // Future: image, audio, video, etc.
+                  case "audio":
+                    if (handlers.audio) {
+                      await handlers.audio(message, context);
+                    }
+                    break;
+
+                  case "image":
+                    if (handlers.image) {
+                      await handlers.image(message, context);
+                    }
+                    break;
+
                   default:
                     // Unhandled message type - silently continue
                     break;

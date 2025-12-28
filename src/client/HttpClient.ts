@@ -11,7 +11,7 @@ interface APIErrorResponse {
  * HTTP client for making requests to the WhatsApp Cloud API
  */
 export class HttpClient {
-  private readonly baseURL: string;
+  public readonly baseURL: string;
   public readonly accessToken: string;
   public readonly phoneNumberId?: string;
   public readonly businessAccountId?: string;
@@ -93,6 +93,37 @@ export class HttpClient {
     }
 
     return response.json() as Promise<T>;
+  }
+
+  /**
+   * Make a GET request and return binary data (ArrayBuffer)
+   * Useful for downloading media files
+   */
+  async getBinary(path: string): Promise<ArrayBuffer> {
+    const url = `${this.baseURL}/${this.apiVersion}${path}`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${this.accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      // Try to parse error response
+      let errorMessage = `API Error: ${response.statusText}`;
+      try {
+        const error = (await response.json()) as APIErrorResponse;
+        errorMessage = `API Error: ${
+          error.error?.message || response.statusText
+        } (${error.error?.code || response.status})`;
+      } catch {
+        // If JSON parsing fails, use default message
+      }
+      throw new Error(errorMessage);
+    }
+
+    return response.arrayBuffer();
   }
 
   /**

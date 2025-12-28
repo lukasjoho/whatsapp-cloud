@@ -19,6 +19,23 @@ const incomingTextContentSchema = z.object({
 });
 
 /**
+ * Audio content in incoming audio messages
+ */
+const incomingAudioContentSchema = z.object({
+  id: z.string(), // Media ID for downloading
+  mime_type: z.string().optional(), // e.g., "audio/ogg; codecs=opus"
+});
+
+/**
+ * Image content in incoming image messages
+ */
+const incomingImageContentSchema = z.object({
+  id: z.string(), // Media ID for downloading
+  mime_type: z.string().optional(), // e.g., "image/jpeg"
+  caption: z.string().optional(), // Optional caption text
+});
+
+/**
  * Incoming text message schema
  * Uses discriminated union pattern (type: "text")
  */
@@ -28,11 +45,28 @@ export const incomingTextMessageSchema = baseIncomingMessageSchema.extend({
 });
 
 /**
+ * Incoming audio message schema
+ * Uses discriminated union pattern (type: "audio")
+ */
+export const incomingAudioMessageSchema = baseIncomingMessageSchema.extend({
+  type: z.literal("audio"),
+  audio: incomingAudioContentSchema,
+});
+
+/**
+ * Incoming image message schema
+ * Uses discriminated union pattern (type: "image")
+ */
+export const incomingImageMessageSchema = baseIncomingMessageSchema.extend({
+  type: z.literal("image"),
+  image: incomingImageContentSchema,
+});
+
+/**
  * Union of all incoming message types
- * For now: just text. Others (image, audio, etc.) will be added later
  */
 export const incomingMessageSchema = z.discriminatedUnion("type", [
   incomingTextMessageSchema,
-  // Future: incomingImageMessageSchema, incomingAudioMessageSchema, etc.
+  incomingAudioMessageSchema,
+  incomingImageMessageSchema,
 ]);
-
