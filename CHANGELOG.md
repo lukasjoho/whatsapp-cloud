@@ -1,5 +1,12 @@
 # whatzapp
 
+## 0.0.7
+
+### Patch Changes
+
+- 2024d31: add audio and image handler
+- f2501c2: add template types
+
 ## 0.0.6
 
 ### Patch Changes
