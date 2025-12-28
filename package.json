@@ -1,6 +1,6 @@
 {
   "name": "whatsapp-cloud",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Work in progress. A WhatsApp client tailored for LLMs—built to actually work.",
   "type": "module",
   "main": "dist/index.js",
