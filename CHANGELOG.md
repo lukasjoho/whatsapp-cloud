@@ -1,5 +1,11 @@
 # whatzapp
 
+## 0.0.11
+
+### Patch Changes
+
+- 396eeee: add dist
+
 ## 0.0.10
 
 ### Patch Changes
