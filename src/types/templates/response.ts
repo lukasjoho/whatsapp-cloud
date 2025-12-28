@@ -1,10 +1,10 @@
 import { z } from "zod";
 import {
   templateSchema,
-  createTemplateResponseSchema,
-  listTemplatesResponseSchema,
-  updateTemplateResponseSchema,
-  deleteTemplateResponseSchema,
+  templateCreateResponseSchema,
+  templateListResponseSchema,
+  templateUpdateResponseSchema,
+  templateDeleteResponseSchema,
 } from "../../schemas/templates/response";
 
 /**
@@ -15,20 +15,25 @@ export type Template = z.infer<typeof templateSchema>;
 /**
  * Type for create template response
  */
-export type CreateTemplateResponse = z.infer<typeof createTemplateResponseSchema>;
+export type TemplateCreateResponse = z.infer<
+  typeof templateCreateResponseSchema
+>;
 
 /**
  * Type for list templates response
  */
-export type ListTemplatesResponse = z.infer<typeof listTemplatesResponseSchema>;
+export type TemplateListResponse = z.infer<typeof templateListResponseSchema>;
 
 /**
  * Type for update template response
  */
-export type UpdateTemplateResponse = z.infer<typeof updateTemplateResponseSchema>;
+export type TemplateUpdateResponse = z.infer<
+  typeof templateUpdateResponseSchema
+>;
 
 /**
  * Type for delete template response
  */
-export type DeleteTemplateResponse = z.infer<typeof deleteTemplateResponseSchema>;
-
+export type TemplateDeleteResponse = z.infer<
+  typeof templateDeleteResponseSchema
+>;

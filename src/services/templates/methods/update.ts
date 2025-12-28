@@ -1,7 +1,7 @@
 import type { HttpClient } from "../../../client/HttpClient";
 import { templateUpdateSchema } from "../../../schemas/templates/request";
 import type { TemplateUpdate } from "../../../types/templates/request";
-import type { UpdateTemplateResponse } from "../../../types/templates/response";
+import type { TemplateUpdateResponse } from "../../../types/templates/response";
 import { transformZodError } from "../../../utils/zod-error";
 
 /**
@@ -17,7 +17,7 @@ export async function updateTemplate(
   httpClient: HttpClient,
   templateId: string,
   request: TemplateUpdate
-): Promise<UpdateTemplateResponse> {
+): Promise<TemplateUpdateResponse> {
   if (!templateId || templateId.trim().length === 0) {
     throw new Error("Template ID is required");
   }
@@ -30,6 +30,5 @@ export async function updateTemplate(
   const data = result.data;
 
   // Make API request - template ID is used directly, no WABA prefix
-  return httpClient.post<UpdateTemplateResponse>(`/${templateId}`, data);
+  return httpClient.post<TemplateUpdateResponse>(`/${templateId}`, data);
 }
-

@@ -1,7 +1,7 @@
 import type { TemplatesClient } from "../TemplatesClient";
 import { templateCreateSchema } from "../../../schemas/templates/request";
 import type { TemplateCreate } from "../../../types/templates/request";
-import type { CreateTemplateResponse } from "../../../types/templates/response";
+import type { TemplateCreateResponse } from "../../../types/templates/response";
 import { transformZodError } from "../../../utils/zod-error";
 
 /**
@@ -13,7 +13,7 @@ import { transformZodError } from "../../../utils/zod-error";
 export async function createTemplate(
   templatesClient: TemplatesClient,
   request: TemplateCreate
-): Promise<CreateTemplateResponse> {
+): Promise<TemplateCreateResponse> {
   // Validate request with schema - throws WhatsAppValidationError if invalid
   const result = templateCreateSchema.safeParse(request);
   if (!result.success) {
@@ -22,7 +22,7 @@ export async function createTemplate(
   const data = result.data;
 
   // Make API request - templatesClient handles the WABA ID prefix automatically
-  return templatesClient.post<CreateTemplateResponse>(
+  return templatesClient.post<TemplateCreateResponse>(
     "/message_templates",
     data
   );

@@ -9,15 +9,15 @@ import { WhatsAppValidationError } from "../../errors";
 import type {
   TemplateCreate,
   TemplateUpdate,
-  ListTemplatesRequest,
-  DeleteTemplateRequest,
+  TemplateList,
+  TemplateDelete,
 } from "../../types/templates/request";
 import type {
-  CreateTemplateResponse,
-  ListTemplatesResponse,
+  TemplateCreateResponse,
+  TemplateListResponse,
   Template,
-  UpdateTemplateResponse,
-  DeleteTemplateResponse,
+  TemplateUpdateResponse,
+  TemplateDeleteResponse,
 } from "../../types/templates/response";
 
 /**
@@ -56,7 +56,7 @@ export class TemplatesService {
   async create(
     request: TemplateCreate,
     businessAccountId?: string
-  ): Promise<CreateTemplateResponse> {
+  ): Promise<TemplateCreateResponse> {
     const client = this.getClient(businessAccountId);
     return createTemplate(client, request);
   }
@@ -68,9 +68,9 @@ export class TemplatesService {
    * @param businessAccountId - Optional WABA ID (overrides client config)
    */
   async list(
-    options?: ListTemplatesRequest,
+    options?: TemplateList,
     businessAccountId?: string
-  ): Promise<ListTemplatesResponse> {
+  ): Promise<TemplateListResponse> {
     const client = this.getClient(businessAccountId);
     return listTemplates(client, options);
   }
@@ -97,7 +97,7 @@ export class TemplatesService {
   async update(
     templateId: string,
     request: TemplateUpdate
-  ): Promise<UpdateTemplateResponse> {
+  ): Promise<TemplateUpdateResponse> {
     return updateTemplate(this.httpClient, templateId, request);
   }
 
@@ -108,9 +108,9 @@ export class TemplatesService {
    * @param businessAccountId - Optional WABA ID (overrides client config)
    */
   async delete(
-    options: DeleteTemplateRequest,
+    options: TemplateDelete,
     businessAccountId?: string
-  ): Promise<DeleteTemplateResponse> {
+  ): Promise<TemplateDeleteResponse> {
     const client = this.getClient(businessAccountId);
     return deleteTemplate(client, options);
   }

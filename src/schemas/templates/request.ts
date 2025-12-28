@@ -1,16 +1,22 @@
 import { z } from "zod";
-import { componentSchema } from "./component";
+import { templateComponentSchema } from "./component";
 
 /**
  * Schema for creating a template
  * Simplified - no variables/examples for now
  */
 export const templateCreateSchema = z.object({
-  name: z.string().min(1).max(512, "Template name must be 512 characters or less"),
-  language: z.string().min(2).max(5, "Language code must be 2-5 characters (e.g., 'en' or 'en_US')"),
+  name: z
+    .string()
+    .min(1)
+    .max(512, "Template name must be 512 characters or less"),
+  language: z
+    .string()
+    .min(2)
+    .max(5, "Language code must be 2-5 characters (e.g., 'en' or 'en_US')"),
   category: z.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]),
   components: z
-    .array(componentSchema)
+    .array(templateComponentSchema)
     .min(1, "At least one component is required")
     .refine(
       (components) => {
@@ -51,7 +57,7 @@ export const templateCreateSchema = z.object({
  */
 export const templateUpdateSchema = z.object({
   category: z.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]).optional(),
-  components: z.array(componentSchema).optional(),
+  components: z.array(templateComponentSchema).optional(),
   language: z.string().min(2).max(5).optional(),
   name: z.string().min(1).max(512).optional(),
 });
@@ -59,7 +65,7 @@ export const templateUpdateSchema = z.object({
 /**
  * Schema for listing templates
  */
-export const listTemplatesRequestSchema = z.object({
+export const templateListSchema = z.object({
   name: z.string().optional(), // Filter by template name
 });
 
@@ -67,7 +73,7 @@ export const listTemplatesRequestSchema = z.object({
  * Schema for deleting a template
  * Either name or hsm_id must be provided
  */
-export const deleteTemplateRequestSchema = z
+export const templateDeleteSchema = z
   .object({
     name: z.string().optional(),
     hsm_id: z.string().optional(),
@@ -75,4 +81,3 @@ export const deleteTemplateRequestSchema = z
   .refine((data) => data.name || data.hsm_id, {
     message: "Either name or hsm_id must be provided",
   });
-

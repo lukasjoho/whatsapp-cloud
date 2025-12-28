@@ -1,7 +1,7 @@
 import type { TemplatesClient } from "../TemplatesClient";
-import { deleteTemplateRequestSchema } from "../../../schemas/templates/request";
-import type { DeleteTemplateRequest } from "../../../types/templates/request";
-import type { DeleteTemplateResponse } from "../../../types/templates/response";
+import { templateDeleteSchema } from "../../../schemas/templates/request";
+import type { TemplateDelete } from "../../../types/templates/request";
+import type { TemplateDeleteResponse } from "../../../types/templates/response";
 import { transformZodError } from "../../../utils/zod-error";
 
 /**
@@ -12,10 +12,10 @@ import { transformZodError } from "../../../utils/zod-error";
  */
 export async function deleteTemplate(
   templatesClient: TemplatesClient,
-  options: DeleteTemplateRequest
-): Promise<DeleteTemplateResponse> {
+  options: TemplateDelete
+): Promise<TemplateDeleteResponse> {
   // Validate request with schema - throws WhatsAppValidationError if invalid
-  const result = deleteTemplateRequestSchema.safeParse(options);
+  const result = templateDeleteSchema.safeParse(options);
   if (!result.success) {
     throw transformZodError(result.error);
   }
@@ -33,6 +33,6 @@ export async function deleteTemplate(
   const path = `/message_templates?${queryString}`;
 
   // Make API request - templatesClient handles the WABA ID prefix automatically
-  return templatesClient.delete<DeleteTemplateResponse>(path);
+  return templatesClient.delete<TemplateDeleteResponse>(path);
 }
 

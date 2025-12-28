@@ -20,4 +20,3 @@ export async function getTemplate(
   // Make API request - template ID is used directly, no WABA prefix
   return httpClient.get<Template>(`/${templateId}`);
 }
-

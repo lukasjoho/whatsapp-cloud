@@ -8,7 +8,7 @@ import { z } from "zod";
 /**
  * Quick reply button schema
  */
-export const quickReplyButtonSchema = z.object({
+export const templateQuickReplyButtonSchema = z.object({
   type: z.literal("QUICK_REPLY"),
   text: z.string().min(1).max(25, "Button text must be 25 characters or less"),
 });
@@ -17,7 +17,7 @@ export const quickReplyButtonSchema = z.object({
  * URL button schema
  * Note: example field will be added later when we support variables
  */
-export const urlButtonSchema = z.object({
+export const templateUrlButtonSchema = z.object({
   type: z.literal("URL"),
   text: z.string().min(1).max(25, "Button text must be 25 characters or less"),
   url: z.string().url().max(2000, "URL must be 2000 characters or less"),
@@ -27,7 +27,7 @@ export const urlButtonSchema = z.object({
 /**
  * Phone number button schema
  */
-export const phoneNumberButtonSchema = z.object({
+export const templatePhoneNumberButtonSchema = z.object({
   type: z.literal("PHONE_NUMBER"),
   text: z.string().min(1).max(25, "Button text must be 25 characters or less"),
   phone_number: z
@@ -40,7 +40,7 @@ export const phoneNumberButtonSchema = z.object({
  * Copy code button schema
  * Note: example field will be added later
  */
-export const copyCodeButtonSchema = z.object({
+export const templateCopyCodeButtonSchema = z.object({
   type: z.literal("COPY_CODE"),
   // example: z.string().max(15).optional(), // For later: example value to copy
 });
@@ -49,7 +49,7 @@ export const copyCodeButtonSchema = z.object({
  * Flow button schema (for authentication templates)
  * Note: Will be expanded later when we support flow templates
  */
-export const flowButtonSchema = z.object({
+export const templateFlowButtonSchema = z.object({
   type: z.literal("FLOW"),
   text: z.string().min(1).max(25, "Button text must be 25 characters or less"),
   flow_action: z.string().optional(),
@@ -60,24 +60,23 @@ export const flowButtonSchema = z.object({
 /**
  * Union of all button types
  */
-export const buttonSchema = z.discriminatedUnion("type", [
-  quickReplyButtonSchema,
-  urlButtonSchema,
-  phoneNumberButtonSchema,
-  copyCodeButtonSchema,
-  flowButtonSchema,
+export const templateButtonSchema = z.discriminatedUnion("type", [
+  templateQuickReplyButtonSchema,
+  templateUrlButtonSchema,
+  templatePhoneNumberButtonSchema,
+  templateCopyCodeButtonSchema,
+  templateFlowButtonSchema,
 ]);
 
 /**
  * Header component schema
- * Simplified - no variables/examples for now
  *
  * Note:
  * - TEXT format requires text field
- * - IMAGE/VIDEO/DOCUMENT formats require example.header_handle (for later)
+ * - IMAGE/VIDEO/DOCUMENT formats require example.header_handle (asset handle from Resumable Upload API)
  * - LOCATION format requires neither text nor example
  */
-export const headerComponentSchema = z
+export const templateHeaderComponentSchema = z
   .object({
     type: z.literal("HEADER"),
     format: z.enum(["TEXT", "IMAGE", "VIDEO", "DOCUMENT", "LOCATION"]),
@@ -85,7 +84,13 @@ export const headerComponentSchema = z
       .string()
       .max(60, "Header text must be 60 characters or less")
       .optional(),
-    // example: z.object({...}).optional(), // For later: when using variables or media
+    example: z
+      .object({
+        header_handle: z
+          .array(z.string())
+          .min(1, "At least one header_handle is required"),
+      })
+      .optional(),
   })
   .refine(
     (data) => {
@@ -93,15 +98,52 @@ export const headerComponentSchema = z
       if (data.format === "TEXT" && !data.text) {
         return false;
       }
-      // LOCATION format doesn't need text
+      // LOCATION format doesn't need text or example
       if (data.format === "LOCATION") {
         return true;
       }
-      // IMAGE/VIDEO/DOCUMENT will need example.header_handle (for later)
+      // IMAGE/VIDEO/DOCUMENT formats require example.header_handle
+      if (["IMAGE", "VIDEO", "DOCUMENT"].includes(data.format)) {
+        if (
+          !data.example ||
+          !data.example.header_handle ||
+          data.example.header_handle.length === 0
+        ) {
+          return false;
+        }
+      }
+      return true;
+    },
+    {
+      message:
+        "TEXT format requires text field; IMAGE/VIDEO/DOCUMENT formats require example.header_handle",
+    }
+  )
+  .refine(
+    (data) => {
+      // TEXT format validation
+      if (data.format === "TEXT") {
+        return !!data.text;
+      }
       return true;
     },
     {
       message: "TEXT format header requires text field",
+    }
+  )
+  .refine(
+    (data) => {
+      // IMAGE/VIDEO/DOCUMENT format validation
+      if (["IMAGE", "VIDEO", "DOCUMENT"].includes(data.format)) {
+        return !!(
+          data.example?.header_handle && data.example.header_handle.length > 0
+        );
+      }
+      return true;
+    },
+    {
+      message:
+        "IMAGE/VIDEO/DOCUMENT format header requires example.header_handle (asset handle from Resumable Upload API)",
     }
   );
 
@@ -109,7 +151,7 @@ export const headerComponentSchema = z
  * Body component schema
  * Required component - no variables for now
  */
-export const bodyComponentSchema = z.object({
+export const templateBodyComponentSchema = z.object({
   type: z.literal("BODY"),
   text: z
     .string()
@@ -121,7 +163,7 @@ export const bodyComponentSchema = z.object({
 /**
  * Footer component schema
  */
-export const footerComponentSchema = z.object({
+export const templateFooterComponentSchema = z.object({
   type: z.literal("FOOTER"),
   text: z.string().min(1).max(60, "Footer text must be 60 characters or less"),
 });
@@ -129,17 +171,20 @@ export const footerComponentSchema = z.object({
 /**
  * Buttons component schema
  */
-export const buttonsComponentSchema = z.object({
+export const templateButtonsComponentSchema = z.object({
   type: z.literal("BUTTONS"),
-  buttons: z.array(buttonSchema).min(1).max(10, "Maximum 10 buttons allowed"),
+  buttons: z
+    .array(templateButtonSchema)
+    .min(1)
+    .max(10, "Maximum 10 buttons allowed"),
 });
 
 /**
  * Union of all component types
  */
-export const componentSchema = z.discriminatedUnion("type", [
-  headerComponentSchema,
-  bodyComponentSchema,
-  footerComponentSchema,
-  buttonsComponentSchema,
+export const templateComponentSchema = z.discriminatedUnion("type", [
+  templateHeaderComponentSchema,
+  templateBodyComponentSchema,
+  templateFooterComponentSchema,
+  templateButtonsComponentSchema,
 ]);
