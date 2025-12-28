@@ -52,6 +52,7 @@ __export(index_exports, {
   templateFlowButtonSchema: () => templateFlowButtonSchema,
   templateFooterComponentSchema: () => templateFooterComponentSchema,
   templateHeaderComponentSchema: () => templateHeaderComponentSchema,
+  templateLanguageSchema: () => templateLanguageSchema,
   templateListResponseSchema: () => templateListResponseSchema,
   templateListSchema: () => templateListSchema,
   templatePhoneNumberButtonSchema: () => templatePhoneNumberButtonSchema,
@@ -632,7 +633,7 @@ var TemplatesClient = class {
 };
 
 // src/schemas/templates/request.ts
-var import_zod5 = require("zod");
+var import_zod6 = require("zod");
 
 // src/schemas/templates/component.ts
 var import_zod4 = require("zod");
@@ -735,12 +736,239 @@ var templateComponentSchema = import_zod4.z.discriminatedUnion("type", [
   templateButtonsComponentSchema
 ]);
 
+// src/schemas/templates/language.ts
+var import_zod5 = require("zod");
+var templateLanguageSchema = import_zod5.z.enum([
+  "af",
+  // Afrikaans
+  "sq",
+  // Albanisch
+  "ar",
+  // Arabisch
+  "ar_EG",
+  // Arabisch (Ägypten)
+  "ar_AE",
+  // Arabisch (Vereinigte Arabische Emirate)
+  "ar_LB",
+  // Arabisch (LBN)
+  "ar_MA",
+  // Arabisch (MAR)
+  "ar_QA",
+  // Arabisch (QAT)
+  "az",
+  // Aserbaidschanisch
+  "be_BY",
+  // Belarussisch
+  "bn",
+  // Bengalisch
+  "bn_IN",
+  // Bengali (IND)
+  "bg",
+  // Bulgarisch
+  "ca",
+  // Katalanisch
+  "zh_CN",
+  // Chinesisch (CHN)
+  "zh_HK",
+  // Chinesisch (HKG)
+  "zh_TW",
+  // Chinesisch (TAI)
+  "hr",
+  // Kroatisch
+  "cs",
+  // Tschechisch
+  "da",
+  // Dänisch
+  "prs_AF",
+  // Dari
+  "nl",
+  // Niederländisch
+  "nl_BE",
+  // Niederländisch (BEL)
+  "en",
+  // Englisch
+  "en_GB",
+  // Englisch (UK)
+  "en_US",
+  // Englisch (USA)
+  "en_AE",
+  // Englisch (Vereinigte Arabische Emirate)
+  "en_AU",
+  // Englisch (AUS)
+  "en_CA",
+  // Englisch (Kanada)
+  "en_GH",
+  // Englisch (GHA)
+  "en_IE",
+  // English (IRL)
+  "en_IN",
+  // Englisch (Indien)
+  "en_JM",
+  // Englisch (JAM)
+  "en_MY",
+  // Englisch (MYS)
+  "en_NZ",
+  // Englisch (Neuseeland)
+  "en_QA",
+  // Englisch (QAT)
+  "en_SG",
+  // Englisch (SGP)
+  "en_UG",
+  // Englisch (UGA)
+  "en_ZA",
+  // Englisch (ZAF)
+  "et",
+  // Estnisch
+  "fil",
+  // Filipino
+  "fi",
+  // Finnisch
+  "fr",
+  // Französisch
+  "fr_BE",
+  // Französisch (BEL)
+  "fr_CA",
+  // Französisch (Kanada)
+  "fr_CH",
+  // Französisch (CHE)
+  "fr_CI",
+  // Französisch (CIV)
+  "fr_MA",
+  // Französisch (MAR)
+  "ka",
+  // Georgisch
+  "de",
+  // Deutsch
+  "de_AT",
+  // Deutsch (Österreich)
+  "de_CH",
+  // Deutsch (CHE)
+  "el",
+  // Griechisch
+  "gu",
+  // Gujarati
+  "ha",
+  // Hausa
+  "he",
+  // Hebräisch
+  "hi",
+  // Hindi
+  "hu",
+  // Ungarisch
+  "id",
+  // Indonesisch
+  "ga",
+  // Irisch
+  "it",
+  // Italienisch
+  "ja",
+  // Japanisch
+  "kn",
+  // Kannada
+  "kk",
+  // Kasachisch
+  "rw_RW",
+  // Kinyarwanda
+  "ko",
+  // Koreanisch
+  "ky_KG",
+  // Kirgisisch (Kirgisistan)
+  "lo",
+  // Laotisch
+  "lv",
+  // Lettisch
+  "lt",
+  // Litauisch
+  "mk",
+  // Mazedonisch
+  "ms",
+  // Malaiisch
+  "ml",
+  // Malayalam
+  "mr",
+  // Marathi
+  "nb",
+  // Norwegisch
+  "ps_AF",
+  // Paschtunisch
+  "fa",
+  // Persisch
+  "pl",
+  // Polnisch
+  "pt_BR",
+  // Portugiesisch (BR)
+  "pt_PT",
+  // Portugiesisch (POR)
+  "pa",
+  // Panjabi
+  "ro",
+  // Rumänisch
+  "ru",
+  // Russisch
+  "sr",
+  // Serbisch
+  "si_LK",
+  // Sinhala
+  "sk",
+  // Slowakisch
+  "sl",
+  // Slowenisch
+  "es",
+  // Spanisch
+  "es_AR",
+  // Spanisch (ARG)
+  "es_CL",
+  // Spanisch (CHL)
+  "es_CO",
+  // Spanisch (Kolumbien)
+  "es_CR",
+  // Spanisch (CRI)
+  "es_DO",
+  // Spanisch (DOM)
+  "es_EC",
+  // Spanisch (ECU)
+  "es_HN",
+  // Spanisch (Honduras)
+  "es_MX",
+  // Spanisch (MEX)
+  "es_PA",
+  // Spanisch (PAN)
+  "es_PE",
+  // Spanisch (Peru)
+  "es_ES",
+  // Spanisch (SPA)
+  "es_UY",
+  // Spanisch (URY)
+  "sw",
+  // Swahili
+  "sv",
+  // Schwedisch
+  "ta",
+  // Tamil
+  "te",
+  // Telugu
+  "th",
+  // Thai
+  "tr",
+  // Türkisch
+  "uk",
+  // Ukrainisch
+  "ur",
+  // Urdu
+  "uz",
+  // Usbekisch
+  "vi",
+  // Vietnamesisch
+  "zu"
+  // Zulu
+]);
+
 // src/schemas/templates/request.ts
-var templateCreateSchema = import_zod5.z.object({
-  name: import_zod5.z.string().min(1).max(512, "Template name must be 512 characters or less"),
-  language: import_zod5.z.string().min(2).max(5, "Language code must be 2-5 characters (e.g., 'en' or 'en_US')"),
-  category: import_zod5.z.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]),
-  components: import_zod5.z.array(templateComponentSchema).min(1, "At least one component is required").refine(
+var templateCreateSchema = import_zod6.z.object({
+  name: import_zod6.z.string().min(1).max(512, "Template name must be 512 characters or less"),
+  language: templateLanguageSchema,
+  category: import_zod6.z.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]),
+  components: import_zod6.z.array(templateComponentSchema).min(1, "At least one component is required").refine(
     (components) => {
       return components.some((c) => c.type === "BODY");
     },
@@ -765,19 +993,19 @@ var templateCreateSchema = import_zod5.z.object({
     { message: "Only one BUTTONS component is allowed" }
   )
 });
-var templateUpdateSchema = import_zod5.z.object({
-  category: import_zod5.z.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]).optional(),
-  components: import_zod5.z.array(templateComponentSchema).optional(),
-  language: import_zod5.z.string().min(2).max(5).optional(),
-  name: import_zod5.z.string().min(1).max(512).optional()
+var templateUpdateSchema = import_zod6.z.object({
+  category: import_zod6.z.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]).optional(),
+  components: import_zod6.z.array(templateComponentSchema).optional(),
+  language: templateLanguageSchema.optional(),
+  name: import_zod6.z.string().min(1).max(512).optional()
 });
-var templateListSchema = import_zod5.z.object({
-  name: import_zod5.z.string().optional()
+var templateListSchema = import_zod6.z.object({
+  name: import_zod6.z.string().optional()
   // Filter by template name
 });
-var templateDeleteSchema = import_zod5.z.object({
-  name: import_zod5.z.string().optional(),
-  hsm_id: import_zod5.z.string().optional()
+var templateDeleteSchema = import_zod6.z.object({
+  name: import_zod6.z.string().optional(),
+  hsm_id: import_zod6.z.string().optional()
 }).refine((data) => data.name || data.hsm_id, {
   message: "Either name or hsm_id must be provided"
 });
@@ -961,88 +1189,88 @@ function verifyWebhook(query, verifyToken) {
 }
 
 // src/schemas/webhooks/payload.ts
-var import_zod7 = require("zod");
+var import_zod8 = require("zod");
 
 // src/schemas/webhooks/incoming-message.ts
-var import_zod6 = require("zod");
-var baseIncomingMessageSchema = import_zod6.z.object({
-  from: import_zod6.z.string(),
+var import_zod7 = require("zod");
+var baseIncomingMessageSchema = import_zod7.z.object({
+  from: import_zod7.z.string(),
   // WhatsApp ID (phone number without +)
-  id: import_zod6.z.string(),
+  id: import_zod7.z.string(),
   // Message ID (wamid.*)
-  timestamp: import_zod6.z.string(),
+  timestamp: import_zod7.z.string(),
   // Unix timestamp as string
-  type: import_zod6.z.string()
+  type: import_zod7.z.string()
   // Message type discriminator
 });
-var incomingTextContentSchema = import_zod6.z.object({
-  body: import_zod6.z.string()
+var incomingTextContentSchema = import_zod7.z.object({
+  body: import_zod7.z.string()
 });
-var incomingAudioContentSchema = import_zod6.z.object({
-  id: import_zod6.z.string(),
+var incomingAudioContentSchema = import_zod7.z.object({
+  id: import_zod7.z.string(),
   // Media ID for downloading
-  mime_type: import_zod6.z.string().optional()
+  mime_type: import_zod7.z.string().optional()
   // e.g., "audio/ogg; codecs=opus"
 });
-var incomingImageContentSchema = import_zod6.z.object({
-  id: import_zod6.z.string(),
+var incomingImageContentSchema = import_zod7.z.object({
+  id: import_zod7.z.string(),
   // Media ID for downloading
-  mime_type: import_zod6.z.string().optional(),
+  mime_type: import_zod7.z.string().optional(),
   // e.g., "image/jpeg"
-  caption: import_zod6.z.string().optional()
+  caption: import_zod7.z.string().optional()
   // Optional caption text
 });
 var incomingTextMessageSchema = baseIncomingMessageSchema.extend({
-  type: import_zod6.z.literal("text"),
+  type: import_zod7.z.literal("text"),
   text: incomingTextContentSchema
 });
 var incomingAudioMessageSchema = baseIncomingMessageSchema.extend({
-  type: import_zod6.z.literal("audio"),
+  type: import_zod7.z.literal("audio"),
   audio: incomingAudioContentSchema
 });
 var incomingImageMessageSchema = baseIncomingMessageSchema.extend({
-  type: import_zod6.z.literal("image"),
+  type: import_zod7.z.literal("image"),
   image: incomingImageContentSchema
 });
-var incomingMessageSchema = import_zod6.z.discriminatedUnion("type", [
+var incomingMessageSchema = import_zod7.z.discriminatedUnion("type", [
   incomingTextMessageSchema,
   incomingAudioMessageSchema,
   incomingImageMessageSchema
 ]);
 
 // src/schemas/webhooks/payload.ts
-var contactSchema = import_zod7.z.object({
-  profile: import_zod7.z.object({
-    name: import_zod7.z.string()
+var contactSchema = import_zod8.z.object({
+  profile: import_zod8.z.object({
+    name: import_zod8.z.string()
   }),
-  wa_id: import_zod7.z.string()
+  wa_id: import_zod8.z.string()
 });
-var webhookMetadataSchema = import_zod7.z.object({
-  display_phone_number: import_zod7.z.string(),
-  phone_number_id: import_zod7.z.string()
+var webhookMetadataSchema = import_zod8.z.object({
+  display_phone_number: import_zod8.z.string(),
+  phone_number_id: import_zod8.z.string()
 });
-var webhookValueSchema = import_zod7.z.object({
-  messaging_product: import_zod7.z.literal("whatsapp"),
+var webhookValueSchema = import_zod8.z.object({
+  messaging_product: import_zod8.z.literal("whatsapp"),
   metadata: webhookMetadataSchema,
-  contacts: import_zod7.z.array(contactSchema).optional(),
-  messages: import_zod7.z.array(incomingMessageSchema).optional(),
+  contacts: import_zod8.z.array(contactSchema).optional(),
+  messages: import_zod8.z.array(incomingMessageSchema).optional(),
   // Incoming messages
-  statuses: import_zod7.z.array(import_zod7.z.any()).optional()
+  statuses: import_zod8.z.array(import_zod8.z.any()).optional()
   // Status updates (for later)
 });
-var webhookChangeSchema = import_zod7.z.object({
+var webhookChangeSchema = import_zod8.z.object({
   value: webhookValueSchema,
-  field: import_zod7.z.literal("messages")
+  field: import_zod8.z.literal("messages")
   // For now: only messages field
 });
-var webhookEntrySchema = import_zod7.z.object({
-  id: import_zod7.z.string(),
+var webhookEntrySchema = import_zod8.z.object({
+  id: import_zod8.z.string(),
   // WABA ID
-  changes: import_zod7.z.array(webhookChangeSchema)
+  changes: import_zod8.z.array(webhookChangeSchema)
 });
-var webhookPayloadSchema = import_zod7.z.object({
-  object: import_zod7.z.literal("whatsapp_business_account"),
-  entry: import_zod7.z.array(webhookEntrySchema)
+var webhookPayloadSchema = import_zod8.z.object({
+  object: import_zod8.z.literal("whatsapp_business_account"),
+  entry: import_zod8.z.array(webhookEntrySchema)
 });
 
 // src/services/webhooks/WebhooksService.ts
@@ -1207,7 +1435,7 @@ var WebhooksService = class {
 };
 
 // src/client/WhatsAppClient.ts
-var import_zod8 = require("zod");
+var import_zod9 = require("zod");
 var WhatsAppClient = class {
   messages;
   accounts;
@@ -1220,7 +1448,7 @@ var WhatsAppClient = class {
     try {
       validated = clientConfigSchema.parse(config);
     } catch (error) {
-      if (error instanceof import_zod8.ZodError) {
+      if (error instanceof import_zod9.ZodError) {
         throw transformZodError(error);
       }
       throw error;
@@ -1248,109 +1476,109 @@ var WhatsAppClient = class {
 };
 
 // src/schemas/messages/response.ts
-var import_zod9 = require("zod");
-var messageResponseSchema = import_zod9.z.object({
-  messaging_product: import_zod9.z.literal("whatsapp"),
-  contacts: import_zod9.z.array(
-    import_zod9.z.object({
-      input: import_zod9.z.string(),
-      wa_id: import_zod9.z.string()
+var import_zod10 = require("zod");
+var messageResponseSchema = import_zod10.z.object({
+  messaging_product: import_zod10.z.literal("whatsapp"),
+  contacts: import_zod10.z.array(
+    import_zod10.z.object({
+      input: import_zod10.z.string(),
+      wa_id: import_zod10.z.string()
     })
   ),
-  messages: import_zod9.z.array(
-    import_zod9.z.object({
-      id: import_zod9.z.string()
+  messages: import_zod10.z.array(
+    import_zod10.z.object({
+      id: import_zod10.z.string()
     })
   )
 });
 
 // src/schemas/accounts/phone-number.ts
-var import_zod10 = require("zod");
-var phoneNumberResponseSchema = import_zod10.z.object({
-  verified_name: import_zod10.z.string(),
-  display_phone_number: import_zod10.z.string(),
-  id: import_zod10.z.string(),
-  quality_rating: import_zod10.z.string()
+var import_zod11 = require("zod");
+var phoneNumberResponseSchema = import_zod11.z.object({
+  verified_name: import_zod11.z.string(),
+  display_phone_number: import_zod11.z.string(),
+  id: import_zod11.z.string(),
+  quality_rating: import_zod11.z.string()
 });
-var phoneNumberListResponseSchema = import_zod10.z.object({
-  data: import_zod10.z.array(phoneNumberResponseSchema)
+var phoneNumberListResponseSchema = import_zod11.z.object({
+  data: import_zod11.z.array(phoneNumberResponseSchema)
 });
 
 // src/schemas/business/account.ts
-var import_zod11 = require("zod");
-var businessAccountResponseSchema = import_zod11.z.object({
-  id: import_zod11.z.string(),
-  name: import_zod11.z.string().optional(),
-  account_review_status: import_zod11.z.string().optional(),
-  currency: import_zod11.z.string().optional(),
-  country: import_zod11.z.string().optional(),
-  timezone_id: import_zod11.z.string().optional(),
-  business_verification_status: import_zod11.z.string().optional(),
-  is_enabled_for_insights: import_zod11.z.boolean().optional(),
-  message_template_namespace: import_zod11.z.string().optional()
-});
-var businessAccountsListResponseSchema = import_zod11.z.object({
-  data: import_zod11.z.record(import_zod11.z.string(), businessAccountResponseSchema).or(
-    import_zod11.z.array(businessAccountResponseSchema)
-  ),
-  paging: import_zod11.z.object({
-    cursors: import_zod11.z.object({
-      before: import_zod11.z.string().optional(),
-      after: import_zod11.z.string().optional()
-    }).optional(),
-    next: import_zod11.z.string().url().optional(),
-    previous: import_zod11.z.string().url().optional()
-  }).optional()
-});
-
-// src/schemas/templates/response.ts
 var import_zod12 = require("zod");
-var templateSchema = import_zod12.z.object({
+var businessAccountResponseSchema = import_zod12.z.object({
   id: import_zod12.z.string(),
-  name: import_zod12.z.string(),
-  language: import_zod12.z.string(),
-  status: import_zod12.z.string(),
-  category: import_zod12.z.string(),
-  components: import_zod12.z.array(templateComponentSchema)
+  name: import_zod12.z.string().optional(),
+  account_review_status: import_zod12.z.string().optional(),
+  currency: import_zod12.z.string().optional(),
+  country: import_zod12.z.string().optional(),
+  timezone_id: import_zod12.z.string().optional(),
+  business_verification_status: import_zod12.z.string().optional(),
+  is_enabled_for_insights: import_zod12.z.boolean().optional(),
+  message_template_namespace: import_zod12.z.string().optional()
 });
-var templateCreateResponseSchema = import_zod12.z.object({
-  id: import_zod12.z.string(),
-  status: import_zod12.z.string(),
-  category: import_zod12.z.string()
-});
-var templateListResponseSchema = import_zod12.z.object({
-  data: import_zod12.z.array(templateSchema),
+var businessAccountsListResponseSchema = import_zod12.z.object({
+  data: import_zod12.z.record(import_zod12.z.string(), businessAccountResponseSchema).or(
+    import_zod12.z.array(businessAccountResponseSchema)
+  ),
   paging: import_zod12.z.object({
     cursors: import_zod12.z.object({
       before: import_zod12.z.string().optional(),
       after: import_zod12.z.string().optional()
+    }).optional(),
+    next: import_zod12.z.string().url().optional(),
+    previous: import_zod12.z.string().url().optional()
+  }).optional()
+});
+
+// src/schemas/templates/response.ts
+var import_zod13 = require("zod");
+var templateSchema = import_zod13.z.object({
+  id: import_zod13.z.string(),
+  name: import_zod13.z.string(),
+  language: import_zod13.z.string(),
+  status: import_zod13.z.string(),
+  category: import_zod13.z.string(),
+  components: import_zod13.z.array(templateComponentSchema)
+});
+var templateCreateResponseSchema = import_zod13.z.object({
+  id: import_zod13.z.string(),
+  status: import_zod13.z.string(),
+  category: import_zod13.z.string()
+});
+var templateListResponseSchema = import_zod13.z.object({
+  data: import_zod13.z.array(templateSchema),
+  paging: import_zod13.z.object({
+    cursors: import_zod13.z.object({
+      before: import_zod13.z.string().optional(),
+      after: import_zod13.z.string().optional()
     }).optional()
   }).optional()
 });
-var templateUpdateResponseSchema = import_zod12.z.object({
-  success: import_zod12.z.boolean()
+var templateUpdateResponseSchema = import_zod13.z.object({
+  success: import_zod13.z.boolean()
 });
-var templateDeleteResponseSchema = import_zod12.z.object({
-  success: import_zod12.z.boolean()
+var templateDeleteResponseSchema = import_zod13.z.object({
+  success: import_zod13.z.boolean()
 });
 
 // src/schemas/debug.ts
-var import_zod13 = require("zod");
-var debugTokenResponseSchema = import_zod13.z.object({
-  data: import_zod13.z.object({
-    app_id: import_zod13.z.string().optional(),
-    type: import_zod13.z.string().optional(),
-    application: import_zod13.z.string().optional(),
-    data_access_expires_at: import_zod13.z.number().optional(),
-    expires_at: import_zod13.z.number().optional(),
-    is_valid: import_zod13.z.boolean().optional(),
-    issued_at: import_zod13.z.number().optional(),
-    metadata: import_zod13.z.object({
-      auth_type: import_zod13.z.string().optional(),
-      sso: import_zod13.z.string().optional()
+var import_zod14 = require("zod");
+var debugTokenResponseSchema = import_zod14.z.object({
+  data: import_zod14.z.object({
+    app_id: import_zod14.z.string().optional(),
+    type: import_zod14.z.string().optional(),
+    application: import_zod14.z.string().optional(),
+    data_access_expires_at: import_zod14.z.number().optional(),
+    expires_at: import_zod14.z.number().optional(),
+    is_valid: import_zod14.z.boolean().optional(),
+    issued_at: import_zod14.z.number().optional(),
+    metadata: import_zod14.z.object({
+      auth_type: import_zod14.z.string().optional(),
+      sso: import_zod14.z.string().optional()
     }).optional(),
-    scopes: import_zod13.z.array(import_zod13.z.string()).optional(),
-    user_id: import_zod13.z.string().optional()
+    scopes: import_zod14.z.array(import_zod14.z.string()).optional(),
+    user_id: import_zod14.z.string().optional()
   })
 });
 // Annotate the CommonJS export names for ESM import in node:
@@ -1387,6 +1615,7 @@ var debugTokenResponseSchema = import_zod13.z.object({
   templateFlowButtonSchema,
   templateFooterComponentSchema,
   templateHeaderComponentSchema,
+  templateLanguageSchema,
   templateListResponseSchema,
   templateListSchema,
   templatePhoneNumberButtonSchema,

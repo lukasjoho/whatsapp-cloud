@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { templateComponentSchema } from "./component";
+import { templateLanguageSchema } from "./language";
 
 /**
  * Schema for creating a template
@@ -10,10 +11,7 @@ export const templateCreateSchema = z.object({
     .string()
     .min(1)
     .max(512, "Template name must be 512 characters or less"),
-  language: z
-    .string()
-    .min(2)
-    .max(5, "Language code must be 2-5 characters (e.g., 'en' or 'en_US')"),
+  language: templateLanguageSchema,
   category: z.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]),
   components: z
     .array(templateComponentSchema)
@@ -58,7 +56,7 @@ export const templateCreateSchema = z.object({
 export const templateUpdateSchema = z.object({
   category: z.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]).optional(),
   components: z.array(templateComponentSchema).optional(),
-  language: z.string().min(2).max(5).optional(),
+  language: templateLanguageSchema.optional(),
   name: z.string().min(1).max(512).optional(),
 });
 

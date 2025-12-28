@@ -566,7 +566,7 @@ var TemplatesClient = class {
 };
 
 // src/schemas/templates/request.ts
-import { z as z4 } from "zod";
+import { z as z5 } from "zod";
 
 // src/schemas/templates/component.ts
 import { z as z3 } from "zod";
@@ -669,12 +669,239 @@ var templateComponentSchema = z3.discriminatedUnion("type", [
   templateButtonsComponentSchema
 ]);
 
+// src/schemas/templates/language.ts
+import { z as z4 } from "zod";
+var templateLanguageSchema = z4.enum([
+  "af",
+  // Afrikaans
+  "sq",
+  // Albanisch
+  "ar",
+  // Arabisch
+  "ar_EG",
+  // Arabisch (Ägypten)
+  "ar_AE",
+  // Arabisch (Vereinigte Arabische Emirate)
+  "ar_LB",
+  // Arabisch (LBN)
+  "ar_MA",
+  // Arabisch (MAR)
+  "ar_QA",
+  // Arabisch (QAT)
+  "az",
+  // Aserbaidschanisch
+  "be_BY",
+  // Belarussisch
+  "bn",
+  // Bengalisch
+  "bn_IN",
+  // Bengali (IND)
+  "bg",
+  // Bulgarisch
+  "ca",
+  // Katalanisch
+  "zh_CN",
+  // Chinesisch (CHN)
+  "zh_HK",
+  // Chinesisch (HKG)
+  "zh_TW",
+  // Chinesisch (TAI)
+  "hr",
+  // Kroatisch
+  "cs",
+  // Tschechisch
+  "da",
+  // Dänisch
+  "prs_AF",
+  // Dari
+  "nl",
+  // Niederländisch
+  "nl_BE",
+  // Niederländisch (BEL)
+  "en",
+  // Englisch
+  "en_GB",
+  // Englisch (UK)
+  "en_US",
+  // Englisch (USA)
+  "en_AE",
+  // Englisch (Vereinigte Arabische Emirate)
+  "en_AU",
+  // Englisch (AUS)
+  "en_CA",
+  // Englisch (Kanada)
+  "en_GH",
+  // Englisch (GHA)
+  "en_IE",
+  // English (IRL)
+  "en_IN",
+  // Englisch (Indien)
+  "en_JM",
+  // Englisch (JAM)
+  "en_MY",
+  // Englisch (MYS)
+  "en_NZ",
+  // Englisch (Neuseeland)
+  "en_QA",
+  // Englisch (QAT)
+  "en_SG",
+  // Englisch (SGP)
+  "en_UG",
+  // Englisch (UGA)
+  "en_ZA",
+  // Englisch (ZAF)
+  "et",
+  // Estnisch
+  "fil",
+  // Filipino
+  "fi",
+  // Finnisch
+  "fr",
+  // Französisch
+  "fr_BE",
+  // Französisch (BEL)
+  "fr_CA",
+  // Französisch (Kanada)
+  "fr_CH",
+  // Französisch (CHE)
+  "fr_CI",
+  // Französisch (CIV)
+  "fr_MA",
+  // Französisch (MAR)
+  "ka",
+  // Georgisch
+  "de",
+  // Deutsch
+  "de_AT",
+  // Deutsch (Österreich)
+  "de_CH",
+  // Deutsch (CHE)
+  "el",
+  // Griechisch
+  "gu",
+  // Gujarati
+  "ha",
+  // Hausa
+  "he",
+  // Hebräisch
+  "hi",
+  // Hindi
+  "hu",
+  // Ungarisch
+  "id",
+  // Indonesisch
+  "ga",
+  // Irisch
+  "it",
+  // Italienisch
+  "ja",
+  // Japanisch
+  "kn",
+  // Kannada
+  "kk",
+  // Kasachisch
+  "rw_RW",
+  // Kinyarwanda
+  "ko",
+  // Koreanisch
+  "ky_KG",
+  // Kirgisisch (Kirgisistan)
+  "lo",
+  // Laotisch
+  "lv",
+  // Lettisch
+  "lt",
+  // Litauisch
+  "mk",
+  // Mazedonisch
+  "ms",
+  // Malaiisch
+  "ml",
+  // Malayalam
+  "mr",
+  // Marathi
+  "nb",
+  // Norwegisch
+  "ps_AF",
+  // Paschtunisch
+  "fa",
+  // Persisch
+  "pl",
+  // Polnisch
+  "pt_BR",
+  // Portugiesisch (BR)
+  "pt_PT",
+  // Portugiesisch (POR)
+  "pa",
+  // Panjabi
+  "ro",
+  // Rumänisch
+  "ru",
+  // Russisch
+  "sr",
+  // Serbisch
+  "si_LK",
+  // Sinhala
+  "sk",
+  // Slowakisch
+  "sl",
+  // Slowenisch
+  "es",
+  // Spanisch
+  "es_AR",
+  // Spanisch (ARG)
+  "es_CL",
+  // Spanisch (CHL)
+  "es_CO",
+  // Spanisch (Kolumbien)
+  "es_CR",
+  // Spanisch (CRI)
+  "es_DO",
+  // Spanisch (DOM)
+  "es_EC",
+  // Spanisch (ECU)
+  "es_HN",
+  // Spanisch (Honduras)
+  "es_MX",
+  // Spanisch (MEX)
+  "es_PA",
+  // Spanisch (PAN)
+  "es_PE",
+  // Spanisch (Peru)
+  "es_ES",
+  // Spanisch (SPA)
+  "es_UY",
+  // Spanisch (URY)
+  "sw",
+  // Swahili
+  "sv",
+  // Schwedisch
+  "ta",
+  // Tamil
+  "te",
+  // Telugu
+  "th",
+  // Thai
+  "tr",
+  // Türkisch
+  "uk",
+  // Ukrainisch
+  "ur",
+  // Urdu
+  "uz",
+  // Usbekisch
+  "vi",
+  // Vietnamesisch
+  "zu"
+  // Zulu
+]);
+
 // src/schemas/templates/request.ts
-var templateCreateSchema = z4.object({
-  name: z4.string().min(1).max(512, "Template name must be 512 characters or less"),
-  language: z4.string().min(2).max(5, "Language code must be 2-5 characters (e.g., 'en' or 'en_US')"),
-  category: z4.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]),
-  components: z4.array(templateComponentSchema).min(1, "At least one component is required").refine(
+var templateCreateSchema = z5.object({
+  name: z5.string().min(1).max(512, "Template name must be 512 characters or less"),
+  language: templateLanguageSchema,
+  category: z5.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]),
+  components: z5.array(templateComponentSchema).min(1, "At least one component is required").refine(
     (components) => {
       return components.some((c) => c.type === "BODY");
     },
@@ -699,19 +926,19 @@ var templateCreateSchema = z4.object({
     { message: "Only one BUTTONS component is allowed" }
   )
 });
-var templateUpdateSchema = z4.object({
-  category: z4.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]).optional(),
-  components: z4.array(templateComponentSchema).optional(),
-  language: z4.string().min(2).max(5).optional(),
-  name: z4.string().min(1).max(512).optional()
+var templateUpdateSchema = z5.object({
+  category: z5.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]).optional(),
+  components: z5.array(templateComponentSchema).optional(),
+  language: templateLanguageSchema.optional(),
+  name: z5.string().min(1).max(512).optional()
 });
-var templateListSchema = z4.object({
-  name: z4.string().optional()
+var templateListSchema = z5.object({
+  name: z5.string().optional()
   // Filter by template name
 });
-var templateDeleteSchema = z4.object({
-  name: z4.string().optional(),
-  hsm_id: z4.string().optional()
+var templateDeleteSchema = z5.object({
+  name: z5.string().optional(),
+  hsm_id: z5.string().optional()
 }).refine((data) => data.name || data.hsm_id, {
   message: "Either name or hsm_id must be provided"
 });
@@ -895,88 +1122,88 @@ function verifyWebhook(query, verifyToken) {
 }
 
 // src/schemas/webhooks/payload.ts
-import { z as z6 } from "zod";
+import { z as z7 } from "zod";
 
 // src/schemas/webhooks/incoming-message.ts
-import { z as z5 } from "zod";
-var baseIncomingMessageSchema = z5.object({
-  from: z5.string(),
+import { z as z6 } from "zod";
+var baseIncomingMessageSchema = z6.object({
+  from: z6.string(),
   // WhatsApp ID (phone number without +)
-  id: z5.string(),
+  id: z6.string(),
   // Message ID (wamid.*)
-  timestamp: z5.string(),
+  timestamp: z6.string(),
   // Unix timestamp as string
-  type: z5.string()
+  type: z6.string()
   // Message type discriminator
 });
-var incomingTextContentSchema = z5.object({
-  body: z5.string()
+var incomingTextContentSchema = z6.object({
+  body: z6.string()
 });
-var incomingAudioContentSchema = z5.object({
-  id: z5.string(),
+var incomingAudioContentSchema = z6.object({
+  id: z6.string(),
   // Media ID for downloading
-  mime_type: z5.string().optional()
+  mime_type: z6.string().optional()
   // e.g., "audio/ogg; codecs=opus"
 });
-var incomingImageContentSchema = z5.object({
-  id: z5.string(),
+var incomingImageContentSchema = z6.object({
+  id: z6.string(),
   // Media ID for downloading
-  mime_type: z5.string().optional(),
+  mime_type: z6.string().optional(),
   // e.g., "image/jpeg"
-  caption: z5.string().optional()
+  caption: z6.string().optional()
   // Optional caption text
 });
 var incomingTextMessageSchema = baseIncomingMessageSchema.extend({
-  type: z5.literal("text"),
+  type: z6.literal("text"),
   text: incomingTextContentSchema
 });
 var incomingAudioMessageSchema = baseIncomingMessageSchema.extend({
-  type: z5.literal("audio"),
+  type: z6.literal("audio"),
   audio: incomingAudioContentSchema
 });
 var incomingImageMessageSchema = baseIncomingMessageSchema.extend({
-  type: z5.literal("image"),
+  type: z6.literal("image"),
   image: incomingImageContentSchema
 });
-var incomingMessageSchema = z5.discriminatedUnion("type", [
+var incomingMessageSchema = z6.discriminatedUnion("type", [
   incomingTextMessageSchema,
   incomingAudioMessageSchema,
   incomingImageMessageSchema
 ]);
 
 // src/schemas/webhooks/payload.ts
-var contactSchema = z6.object({
-  profile: z6.object({
-    name: z6.string()
+var contactSchema = z7.object({
+  profile: z7.object({
+    name: z7.string()
   }),
-  wa_id: z6.string()
+  wa_id: z7.string()
 });
-var webhookMetadataSchema = z6.object({
-  display_phone_number: z6.string(),
-  phone_number_id: z6.string()
+var webhookMetadataSchema = z7.object({
+  display_phone_number: z7.string(),
+  phone_number_id: z7.string()
 });
-var webhookValueSchema = z6.object({
-  messaging_product: z6.literal("whatsapp"),
+var webhookValueSchema = z7.object({
+  messaging_product: z7.literal("whatsapp"),
   metadata: webhookMetadataSchema,
-  contacts: z6.array(contactSchema).optional(),
-  messages: z6.array(incomingMessageSchema).optional(),
+  contacts: z7.array(contactSchema).optional(),
+  messages: z7.array(incomingMessageSchema).optional(),
   // Incoming messages
-  statuses: z6.array(z6.any()).optional()
+  statuses: z7.array(z7.any()).optional()
   // Status updates (for later)
 });
-var webhookChangeSchema = z6.object({
+var webhookChangeSchema = z7.object({
   value: webhookValueSchema,
-  field: z6.literal("messages")
+  field: z7.literal("messages")
   // For now: only messages field
 });
-var webhookEntrySchema = z6.object({
-  id: z6.string(),
+var webhookEntrySchema = z7.object({
+  id: z7.string(),
   // WABA ID
-  changes: z6.array(webhookChangeSchema)
+  changes: z7.array(webhookChangeSchema)
 });
-var webhookPayloadSchema = z6.object({
-  object: z6.literal("whatsapp_business_account"),
-  entry: z6.array(webhookEntrySchema)
+var webhookPayloadSchema = z7.object({
+  object: z7.literal("whatsapp_business_account"),
+  entry: z7.array(webhookEntrySchema)
 });
 
 // src/services/webhooks/WebhooksService.ts
@@ -1182,109 +1409,109 @@ var WhatsAppClient = class {
 };
 
 // src/schemas/messages/response.ts
-import { z as z7 } from "zod";
-var messageResponseSchema = z7.object({
-  messaging_product: z7.literal("whatsapp"),
-  contacts: z7.array(
-    z7.object({
-      input: z7.string(),
-      wa_id: z7.string()
+import { z as z8 } from "zod";
+var messageResponseSchema = z8.object({
+  messaging_product: z8.literal("whatsapp"),
+  contacts: z8.array(
+    z8.object({
+      input: z8.string(),
+      wa_id: z8.string()
     })
   ),
-  messages: z7.array(
-    z7.object({
-      id: z7.string()
+  messages: z8.array(
+    z8.object({
+      id: z8.string()
     })
   )
 });
 
 // src/schemas/accounts/phone-number.ts
-import { z as z8 } from "zod";
-var phoneNumberResponseSchema = z8.object({
-  verified_name: z8.string(),
-  display_phone_number: z8.string(),
-  id: z8.string(),
-  quality_rating: z8.string()
+import { z as z9 } from "zod";
+var phoneNumberResponseSchema = z9.object({
+  verified_name: z9.string(),
+  display_phone_number: z9.string(),
+  id: z9.string(),
+  quality_rating: z9.string()
 });
-var phoneNumberListResponseSchema = z8.object({
-  data: z8.array(phoneNumberResponseSchema)
+var phoneNumberListResponseSchema = z9.object({
+  data: z9.array(phoneNumberResponseSchema)
 });
 
 // src/schemas/business/account.ts
-import { z as z9 } from "zod";
-var businessAccountResponseSchema = z9.object({
-  id: z9.string(),
-  name: z9.string().optional(),
-  account_review_status: z9.string().optional(),
-  currency: z9.string().optional(),
-  country: z9.string().optional(),
-  timezone_id: z9.string().optional(),
-  business_verification_status: z9.string().optional(),
-  is_enabled_for_insights: z9.boolean().optional(),
-  message_template_namespace: z9.string().optional()
-});
-var businessAccountsListResponseSchema = z9.object({
-  data: z9.record(z9.string(), businessAccountResponseSchema).or(
-    z9.array(businessAccountResponseSchema)
-  ),
-  paging: z9.object({
-    cursors: z9.object({
-      before: z9.string().optional(),
-      after: z9.string().optional()
-    }).optional(),
-    next: z9.string().url().optional(),
-    previous: z9.string().url().optional()
-  }).optional()
-});
-
-// src/schemas/templates/response.ts
 import { z as z10 } from "zod";
-var templateSchema = z10.object({
+var businessAccountResponseSchema = z10.object({
   id: z10.string(),
-  name: z10.string(),
-  language: z10.string(),
-  status: z10.string(),
-  category: z10.string(),
-  components: z10.array(templateComponentSchema)
+  name: z10.string().optional(),
+  account_review_status: z10.string().optional(),
+  currency: z10.string().optional(),
+  country: z10.string().optional(),
+  timezone_id: z10.string().optional(),
+  business_verification_status: z10.string().optional(),
+  is_enabled_for_insights: z10.boolean().optional(),
+  message_template_namespace: z10.string().optional()
 });
-var templateCreateResponseSchema = z10.object({
-  id: z10.string(),
-  status: z10.string(),
-  category: z10.string()
-});
-var templateListResponseSchema = z10.object({
-  data: z10.array(templateSchema),
+var businessAccountsListResponseSchema = z10.object({
+  data: z10.record(z10.string(), businessAccountResponseSchema).or(
+    z10.array(businessAccountResponseSchema)
+  ),
   paging: z10.object({
     cursors: z10.object({
       before: z10.string().optional(),
       after: z10.string().optional()
+    }).optional(),
+    next: z10.string().url().optional(),
+    previous: z10.string().url().optional()
+  }).optional()
+});
+
+// src/schemas/templates/response.ts
+import { z as z11 } from "zod";
+var templateSchema = z11.object({
+  id: z11.string(),
+  name: z11.string(),
+  language: z11.string(),
+  status: z11.string(),
+  category: z11.string(),
+  components: z11.array(templateComponentSchema)
+});
+var templateCreateResponseSchema = z11.object({
+  id: z11.string(),
+  status: z11.string(),
+  category: z11.string()
+});
+var templateListResponseSchema = z11.object({
+  data: z11.array(templateSchema),
+  paging: z11.object({
+    cursors: z11.object({
+      before: z11.string().optional(),
+      after: z11.string().optional()
     }).optional()
   }).optional()
 });
-var templateUpdateResponseSchema = z10.object({
-  success: z10.boolean()
+var templateUpdateResponseSchema = z11.object({
+  success: z11.boolean()
 });
-var templateDeleteResponseSchema = z10.object({
-  success: z10.boolean()
+var templateDeleteResponseSchema = z11.object({
+  success: z11.boolean()
 });
 
 // src/schemas/debug.ts
-import { z as z11 } from "zod";
-var debugTokenResponseSchema = z11.object({
-  data: z11.object({
-    app_id: z11.string().optional(),
-    type: z11.string().optional(),
-    application: z11.string().optional(),
-    data_access_expires_at: z11.number().optional(),
-    expires_at: z11.number().optional(),
-    is_valid: z11.boolean().optional(),
-    issued_at: z11.number().optional(),
-    metadata: z11.object({
-      auth_type: z11.string().optional(),
-      sso: z11.string().optional()
+import { z as z12 } from "zod";
+var debugTokenResponseSchema = z12.object({
+  data: z12.object({
+    app_id: z12.string().optional(),
+    type: z12.string().optional(),
+    application: z12.string().optional(),
+    data_access_expires_at: z12.number().optional(),
+    expires_at: z12.number().optional(),
+    is_valid: z12.boolean().optional(),
+    issued_at: z12.number().optional(),
+    metadata: z12.object({
+      auth_type: z12.string().optional(),
+      sso: z12.string().optional()
     }).optional(),
-    scopes: z11.array(z11.string()).optional(),
-    user_id: z11.string().optional()
+    scopes: z12.array(z12.string()).optional(),
+    user_id: z12.string().optional()
   })
 });
 export {
@@ -1320,6 +1547,7 @@ export {
   templateFlowButtonSchema,
   templateFooterComponentSchema,
   templateHeaderComponentSchema,
+  templateLanguageSchema,
   templateListResponseSchema,
   templateListSchema,
   templatePhoneNumberButtonSchema,
