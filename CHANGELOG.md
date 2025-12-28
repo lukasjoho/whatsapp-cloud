@@ -1,5 +1,11 @@
 # whatzapp
 
+## 0.0.9
+
+### Patch Changes
+
+- 80b7d80: bump version
+
 ## 0.0.7
 
 ### Patch Changes
