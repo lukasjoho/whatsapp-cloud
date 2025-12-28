@@ -1,5 +1,12 @@
 # whatzapp
 
+## 0.0.6
+
+### Patch Changes
+
+- a46c084: export types
+- 175d774: add webhooks namespace
+
 ## 0.0.5
 
 ### Patch Changes
