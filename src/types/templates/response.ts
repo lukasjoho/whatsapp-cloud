@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  templateResponseSchema,
+  templateSchema,
   createTemplateResponseSchema,
   listTemplatesResponseSchema,
   updateTemplateResponseSchema,
@@ -8,9 +8,9 @@ import {
 } from "../../schemas/templates/response";
 
 /**
- * Type for a single template
+ * Type for a template (the base/select model - what you get from API)
  */
-export type TemplateResponse = z.infer<typeof templateResponseSchema>;
+export type Template = z.infer<typeof templateSchema>;
 
 /**
  * Type for create template response

@@ -7,15 +7,15 @@ import { updateTemplate } from "./methods/update";
 import { deleteTemplate } from "./methods/delete";
 import { WhatsAppValidationError } from "../../errors";
 import type {
-  CreateTemplateRequest,
-  UpdateTemplateRequest,
+  TemplateCreate,
+  TemplateUpdate,
   ListTemplatesRequest,
   DeleteTemplateRequest,
 } from "../../types/templates/request";
 import type {
   CreateTemplateResponse,
   ListTemplatesResponse,
-  TemplateResponse,
+  Template,
   UpdateTemplateResponse,
   DeleteTemplateResponse,
 } from "../../types/templates/response";
@@ -54,7 +54,7 @@ export class TemplatesService {
    * @param businessAccountId - Optional WABA ID (overrides client config)
    */
   async create(
-    request: CreateTemplateRequest,
+    request: TemplateCreate,
     businessAccountId?: string
   ): Promise<CreateTemplateResponse> {
     const client = this.getClient(businessAccountId);
@@ -82,7 +82,7 @@ export class TemplatesService {
    *
    * @param templateId - Template ID
    */
-  async get(templateId: string): Promise<TemplateResponse> {
+  async get(templateId: string): Promise<Template> {
     return getTemplate(this.httpClient, templateId);
   }
 
@@ -96,7 +96,7 @@ export class TemplatesService {
    */
   async update(
     templateId: string,
-    request: UpdateTemplateRequest
+    request: TemplateUpdate
   ): Promise<UpdateTemplateResponse> {
     return updateTemplate(this.httpClient, templateId, request);
   }

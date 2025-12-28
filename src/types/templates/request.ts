@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
-  createTemplateRequestSchema,
-  updateTemplateRequestSchema,
+  templateCreateSchema,
+  templateUpdateSchema,
   listTemplatesRequestSchema,
   deleteTemplateRequestSchema,
 } from "../../schemas/templates/request";
@@ -9,12 +9,12 @@ import {
 /**
  * Type for creating a template
  */
-export type CreateTemplateRequest = z.infer<typeof createTemplateRequestSchema>;
+export type TemplateCreate = z.infer<typeof templateCreateSchema>;
 
 /**
  * Type for updating a template
  */
-export type UpdateTemplateRequest = z.infer<typeof updateTemplateRequestSchema>;
+export type TemplateUpdate = z.infer<typeof templateUpdateSchema>;
 
 /**
  * Type for listing templates

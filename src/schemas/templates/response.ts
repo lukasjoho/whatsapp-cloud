@@ -2,9 +2,9 @@ import { z } from "zod";
 import { componentSchema } from "./component";
 
 /**
- * Schema for template response (single template)
+ * Schema for template (the base/select model - what you get from API)
  */
-export const templateResponseSchema = z.object({
+export const templateSchema = z.object({
   id: z.string(),
   name: z.string(),
   language: z.string(),

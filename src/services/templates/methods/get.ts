@@ -1,5 +1,5 @@
 import type { HttpClient } from "../../../client/HttpClient";
-import type { TemplateResponse } from "../../../types/templates/response";
+import type { Template } from "../../../types/templates/response";
 
 /**
  * Get a template by ID
@@ -12,12 +12,12 @@ import type { TemplateResponse } from "../../../types/templates/response";
 export async function getTemplate(
   httpClient: HttpClient,
   templateId: string
-): Promise<TemplateResponse> {
+): Promise<Template> {
   if (!templateId || templateId.trim().length === 0) {
     throw new Error("Template ID is required");
   }
 
   // Make API request - template ID is used directly, no WABA prefix
-  return httpClient.get<TemplateResponse>(`/${templateId}`);
+  return httpClient.get<Template>(`/${templateId}`);
 }
 

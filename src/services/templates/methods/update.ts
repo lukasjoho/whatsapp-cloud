@@ -1,6 +1,6 @@
 import type { HttpClient } from "../../../client/HttpClient";
-import { updateTemplateRequestSchema } from "../../../schemas/templates/request";
-import type { UpdateTemplateRequest } from "../../../types/templates/request";
+import { templateUpdateSchema } from "../../../schemas/templates/request";
+import type { TemplateUpdate } from "../../../types/templates/request";
 import type { UpdateTemplateResponse } from "../../../types/templates/response";
 import { transformZodError } from "../../../utils/zod-error";
 
@@ -16,14 +16,14 @@ import { transformZodError } from "../../../utils/zod-error";
 export async function updateTemplate(
   httpClient: HttpClient,
   templateId: string,
-  request: UpdateTemplateRequest
+  request: TemplateUpdate
 ): Promise<UpdateTemplateResponse> {
   if (!templateId || templateId.trim().length === 0) {
     throw new Error("Template ID is required");
   }
 
   // Validate request with schema - throws WhatsAppValidationError if invalid
-  const result = updateTemplateRequestSchema.safeParse(request);
+  const result = templateUpdateSchema.safeParse(request);
   if (!result.success) {
     throw transformZodError(result.error);
   }

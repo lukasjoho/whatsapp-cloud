@@ -5,7 +5,7 @@ import { componentSchema } from "./component";
  * Schema for creating a template
  * Simplified - no variables/examples for now
  */
-export const createTemplateRequestSchema = z.object({
+export const templateCreateSchema = z.object({
   name: z.string().min(1).max(512, "Template name must be 512 characters or less"),
   language: z.string().min(2).max(5, "Language code must be 2-5 characters (e.g., 'en' or 'en_US')"),
   category: z.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]),
@@ -49,7 +49,7 @@ export const createTemplateRequestSchema = z.object({
  * Schema for updating a template
  * All fields optional - only update what's provided
  */
-export const updateTemplateRequestSchema = z.object({
+export const templateUpdateSchema = z.object({
   category: z.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]).optional(),
   components: z.array(componentSchema).optional(),
   language: z.string().min(2).max(5).optional(),
