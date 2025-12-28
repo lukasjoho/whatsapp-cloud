@@ -1,5 +1,11 @@
 # whatzapp
 
+## 0.0.12
+
+### Patch Changes
+
+- c8cb10c: add language
+
 ## 0.0.11
 
 ### Patch Changes
