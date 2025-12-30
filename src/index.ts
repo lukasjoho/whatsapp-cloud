@@ -9,6 +9,7 @@ export type * from "./types/index";
 
 // Export webhook handler types (convenience exports)
 export type {
+  WebhookContext,
   MessageContext,
   MessageHandlers,
   HandleOptions,

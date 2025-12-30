@@ -12,10 +12,10 @@ import type {
 } from "../../types/webhooks";
 
 /**
- * Context provided to message handlers
- * Contains metadata and contact info (message is passed separately)
+ * WhatsApp webhook context - data from Meta's webhook payload
+ * This is the "domain" of WhatsApp, not your application
  */
-export type MessageContext = {
+export type WebhookContext = {
   metadata: {
     phoneNumberId: string;
     displayPhoneNumber: string;
@@ -28,21 +28,66 @@ export type MessageContext = {
 };
 
 /**
- * Handler functions for different message types
- * Receives message and context separately - message is the focus, context is optional metadata
+ * @deprecated Use `WebhookContext` instead. This alias is kept for backward compatibility.
  */
-export type MessageHandlers = {
+export type MessageContext = WebhookContext;
+
+/**
+ * Extract the return type from beforeHandler if it exists
+ * Used for type inference to provide type safety in message handlers
+ */
+type ExtractBeforeType<THandlers> = THandlers extends {
+  beforeHandler: (...args: any[]) => infer R;
+}
+  ? Awaited<R>
+  : Record<string, never>;
+
+/**
+ * Handler functions for different message types
+ *
+ * The `beforeHandler` return type is automatically inferred and passed
+ * as the third argument to message handlers for full type safety.
+ *
+ * @example
+ * ```typescript
+ * client.webhooks.handle(req.body, {
+ *   beforeHandler: async (message, webhook) => {
+ *     return { customerIds: ["123", "456"] };
+ *   },
+ *   text: async (message, webhook, before) => {
+ *     // before.customerIds is typed as string[] ✅
+ *     console.log(before.customerIds);
+ *   },
+ * });
+ * ```
+ */
+export type MessageHandlers<TBefore = Record<string, never>> = {
+  /**
+   * Resolves webhook data to application entities
+   * ALWAYS runs first if defined, before any message handler.
+   * The return type is automatically inferred and passed to message handlers.
+   */
+  beforeHandler?: (
+    message: IncomingMessage,
+    webhook: WebhookContext
+  ) => Promise<TBefore> | TBefore;
+
   text?: (
     message: IncomingTextMessage,
-    context: MessageContext
+    webhook: WebhookContext,
+    before: TBefore
   ) => Promise<void> | void;
+
   audio?: (
     message: IncomingAudioMessage,
-    context: MessageContext
+    webhook: WebhookContext,
+    before: TBefore
   ) => Promise<void> | void;
+
   image?: (
     message: IncomingImageMessage,
-    context: MessageContext
+    webhook: WebhookContext,
+    before: TBefore
   ) => Promise<void> | void;
 };
 
@@ -176,13 +221,16 @@ export class WebhooksService {
    * Handlers are processed asynchronously. If you need to await handler completion,
    * use the low-level `extractMessages()` method instead.
    *
+   * The `beforeHandler` return type is automatically inferred and provides
+   * full type safety in message handlers.
+   *
    * @param payload - Webhook payload from Meta (will be validated)
    * @param handlers - Object with handler functions for each message type
    * @param options - Optional error handling configuration
    */
-  handle(
+  handle<THandlers extends MessageHandlers<any>>(
     payload: unknown,
-    handlers: MessageHandlers,
+    handlers: THandlers,
     options?: HandleOptions
   ): void {
     // Validate payload (logs error if malformed, but continues)
@@ -205,8 +253,8 @@ export class WebhooksService {
             // Find contact for this message (match by wa_id)
             const contact = contacts.find((c) => c.wa_id === message.from);
 
-            // Build context (metadata + contact, no message duplication)
-            const context: MessageContext = {
+            // Build webhook context (metadata + contact, no message duplication)
+            const webhook: WebhookContext = {
               metadata,
               ...(contact && {
                 contact: {
@@ -220,23 +268,50 @@ export class WebhooksService {
             // This allows long-running handlers without blocking webhook response
             Promise.resolve()
               .then(async () => {
+                // Extract the before type from handlers for type safety
+                type BeforeType = ExtractBeforeType<THandlers>;
+
+                // Run beforeHandler first if defined
+                let before: BeforeType = {} as BeforeType;
+                if (handlers.beforeHandler) {
+                  try {
+                    before = (await handlers.beforeHandler(
+                      message,
+                      webhook
+                    )) as BeforeType;
+                  } catch (error) {
+                    // If beforeHandler fails, continue with empty before context
+                    // (graceful degradation - handlers can check if before is populated)
+                    if (options?.onError) {
+                      options.onError(error as Error, message);
+                    } else {
+                      console.error(
+                        `Error in beforeHandler for message ${message.id}:`,
+                        error
+                      );
+                    }
+                    // Continue with empty before context
+                    before = {} as BeforeType;
+                  }
+                }
+
                 // Type-safe dispatch based on message type
                 switch (message.type) {
                   case "text":
                     if (handlers.text) {
-                      await handlers.text(message, context);
+                      await handlers.text(message, webhook, before);
                     }
                     break;
 
                   case "audio":
                     if (handlers.audio) {
-                      await handlers.audio(message, context);
+                      await handlers.audio(message, webhook, before);
                     }
                     break;
 
                   case "image":
                     if (handlers.image) {
-                      await handlers.image(message, context);
+                      await handlers.image(message, webhook, before);
                     }
                     break;
 

@@ -1,3 +1,8 @@
 export * from "./WebhooksService";
-export type { MessageContext, MessageHandlers, HandleOptions } from "./WebhooksService";
+export type {
+  WebhookContext,
+  MessageContext,
+  MessageHandlers,
+  HandleOptions,
+} from "./WebhooksService";
 
