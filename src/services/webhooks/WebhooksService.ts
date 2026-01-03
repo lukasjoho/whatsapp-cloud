@@ -35,6 +35,12 @@ export type MessageContext = WebhookContext;
 /**
  * Extract the return type from beforeHandler if it exists
  * Used for type inference to provide type safety in message handlers
+ *
+ * This works by:
+ * 1. Checking if THandlers has a beforeHandler property
+ * 2. Extracting the return type (R) using TypeScript's infer
+ * 3. Unwrapping Promise types with Awaited
+ * 4. Defaulting to empty object if no beforeHandler exists
  */
 type ExtractBeforeType<THandlers> = THandlers extends {
   beforeHandler: (...args: any[]) => infer R;
@@ -55,8 +61,13 @@ type ExtractBeforeType<THandlers> = THandlers extends {
  *     return { customerIds: ["123", "456"] };
  *   },
  *   text: async (message, webhook, before) => {
- *     // before.customerIds is typed as string[] ✅
- *     console.log(before.customerIds);
+ *     // before is TBefore | undefined
+ *     // - undefined = beforeHandler not set or failed
+ *     // - object = beforeHandler succeeded (even if empty {})
+ *     if (before) {
+ *       // before.customerIds is typed as string[] ✅
+ *       console.log(before.customerIds);
+ *     }
  *   },
  * });
  * ```
@@ -75,19 +86,19 @@ export type MessageHandlers<TBefore = Record<string, never>> = {
   text?: (
     message: IncomingTextMessage,
     webhook: WebhookContext,
-    before: TBefore
+    before: TBefore | undefined
   ) => Promise<void> | void;
 
   audio?: (
     message: IncomingAudioMessage,
     webhook: WebhookContext,
-    before: TBefore
+    before: TBefore | undefined
   ) => Promise<void> | void;
 
   image?: (
     message: IncomingImageMessage,
     webhook: WebhookContext,
-    before: TBefore
+    before: TBefore | undefined
   ) => Promise<void> | void;
 };
 
@@ -272,7 +283,7 @@ export class WebhooksService {
                 type BeforeType = ExtractBeforeType<THandlers>;
 
                 // Run beforeHandler first if defined
-                let before: BeforeType = {} as BeforeType;
+                let before: BeforeType | undefined = undefined;
                 if (handlers.beforeHandler) {
                   try {
                     before = (await handlers.beforeHandler(
@@ -280,8 +291,8 @@ export class WebhooksService {
                       webhook
                     )) as BeforeType;
                   } catch (error) {
-                    // If beforeHandler fails, continue with empty before context
-                    // (graceful degradation - handlers can check if before is populated)
+                    // If beforeHandler fails, set to undefined
+                    // (graceful degradation - handlers can check if before exists)
                     if (options?.onError) {
                       options.onError(error as Error, message);
                     } else {
@@ -290,8 +301,8 @@ export class WebhooksService {
                         error
                       );
                     }
-                    // Continue with empty before context
-                    before = {} as BeforeType;
+                    // Continue with undefined - clear signal that beforeHandler failed
+                    before = undefined;
                   }
                 }
 
