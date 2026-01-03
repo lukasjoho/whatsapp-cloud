@@ -1,5 +1,12 @@
 # whatzapp
 
+## 0.1.0
+
+### Minor Changes
+
+- 6bbb09e: add new handlers
+- 47f0f37: add before handler
+
 ## 0.0.13
 
 ### Patch Changes
