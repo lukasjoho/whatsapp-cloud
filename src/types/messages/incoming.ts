@@ -4,7 +4,7 @@ import {
   incomingAudioMessageSchema,
   incomingImageMessageSchema,
   incomingMessageSchema,
-} from "../../schemas/webhooks/incoming-message";
+} from "../../schemas/messages/incoming";
 
 /**
  * Type for incoming text message

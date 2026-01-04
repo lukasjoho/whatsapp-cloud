@@ -53,10 +53,19 @@ declare class HttpClient {
 }
 
 /**
- * Schema for sending an image message
- * Matches the structure expected by WhatsApp API (minus messaging_product, recipient_type, type, and phoneNumberId)
+ * Input schema for sendText() method
  */
-declare const sendImageRequestSchema: z.ZodObject<{
+declare const sendTextInputSchema: z.ZodObject<{
+    to: z.ZodString;
+    text: z.ZodObject<{
+        body: z.ZodString;
+        preview_url: z.ZodOptional<z.ZodBoolean>;
+    }, z.core.$strip>;
+}, z.core.$strip>;
+/**
+ * Input schema for sendImage() method
+ */
+declare const sendImageInputSchema: z.ZodObject<{
     to: z.ZodString;
     image: z.ZodObject<{
         id: z.ZodOptional<z.ZodString>;
@@ -65,21 +74,9 @@ declare const sendImageRequestSchema: z.ZodObject<{
     }, z.core.$strip>;
 }, z.core.$strip>;
 /**
- * Schema for sending a text message
- * Matches the structure expected by WhatsApp API (minus messaging_product, recipient_type, type, and phoneNumberId)
+ * Input schema for sendLocation() method
  */
-declare const sendTextRequestSchema: z.ZodObject<{
-    to: z.ZodString;
-    text: z.ZodObject<{
-        body: z.ZodString;
-        preview_url: z.ZodOptional<z.ZodBoolean>;
-    }, z.core.$strip>;
-}, z.core.$strip>;
-/**
- * Schema for sending a location message
- * Matches the structure expected by WhatsApp API (minus messaging_product, recipient_type, type, and phoneNumberId)
- */
-declare const sendLocationRequestSchema: z.ZodObject<{
+declare const sendLocationInputSchema: z.ZodObject<{
     to: z.ZodString;
     location: z.ZodObject<{
         longitude: z.ZodNumber;
@@ -89,33 +86,135 @@ declare const sendLocationRequestSchema: z.ZodObject<{
     }, z.core.$strip>;
 }, z.core.$strip>;
 /**
- * Schema for sending a reaction message
- * Matches the structure expected by WhatsApp API (minus messaging_product, recipient_type, type, and phoneNumberId)
+ * Input schema for sendReaction() method
  */
-declare const sendReactionRequestSchema: z.ZodObject<{
+declare const sendReactionInputSchema: z.ZodObject<{
     to: z.ZodString;
     reaction: z.ZodObject<{
         message_id: z.ZodString;
         emoji: z.ZodString;
     }, z.core.$strip>;
 }, z.core.$strip>;
+/**
+ * Full outgoing text message schema (includes type discriminator)
+ */
+declare const outgoingTextMessageSchema: z.ZodObject<{
+    to: z.ZodString;
+    text: z.ZodObject<{
+        body: z.ZodString;
+        preview_url: z.ZodOptional<z.ZodBoolean>;
+    }, z.core.$strip>;
+    type: z.ZodLiteral<"text">;
+}, z.core.$strip>;
+/**
+ * Full outgoing image message schema (includes type discriminator)
+ */
+declare const outgoingImageMessageSchema: z.ZodObject<{
+    to: z.ZodString;
+    image: z.ZodObject<{
+        id: z.ZodOptional<z.ZodString>;
+        link: z.ZodOptional<z.ZodString>;
+        caption: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>;
+    type: z.ZodLiteral<"image">;
+}, z.core.$strip>;
+/**
+ * Full outgoing location message schema (includes type discriminator)
+ */
+declare const outgoingLocationMessageSchema: z.ZodObject<{
+    to: z.ZodString;
+    location: z.ZodObject<{
+        longitude: z.ZodNumber;
+        latitude: z.ZodNumber;
+        name: z.ZodOptional<z.ZodString>;
+        address: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>;
+    type: z.ZodLiteral<"location">;
+}, z.core.$strip>;
+/**
+ * Full outgoing reaction message schema (includes type discriminator)
+ */
+declare const outgoingReactionMessageSchema: z.ZodObject<{
+    to: z.ZodString;
+    reaction: z.ZodObject<{
+        message_id: z.ZodString;
+        emoji: z.ZodString;
+    }, z.core.$strip>;
+    type: z.ZodLiteral<"reaction">;
+}, z.core.$strip>;
+/**
+ * Union of all outgoing message types
+ * Discriminated by the 'type' field
+ */
+declare const outgoingMessageSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
+    to: z.ZodString;
+    text: z.ZodObject<{
+        body: z.ZodString;
+        preview_url: z.ZodOptional<z.ZodBoolean>;
+    }, z.core.$strip>;
+    type: z.ZodLiteral<"text">;
+}, z.core.$strip>, z.ZodObject<{
+    to: z.ZodString;
+    image: z.ZodObject<{
+        id: z.ZodOptional<z.ZodString>;
+        link: z.ZodOptional<z.ZodString>;
+        caption: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>;
+    type: z.ZodLiteral<"image">;
+}, z.core.$strip>, z.ZodObject<{
+    to: z.ZodString;
+    location: z.ZodObject<{
+        longitude: z.ZodNumber;
+        latitude: z.ZodNumber;
+        name: z.ZodOptional<z.ZodString>;
+        address: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>;
+    type: z.ZodLiteral<"location">;
+}, z.core.$strip>, z.ZodObject<{
+    to: z.ZodString;
+    reaction: z.ZodObject<{
+        message_id: z.ZodString;
+        emoji: z.ZodString;
+    }, z.core.$strip>;
+    type: z.ZodLiteral<"reaction">;
+}, z.core.$strip>], "type">;
 
 /**
- * Type for sending a text message
+ * Input type for sendText() method
  */
-type SendTextRequest = z.infer<typeof sendTextRequestSchema>;
+type SendTextInput = z.infer<typeof sendTextInputSchema>;
 /**
- * Type for sending an image message
+ * Input type for sendImage() method
  */
-type SendImageRequest = z.infer<typeof sendImageRequestSchema>;
+type SendImageInput = z.infer<typeof sendImageInputSchema>;
 /**
- * Type for sending a location message
+ * Input type for sendLocation() method
  */
-type SendLocationRequest = z.infer<typeof sendLocationRequestSchema>;
+type SendLocationInput = z.infer<typeof sendLocationInputSchema>;
 /**
- * Type for sending a reaction message
+ * Input type for sendReaction() method
  */
-type SendReactionRequest = z.infer<typeof sendReactionRequestSchema>;
+type SendReactionInput = z.infer<typeof sendReactionInputSchema>;
+/**
+ * Full outgoing text message type (includes type discriminator)
+ */
+type OutgoingTextMessage = z.infer<typeof outgoingTextMessageSchema>;
+/**
+ * Full outgoing image message type (includes type discriminator)
+ */
+type OutgoingImageMessage = z.infer<typeof outgoingImageMessageSchema>;
+/**
+ * Full outgoing location message type (includes type discriminator)
+ */
+type OutgoingLocationMessage = z.infer<typeof outgoingLocationMessageSchema>;
+/**
+ * Full outgoing reaction message type (includes type discriminator)
+ */
+type OutgoingReactionMessage = z.infer<typeof outgoingReactionMessageSchema>;
+/**
+ * Union type for all outgoing message types
+ */
+type OutgoingMessage = z.infer<typeof outgoingMessageSchema>;
 
 /**
  * Schema for message response
@@ -128,6 +227,8 @@ declare const messageResponseSchema: z.ZodObject<{
     }, z.core.$strip>>;
     messages: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
+        group_id: z.ZodOptional<z.ZodString>;
+        message_status: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
 
@@ -153,31 +254,31 @@ declare class MessagesService {
     /**
      * Send a text message
      *
-     * @param request - Text message request (to, text)
+     * @param input - Text message input (to, text)
      * @param phoneNumberId - Optional phone number ID (overrides client config)
      */
-    sendText(request: SendTextRequest, phoneNumberId?: string): Promise<MessageResponse>;
+    sendText(input: SendTextInput, phoneNumberId?: string): Promise<MessageResponse>;
     /**
      * Send an image message
      *
-     * @param request - Image message request (to, image)
+     * @param input - Image message input (to, image)
      * @param phoneNumberId - Optional phone number ID (overrides client config)
      */
-    sendImage(request: SendImageRequest, phoneNumberId?: string): Promise<MessageResponse>;
+    sendImage(input: SendImageInput, phoneNumberId?: string): Promise<MessageResponse>;
     /**
      * Send a location message
      *
-     * @param request - Location message request (to, location)
+     * @param input - Location message input (to, location)
      * @param phoneNumberId - Optional phone number ID (overrides client config)
      */
-    sendLocation(request: SendLocationRequest, phoneNumberId?: string): Promise<MessageResponse>;
+    sendLocation(input: SendLocationInput, phoneNumberId?: string): Promise<MessageResponse>;
     /**
      * Send a reaction message
      *
-     * @param request - Reaction message request (to, reaction)
+     * @param input - Reaction message input (to, reaction)
      * @param phoneNumberId - Optional phone number ID (overrides client config)
      */
-    sendReaction(request: SendReactionRequest, phoneNumberId?: string): Promise<MessageResponse>;
+    sendReaction(input: SendReactionInput, phoneNumberId?: string): Promise<MessageResponse>;
 }
 
 /**
@@ -890,6 +991,195 @@ declare class TemplatesService {
 }
 
 /**
+ * Status update schema for webhook payloads
+ * Represents the status of a sent message (sent, delivered, read, failed, played)
+ */
+declare const statusSchema: z.ZodObject<{
+    id: z.ZodString;
+    status: z.ZodEnum<{
+        sent: "sent";
+        delivered: "delivered";
+        read: "read";
+        failed: "failed";
+        played: "played";
+    }>;
+    timestamp: z.ZodString;
+    recipient_id: z.ZodString;
+    recipient_type: z.ZodOptional<z.ZodLiteral<"group">>;
+    recipient_participant_id: z.ZodOptional<z.ZodString>;
+    recipient_identity_key_hash: z.ZodOptional<z.ZodString>;
+    biz_opaque_callback_data: z.ZodOptional<z.ZodString>;
+    conversation: z.ZodOptional<z.ZodObject<{
+        id: z.ZodString;
+        expiration_timestamp: z.ZodOptional<z.ZodString>;
+        origin: z.ZodObject<{
+            type: z.ZodEnum<{
+                authentication: "authentication";
+                authentication_international: "authentication_international";
+                marketing: "marketing";
+                marketing_lite: "marketing_lite";
+                referral_conversion: "referral_conversion";
+                service: "service";
+                utility: "utility";
+            }>;
+        }, z.core.$strip>;
+    }, z.core.$strip>>;
+    pricing: z.ZodOptional<z.ZodObject<{
+        billable: z.ZodBoolean;
+        pricing_model: z.ZodEnum<{
+            CBP: "CBP";
+            PMP: "PMP";
+        }>;
+        type: z.ZodEnum<{
+            regular: "regular";
+            free_customer_service: "free_customer_service";
+            free_entry_point: "free_entry_point";
+        }>;
+        category: z.ZodEnum<{
+            authentication: "authentication";
+            marketing: "marketing";
+            marketing_lite: "marketing_lite";
+            referral_conversion: "referral_conversion";
+            service: "service";
+            utility: "utility";
+            "authentication-international": "authentication-international";
+        }>;
+    }, z.core.$strip>>;
+    errors: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        code: z.ZodNumber;
+        title: z.ZodString;
+        message: z.ZodString;
+        error_data: z.ZodObject<{
+            details: z.ZodString;
+        }, z.core.$strip>;
+        href: z.ZodString;
+    }, z.core.$strip>>>;
+}, z.core.$strip>;
+/**
+ * Full webhook payload schema
+ */
+declare const webhookPayloadSchema: z.ZodObject<{
+    object: z.ZodLiteral<"whatsapp_business_account">;
+    entry: z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        changes: z.ZodArray<z.ZodObject<{
+            value: z.ZodObject<{
+                messaging_product: z.ZodLiteral<"whatsapp">;
+                metadata: z.ZodObject<{
+                    display_phone_number: z.ZodString;
+                    phone_number_id: z.ZodString;
+                }, z.core.$strip>;
+                contacts: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                    profile: z.ZodObject<{
+                        name: z.ZodString;
+                    }, z.core.$strip>;
+                    wa_id: z.ZodString;
+                }, z.core.$strip>>>;
+                messages: z.ZodOptional<z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+                    from: z.ZodString;
+                    id: z.ZodString;
+                    timestamp: z.ZodString;
+                    type: z.ZodLiteral<"text">;
+                    text: z.ZodObject<{
+                        body: z.ZodString;
+                    }, z.core.$strip>;
+                }, z.core.$strip>, z.ZodObject<{
+                    from: z.ZodString;
+                    id: z.ZodString;
+                    timestamp: z.ZodString;
+                    type: z.ZodLiteral<"audio">;
+                    audio: z.ZodObject<{
+                        id: z.ZodString;
+                        mime_type: z.ZodOptional<z.ZodString>;
+                    }, z.core.$strip>;
+                }, z.core.$strip>, z.ZodObject<{
+                    from: z.ZodString;
+                    id: z.ZodString;
+                    timestamp: z.ZodString;
+                    type: z.ZodLiteral<"image">;
+                    image: z.ZodObject<{
+                        id: z.ZodString;
+                        mime_type: z.ZodOptional<z.ZodString>;
+                        caption: z.ZodOptional<z.ZodString>;
+                    }, z.core.$strip>;
+                }, z.core.$strip>], "type">>>;
+                statuses: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                    id: z.ZodString;
+                    status: z.ZodEnum<{
+                        sent: "sent";
+                        delivered: "delivered";
+                        read: "read";
+                        failed: "failed";
+                        played: "played";
+                    }>;
+                    timestamp: z.ZodString;
+                    recipient_id: z.ZodString;
+                    recipient_type: z.ZodOptional<z.ZodLiteral<"group">>;
+                    recipient_participant_id: z.ZodOptional<z.ZodString>;
+                    recipient_identity_key_hash: z.ZodOptional<z.ZodString>;
+                    biz_opaque_callback_data: z.ZodOptional<z.ZodString>;
+                    conversation: z.ZodOptional<z.ZodObject<{
+                        id: z.ZodString;
+                        expiration_timestamp: z.ZodOptional<z.ZodString>;
+                        origin: z.ZodObject<{
+                            type: z.ZodEnum<{
+                                authentication: "authentication";
+                                authentication_international: "authentication_international";
+                                marketing: "marketing";
+                                marketing_lite: "marketing_lite";
+                                referral_conversion: "referral_conversion";
+                                service: "service";
+                                utility: "utility";
+                            }>;
+                        }, z.core.$strip>;
+                    }, z.core.$strip>>;
+                    pricing: z.ZodOptional<z.ZodObject<{
+                        billable: z.ZodBoolean;
+                        pricing_model: z.ZodEnum<{
+                            CBP: "CBP";
+                            PMP: "PMP";
+                        }>;
+                        type: z.ZodEnum<{
+                            regular: "regular";
+                            free_customer_service: "free_customer_service";
+                            free_entry_point: "free_entry_point";
+                        }>;
+                        category: z.ZodEnum<{
+                            authentication: "authentication";
+                            marketing: "marketing";
+                            marketing_lite: "marketing_lite";
+                            referral_conversion: "referral_conversion";
+                            service: "service";
+                            utility: "utility";
+                            "authentication-international": "authentication-international";
+                        }>;
+                    }, z.core.$strip>>;
+                    errors: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                        code: z.ZodNumber;
+                        title: z.ZodString;
+                        message: z.ZodString;
+                        error_data: z.ZodObject<{
+                            details: z.ZodString;
+                        }, z.core.$strip>;
+                        href: z.ZodString;
+                    }, z.core.$strip>>>;
+                }, z.core.$strip>>>;
+            }, z.core.$strip>;
+            field: z.ZodLiteral<"messages">;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+
+/**
+ * Type for webhook payload
+ */
+type WebhookPayload = z.infer<typeof webhookPayloadSchema>;
+/**
+ * Type for status update in webhook payload
+ */
+type Status = z.infer<typeof statusSchema>;
+
+/**
  * Incoming text message schema
  * Uses discriminated union pattern (type: "text")
  */
@@ -981,70 +1271,10 @@ type IncomingImageMessage = z.infer<typeof incomingImageMessageSchema>;
 type IncomingMessage = z.infer<typeof incomingMessageSchema>;
 
 /**
- * Full webhook payload schema
+ * WhatsApp webhook context - data from Meta's webhook payload
+ * This is the "domain" of WhatsApp, not your application
  */
-declare const webhookPayloadSchema: z.ZodObject<{
-    object: z.ZodLiteral<"whatsapp_business_account">;
-    entry: z.ZodArray<z.ZodObject<{
-        id: z.ZodString;
-        changes: z.ZodArray<z.ZodObject<{
-            value: z.ZodObject<{
-                messaging_product: z.ZodLiteral<"whatsapp">;
-                metadata: z.ZodObject<{
-                    display_phone_number: z.ZodString;
-                    phone_number_id: z.ZodString;
-                }, z.core.$strip>;
-                contacts: z.ZodOptional<z.ZodArray<z.ZodObject<{
-                    profile: z.ZodObject<{
-                        name: z.ZodString;
-                    }, z.core.$strip>;
-                    wa_id: z.ZodString;
-                }, z.core.$strip>>>;
-                messages: z.ZodOptional<z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
-                    from: z.ZodString;
-                    id: z.ZodString;
-                    timestamp: z.ZodString;
-                    type: z.ZodLiteral<"text">;
-                    text: z.ZodObject<{
-                        body: z.ZodString;
-                    }, z.core.$strip>;
-                }, z.core.$strip>, z.ZodObject<{
-                    from: z.ZodString;
-                    id: z.ZodString;
-                    timestamp: z.ZodString;
-                    type: z.ZodLiteral<"audio">;
-                    audio: z.ZodObject<{
-                        id: z.ZodString;
-                        mime_type: z.ZodOptional<z.ZodString>;
-                    }, z.core.$strip>;
-                }, z.core.$strip>, z.ZodObject<{
-                    from: z.ZodString;
-                    id: z.ZodString;
-                    timestamp: z.ZodString;
-                    type: z.ZodLiteral<"image">;
-                    image: z.ZodObject<{
-                        id: z.ZodString;
-                        mime_type: z.ZodOptional<z.ZodString>;
-                        caption: z.ZodOptional<z.ZodString>;
-                    }, z.core.$strip>;
-                }, z.core.$strip>], "type">>>;
-                statuses: z.ZodOptional<z.ZodArray<z.ZodAny>>;
-            }, z.core.$strip>;
-            field: z.ZodLiteral<"messages">;
-        }, z.core.$strip>>;
-    }, z.core.$strip>>;
-}, z.core.$strip>;
-
-/**
- * Type for webhook payload
- */
-type WebhookPayload = z.infer<typeof webhookPayloadSchema>;
-
-/**
- * Context provided to message handlers
- * Contains metadata and contact info (message is passed separately)
- */
-type MessageContext = {
+type WebhookContext = {
     metadata: {
         phoneNumberId: string;
         displayPhoneNumber: string;
@@ -1056,13 +1286,43 @@ type MessageContext = {
     };
 };
 /**
- * Handler functions for different message types
- * Receives message and context separately - message is the focus, context is optional metadata
+ * @deprecated Use `WebhookContext` instead. This alias is kept for backward compatibility.
  */
-type MessageHandlers = {
-    text?: (message: IncomingTextMessage, context: MessageContext) => Promise<void> | void;
-    audio?: (message: IncomingAudioMessage, context: MessageContext) => Promise<void> | void;
-    image?: (message: IncomingImageMessage, context: MessageContext) => Promise<void> | void;
+type MessageContext = WebhookContext;
+/**
+ * Handler functions for different message types
+ *
+ * The `beforeHandler` return type is automatically inferred and passed
+ * as the third argument to message handlers for full type safety.
+ *
+ * @example
+ * ```typescript
+ * client.webhooks.handle(req.body, {
+ *   beforeHandler: async (message, webhook) => {
+ *     return { customerIds: ["123", "456"] };
+ *   },
+ *   text: async (message, webhook, before) => {
+ *     // before is TBefore | undefined
+ *     // - undefined = beforeHandler not set or failed
+ *     // - object = beforeHandler succeeded (even if empty {})
+ *     if (before) {
+ *       // before.customerIds is typed as string[] ✅
+ *       console.log(before.customerIds);
+ *     }
+ *   },
+ * });
+ * ```
+ */
+type MessageHandlers<TBefore = Record<string, never>> = {
+    /**
+     * Resolves webhook data to application entities
+     * ALWAYS runs first if defined, before any message handler.
+     * The return type is automatically inferred and passed to message handlers.
+     */
+    beforeHandler?: (message: IncomingMessage, webhook: WebhookContext) => Promise<TBefore> | TBefore;
+    text?: (message: IncomingTextMessage, webhook: WebhookContext, before: TBefore | undefined) => Promise<void> | void;
+    audio?: (message: IncomingAudioMessage, webhook: WebhookContext, before: TBefore | undefined) => Promise<void> | void;
+    image?: (message: IncomingImageMessage, webhook: WebhookContext, before: TBefore | undefined) => Promise<void> | void;
 };
 /**
  * Options for handle() method
@@ -1116,7 +1376,7 @@ declare class WebhooksService {
      * @param payload - Webhook payload from Meta
      * @returns Flat array of status updates
      */
-    extractStatuses(payload: WebhookPayload): unknown[];
+    extractStatuses(payload: WebhookPayload): Status[];
     /**
      * Download media file by media ID
      *
@@ -1159,11 +1419,14 @@ declare class WebhooksService {
      * Handlers are processed asynchronously. If you need to await handler completion,
      * use the low-level `extractMessages()` method instead.
      *
+     * The `beforeHandler` return type is automatically inferred and provides
+     * full type safety in message handlers.
+     *
      * @param payload - Webhook payload from Meta (will be validated)
      * @param handlers - Object with handler functions for each message type
      * @param options - Optional error handling configuration
      */
-    handle(payload: unknown, handlers: MessageHandlers, options?: HandleOptions): void;
+    handle<THandlers extends MessageHandlers<any>>(payload: unknown, handlers: THandlers, options?: HandleOptions): void;
 }
 
 /**
@@ -1573,4 +1836,4 @@ declare class WhatsAppRateLimitError extends WhatsAppAPIError {
     constructor(message: string, retryAfter?: number | undefined);
 }
 
-export { type BusinessAccountsListResponse, type ClientConfig, type DebugTokenResponse, type HandleOptions, type IncomingAudioMessage, type IncomingImageMessage, type IncomingMessage, type IncomingTextMessage, type MessageContext, type MessageHandlers, type MessageResponse, type PhoneNumberListResponse, type SendImageRequest, type SendLocationRequest, type SendReactionRequest, type SendTextRequest, type Template, type TemplateBodyComponent, type TemplateButton, type TemplateButtonsComponent, type TemplateComponent, type TemplateCopyCodeButton, type TemplateCreate, type TemplateCreateResponse, type TemplateDelete, type TemplateDeleteResponse, type TemplateFlowButton, type TemplateFooterComponent, type TemplateHeaderComponent, type TemplateLanguage, type TemplateList, type TemplateListResponse, type TemplatePhoneNumberButton, type TemplateQuickReplyButton, type TemplateUpdate, type TemplateUpdateResponse, type TemplateUrlButton, type WebhookPayload, WhatsAppAPIError, WhatsAppClient, WhatsAppError, WhatsAppRateLimitError, WhatsAppValidationError, businessAccountResponseSchema, businessAccountsListResponseSchema, clientConfigSchema, debugTokenResponseSchema, incomingAudioMessageSchema, incomingImageMessageSchema, incomingMessageSchema, incomingTextMessageSchema, messageResponseSchema, phoneNumberListResponseSchema, phoneNumberResponseSchema, sendImageRequestSchema, sendLocationRequestSchema, sendReactionRequestSchema, sendTextRequestSchema, templateBodyComponentSchema, templateButtonSchema, templateButtonsComponentSchema, templateComponentSchema, templateCopyCodeButtonSchema, templateCreateResponseSchema, templateCreateSchema, templateDeleteResponseSchema, templateDeleteSchema, templateFlowButtonSchema, templateFooterComponentSchema, templateHeaderComponentSchema, templateLanguageSchema, templateListResponseSchema, templateListSchema, templatePhoneNumberButtonSchema, templateQuickReplyButtonSchema, templateSchema, templateUpdateResponseSchema, templateUpdateSchema, templateUrlButtonSchema, webhookPayloadSchema };
+export { type BusinessAccountsListResponse, type ClientConfig, type DebugTokenResponse, type HandleOptions, type IncomingAudioMessage, type IncomingImageMessage, type IncomingMessage, type IncomingTextMessage, type MessageContext, type MessageHandlers, type MessageResponse, type OutgoingImageMessage, type OutgoingLocationMessage, type OutgoingMessage, type OutgoingReactionMessage, type OutgoingTextMessage, type PhoneNumberListResponse, type SendImageInput, type SendLocationInput, type SendReactionInput, type SendTextInput, type Status, type Template, type TemplateBodyComponent, type TemplateButton, type TemplateButtonsComponent, type TemplateComponent, type TemplateCopyCodeButton, type TemplateCreate, type TemplateCreateResponse, type TemplateDelete, type TemplateDeleteResponse, type TemplateFlowButton, type TemplateFooterComponent, type TemplateHeaderComponent, type TemplateLanguage, type TemplateList, type TemplateListResponse, type TemplatePhoneNumberButton, type TemplateQuickReplyButton, type TemplateUpdate, type TemplateUpdateResponse, type TemplateUrlButton, type WebhookContext, type WebhookPayload, WhatsAppAPIError, WhatsAppClient, WhatsAppError, WhatsAppRateLimitError, WhatsAppValidationError, businessAccountResponseSchema, businessAccountsListResponseSchema, clientConfigSchema, debugTokenResponseSchema, incomingAudioMessageSchema, incomingImageMessageSchema, incomingMessageSchema, incomingTextMessageSchema, messageResponseSchema, outgoingImageMessageSchema, outgoingLocationMessageSchema, outgoingMessageSchema, outgoingReactionMessageSchema, outgoingTextMessageSchema, phoneNumberListResponseSchema, phoneNumberResponseSchema, sendImageInputSchema, sendLocationInputSchema, sendReactionInputSchema, sendTextInputSchema, statusSchema, templateBodyComponentSchema, templateButtonSchema, templateButtonsComponentSchema, templateComponentSchema, templateCopyCodeButtonSchema, templateCreateResponseSchema, templateCreateSchema, templateDeleteResponseSchema, templateDeleteSchema, templateFlowButtonSchema, templateFooterComponentSchema, templateHeaderComponentSchema, templateLanguageSchema, templateListResponseSchema, templateListSchema, templatePhoneNumberButtonSchema, templateQuickReplyButtonSchema, templateSchema, templateUpdateResponseSchema, templateUpdateSchema, templateUrlButtonSchema, webhookPayloadSchema };

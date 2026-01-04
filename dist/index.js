@@ -171,43 +171,60 @@ var HttpClient = class {
   }
 };
 
-// src/schemas/messages/request.ts
+// src/schemas/messages/outgoing.ts
 import { z as z2 } from "zod";
-var baseMessageRequestSchema = z2.object({
+var baseOutgoingMessageSchema = z2.object({
   to: z2.string().regex(/^\+[1-9]\d{1,14}$/, "Invalid phone number format")
 });
-var imageSchema = z2.object({
+var textContentSchema = z2.object({
+  body: z2.string().min(1).max(4096),
+  preview_url: z2.boolean().optional()
+});
+var imageContentSchema = z2.object({
   id: z2.string().optional(),
   link: z2.string().url().optional(),
   caption: z2.string().max(1024).optional()
 }).refine((data) => data.link || data.id, "Either link or id must be provided");
-var sendImageRequestSchema = baseMessageRequestSchema.extend({
-  image: imageSchema
-});
-var textSchema = z2.object({
-  body: z2.string().min(1).max(4096),
-  preview_url: z2.boolean().optional()
-});
-var sendTextRequestSchema = baseMessageRequestSchema.extend({
-  text: textSchema
-});
-var locationSchema = z2.object({
+var locationContentSchema = z2.object({
   longitude: z2.number().min(-180).max(180),
   latitude: z2.number().min(-90).max(90),
   name: z2.string().optional(),
   address: z2.string().optional()
 });
-var sendLocationRequestSchema = baseMessageRequestSchema.extend({
-  location: locationSchema
-});
-var reactionSchema = z2.object({
+var reactionContentSchema = z2.object({
   message_id: z2.string().min(1),
   emoji: z2.string().min(1).max(1)
-  // Single emoji character
 });
-var sendReactionRequestSchema = baseMessageRequestSchema.extend({
-  reaction: reactionSchema
+var sendTextInputSchema = baseOutgoingMessageSchema.extend({
+  text: textContentSchema
 });
+var sendImageInputSchema = baseOutgoingMessageSchema.extend({
+  image: imageContentSchema
+});
+var sendLocationInputSchema = baseOutgoingMessageSchema.extend({
+  location: locationContentSchema
+});
+var sendReactionInputSchema = baseOutgoingMessageSchema.extend({
+  reaction: reactionContentSchema
+});
+var outgoingTextMessageSchema = sendTextInputSchema.extend({
+  type: z2.literal("text")
+});
+var outgoingImageMessageSchema = sendImageInputSchema.extend({
+  type: z2.literal("image")
+});
+var outgoingLocationMessageSchema = sendLocationInputSchema.extend({
+  type: z2.literal("location")
+});
+var outgoingReactionMessageSchema = sendReactionInputSchema.extend({
+  type: z2.literal("reaction")
+});
+var outgoingMessageSchema = z2.discriminatedUnion("type", [
+  outgoingTextMessageSchema,
+  outgoingImageMessageSchema,
+  outgoingLocationMessageSchema,
+  outgoingReactionMessageSchema
+]);
 
 // src/services/messages/utils/build-message-payload.ts
 function buildMessagePayload(to, type, content) {
@@ -278,8 +295,8 @@ function transformZodError(error) {
 }
 
 // src/services/messages/methods/send-text.ts
-async function sendText(messagesClient, request) {
-  const result = sendTextRequestSchema.safeParse(request);
+async function sendText(messagesClient, input) {
+  const result = sendTextInputSchema.safeParse(input);
   if (!result.success) {
     throw transformZodError(result.error);
   }
@@ -291,8 +308,8 @@ async function sendText(messagesClient, request) {
 }
 
 // src/services/messages/methods/send-image.ts
-async function sendImage(messagesClient, request) {
-  const result = sendImageRequestSchema.safeParse(request);
+async function sendImage(messagesClient, input) {
+  const result = sendImageInputSchema.safeParse(input);
   if (!result.success) {
     throw transformZodError(result.error);
   }
@@ -304,8 +321,8 @@ async function sendImage(messagesClient, request) {
 }
 
 // src/services/messages/methods/send-location.ts
-async function sendLocation(messagesClient, request) {
-  const result = sendLocationRequestSchema.safeParse(request);
+async function sendLocation(messagesClient, input) {
+  const result = sendLocationInputSchema.safeParse(input);
   if (!result.success) {
     throw transformZodError(result.error);
   }
@@ -317,8 +334,8 @@ async function sendLocation(messagesClient, request) {
 }
 
 // src/services/messages/methods/send-reaction.ts
-async function sendReaction(messagesClient, request) {
-  const result = sendReactionRequestSchema.safeParse(request);
+async function sendReaction(messagesClient, input) {
+  const result = sendReactionInputSchema.safeParse(input);
   if (!result.success) {
     throw transformZodError(result.error);
   }
@@ -376,42 +393,42 @@ var MessagesService = class {
   /**
    * Send a text message
    *
-   * @param request - Text message request (to, text)
+   * @param input - Text message input (to, text)
    * @param phoneNumberId - Optional phone number ID (overrides client config)
    */
-  async sendText(request, phoneNumberId) {
+  async sendText(input, phoneNumberId) {
     const client = this.getClient(phoneNumberId);
-    return sendText(client, request);
+    return sendText(client, input);
   }
   /**
    * Send an image message
    *
-   * @param request - Image message request (to, image)
+   * @param input - Image message input (to, image)
    * @param phoneNumberId - Optional phone number ID (overrides client config)
    */
-  async sendImage(request, phoneNumberId) {
+  async sendImage(input, phoneNumberId) {
     const client = this.getClient(phoneNumberId);
-    return sendImage(client, request);
+    return sendImage(client, input);
   }
   /**
    * Send a location message
    *
-   * @param request - Location message request (to, location)
+   * @param input - Location message input (to, location)
    * @param phoneNumberId - Optional phone number ID (overrides client config)
    */
-  async sendLocation(request, phoneNumberId) {
+  async sendLocation(input, phoneNumberId) {
     const client = this.getClient(phoneNumberId);
-    return sendLocation(client, request);
+    return sendLocation(client, input);
   }
   /**
    * Send a reaction message
    *
-   * @param request - Reaction message request (to, reaction)
+   * @param input - Reaction message input (to, reaction)
    * @param phoneNumberId - Optional phone number ID (overrides client config)
    */
-  async sendReaction(request, phoneNumberId) {
+  async sendReaction(input, phoneNumberId) {
     const client = this.getClient(phoneNumberId);
-    return sendReaction(client, request);
+    return sendReaction(client, input);
   }
 };
 
@@ -1124,7 +1141,7 @@ function verifyWebhook(query, verifyToken) {
 // src/schemas/webhooks/payload.ts
 import { z as z7 } from "zod";
 
-// src/schemas/webhooks/incoming-message.ts
+// src/schemas/messages/incoming.ts
 import { z as z6 } from "zod";
 var baseIncomingMessageSchema = z6.object({
   from: z6.string(),
@@ -1182,14 +1199,78 @@ var webhookMetadataSchema = z7.object({
   display_phone_number: z7.string(),
   phone_number_id: z7.string()
 });
+var conversationOriginSchema = z7.object({
+  type: z7.enum([
+    "authentication",
+    "authentication_international",
+    "marketing",
+    "marketing_lite",
+    "referral_conversion",
+    "service",
+    "utility"
+  ])
+});
+var conversationSchema = z7.object({
+  id: z7.string(),
+  expiration_timestamp: z7.string().optional(),
+  // Only for sent status
+  origin: conversationOriginSchema
+});
+var pricingSchema = z7.object({
+  billable: z7.boolean(),
+  // Deprecated but still present
+  pricing_model: z7.enum(["CBP", "PMP"]),
+  type: z7.enum(["regular", "free_customer_service", "free_entry_point"]),
+  category: z7.enum([
+    "authentication",
+    "authentication-international",
+    "marketing",
+    "marketing_lite",
+    "referral_conversion",
+    "service",
+    "utility"
+  ])
+});
+var statusErrorSchema = z7.object({
+  code: z7.number(),
+  title: z7.string(),
+  message: z7.string(),
+  error_data: z7.object({
+    details: z7.string()
+  }),
+  href: z7.string()
+});
+var statusSchema = z7.object({
+  id: z7.string(),
+  // WhatsApp message ID
+  status: z7.enum(["sent", "delivered", "read", "failed", "played"]),
+  timestamp: z7.string(),
+  // Unix timestamp
+  recipient_id: z7.string(),
+  // User phone number or group ID
+  recipient_type: z7.literal("group").optional(),
+  // Only included if message sent to a group
+  recipient_participant_id: z7.string().optional(),
+  // Only included if message sent to a group
+  recipient_identity_key_hash: z7.string().optional(),
+  // Only included if identity change check enabled
+  biz_opaque_callback_data: z7.string().optional(),
+  // Only included if message sent with biz_opaque_callback_data
+  conversation: conversationSchema.optional(),
+  // Conditional inclusion (see conversationSchema docs)
+  pricing: pricingSchema.optional(),
+  // Conditional inclusion (see pricingSchema docs)
+  errors: z7.array(statusErrorSchema).optional()
+  // Only included if failure to send or deliver message
+});
 var webhookValueSchema = z7.object({
   messaging_product: z7.literal("whatsapp"),
   metadata: webhookMetadataSchema,
   contacts: z7.array(contactSchema).optional(),
   messages: z7.array(incomingMessageSchema).optional(),
   // Incoming messages
-  statuses: z7.array(z7.any()).optional()
-  // Status updates (for later)
+  statuses: z7.array(statusSchema).optional()
+  // Status updates
 });
 var webhookChangeSchema = z7.object({
   value: webhookValueSchema,
@@ -1304,6 +1385,9 @@ var WebhooksService = class {
    * Handlers are processed asynchronously. If you need to await handler completion,
    * use the low-level `extractMessages()` method instead.
    *
+   * The `beforeHandler` return type is automatically inferred and provides
+   * full type safety in message handlers.
+   *
    * @param payload - Webhook payload from Meta (will be validated)
    * @param handlers - Object with handler functions for each message type
    * @param options - Optional error handling configuration
@@ -1321,7 +1405,7 @@ var WebhooksService = class {
           const contacts = change.value.contacts || [];
           for (const message of change.value.messages) {
             const contact = contacts.find((c) => c.wa_id === message.from);
-            const context = {
+            const webhook = {
               metadata,
               ...contact && {
                 contact: {
@@ -1331,20 +1415,39 @@ var WebhooksService = class {
               }
             };
             Promise.resolve().then(async () => {
+              let before = void 0;
+              if (handlers.beforeHandler) {
+                try {
+                  before = await handlers.beforeHandler(
+                    message,
+                    webhook
+                  );
+                } catch (error) {
+                  if (options?.onError) {
+                    options.onError(error, message);
+                  } else {
+                    console.error(
+                      `Error in beforeHandler for message ${message.id}:`,
+                      error
+                    );
+                  }
+                  before = void 0;
+                }
+              }
               switch (message.type) {
                 case "text":
                   if (handlers.text) {
-                    await handlers.text(message, context);
+                    await handlers.text(message, webhook, before);
                   }
                   break;
                 case "audio":
                   if (handlers.audio) {
-                    await handlers.audio(message, context);
+                    await handlers.audio(message, webhook, before);
                   }
                   break;
                 case "image":
                   if (handlers.image) {
-                    await handlers.image(message, context);
+                    await handlers.image(message, webhook, before);
                   }
                   break;
                 default:
@@ -1420,7 +1523,9 @@ var messageResponseSchema = z8.object({
   ),
   messages: z8.array(
     z8.object({
-      id: z8.string()
+      id: z8.string(),
+      group_id: z8.string().optional(),
+      message_status: z8.string().optional()
     })
   )
 });
@@ -1529,12 +1634,18 @@ export {
   incomingMessageSchema,
   incomingTextMessageSchema,
   messageResponseSchema,
+  outgoingImageMessageSchema,
+  outgoingLocationMessageSchema,
+  outgoingMessageSchema,
+  outgoingReactionMessageSchema,
+  outgoingTextMessageSchema,
   phoneNumberListResponseSchema,
   phoneNumberResponseSchema,
-  sendImageRequestSchema,
-  sendLocationRequestSchema,
-  sendReactionRequestSchema,
-  sendTextRequestSchema,
+  sendImageInputSchema,
+  sendLocationInputSchema,
+  sendReactionInputSchema,
+  sendTextInputSchema,
+  statusSchema,
   templateBodyComponentSchema,
   templateButtonSchema,
   templateButtonsComponentSchema,

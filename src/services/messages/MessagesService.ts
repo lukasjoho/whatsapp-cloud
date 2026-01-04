@@ -6,11 +6,11 @@ import { sendReaction } from "./methods/send-reaction";
 import { MessagesClient } from "./MessagesClient";
 import { WhatsAppValidationError } from "../../errors";
 import type {
-  SendTextRequest,
-  SendImageRequest,
-  SendLocationRequest,
-  SendReactionRequest,
-} from "../../types/messages/request";
+  SendTextInput,
+  SendImageInput,
+  SendLocationInput,
+  SendReactionInput,
+} from "../../types/messages/outgoing";
 import type { MessageResponse } from "../../types/messages/response";
 
 /**
@@ -42,56 +42,56 @@ export class MessagesService {
   /**
    * Send a text message
    *
-   * @param request - Text message request (to, text)
+   * @param input - Text message input (to, text)
    * @param phoneNumberId - Optional phone number ID (overrides client config)
    */
   async sendText(
-    request: SendTextRequest,
+    input: SendTextInput,
     phoneNumberId?: string
   ): Promise<MessageResponse> {
     const client = this.getClient(phoneNumberId);
-    return sendText(client, request);
+    return sendText(client, input);
   }
 
   /**
    * Send an image message
    *
-   * @param request - Image message request (to, image)
+   * @param input - Image message input (to, image)
    * @param phoneNumberId - Optional phone number ID (overrides client config)
    */
   async sendImage(
-    request: SendImageRequest,
+    input: SendImageInput,
     phoneNumberId?: string
   ): Promise<MessageResponse> {
     const client = this.getClient(phoneNumberId);
-    return sendImage(client, request);
+    return sendImage(client, input);
   }
 
   /**
    * Send a location message
    *
-   * @param request - Location message request (to, location)
+   * @param input - Location message input (to, location)
    * @param phoneNumberId - Optional phone number ID (overrides client config)
    */
   async sendLocation(
-    request: SendLocationRequest,
+    input: SendLocationInput,
     phoneNumberId?: string
   ): Promise<MessageResponse> {
     const client = this.getClient(phoneNumberId);
-    return sendLocation(client, request);
+    return sendLocation(client, input);
   }
 
   /**
    * Send a reaction message
    *
-   * @param request - Reaction message request (to, reaction)
+   * @param input - Reaction message input (to, reaction)
    * @param phoneNumberId - Optional phone number ID (overrides client config)
    */
   async sendReaction(
-    request: SendReactionRequest,
+    input: SendReactionInput,
     phoneNumberId?: string
   ): Promise<MessageResponse> {
     const client = this.getClient(phoneNumberId);
-    return sendReaction(client, request);
+    return sendReaction(client, input);
   }
 }

@@ -1,6 +1,6 @@
 import type { MessagesClient } from "../MessagesClient";
-import { sendImageRequestSchema } from "../../../schemas/messages/request";
-import type { SendImageRequest } from "../../../types/messages/request";
+import { sendImageInputSchema } from "../../../schemas/messages/outgoing";
+import type { SendImageInput } from "../../../types/messages/outgoing";
 import type { MessageResponse } from "../../../types/messages/response";
 import { buildMessagePayload } from "../utils/build-message-payload";
 import { transformZodError } from "../../../utils/zod-error";
@@ -13,10 +13,10 @@ import { transformZodError } from "../../../utils/zod-error";
  */
 export async function sendImage(
   messagesClient: MessagesClient,
-  request: SendImageRequest
+  input: SendImageInput
 ): Promise<MessageResponse> {
-  // Validate request with schema - throws WhatsAppValidationError if invalid
-  const result = sendImageRequestSchema.safeParse(request);
+  // Validate input with schema - throws WhatsAppValidationError if invalid
+  const result = sendImageInputSchema.safeParse(input);
   if (!result.success) {
     throw transformZodError(result.error);
   }

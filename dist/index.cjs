@@ -34,12 +34,18 @@ __export(index_exports, {
   incomingMessageSchema: () => incomingMessageSchema,
   incomingTextMessageSchema: () => incomingTextMessageSchema,
   messageResponseSchema: () => messageResponseSchema,
+  outgoingImageMessageSchema: () => outgoingImageMessageSchema,
+  outgoingLocationMessageSchema: () => outgoingLocationMessageSchema,
+  outgoingMessageSchema: () => outgoingMessageSchema,
+  outgoingReactionMessageSchema: () => outgoingReactionMessageSchema,
+  outgoingTextMessageSchema: () => outgoingTextMessageSchema,
   phoneNumberListResponseSchema: () => phoneNumberListResponseSchema,
   phoneNumberResponseSchema: () => phoneNumberResponseSchema,
-  sendImageRequestSchema: () => sendImageRequestSchema,
-  sendLocationRequestSchema: () => sendLocationRequestSchema,
-  sendReactionRequestSchema: () => sendReactionRequestSchema,
-  sendTextRequestSchema: () => sendTextRequestSchema,
+  sendImageInputSchema: () => sendImageInputSchema,
+  sendLocationInputSchema: () => sendLocationInputSchema,
+  sendReactionInputSchema: () => sendReactionInputSchema,
+  sendTextInputSchema: () => sendTextInputSchema,
+  statusSchema: () => statusSchema,
   templateBodyComponentSchema: () => templateBodyComponentSchema,
   templateButtonSchema: () => templateButtonSchema,
   templateButtonsComponentSchema: () => templateButtonsComponentSchema,
@@ -238,43 +244,60 @@ var HttpClient = class {
   }
 };
 
-// src/schemas/messages/request.ts
+// src/schemas/messages/outgoing.ts
 var import_zod2 = require("zod");
-var baseMessageRequestSchema = import_zod2.z.object({
+var baseOutgoingMessageSchema = import_zod2.z.object({
   to: import_zod2.z.string().regex(/^\+[1-9]\d{1,14}$/, "Invalid phone number format")
 });
-var imageSchema = import_zod2.z.object({
+var textContentSchema = import_zod2.z.object({
+  body: import_zod2.z.string().min(1).max(4096),
+  preview_url: import_zod2.z.boolean().optional()
+});
+var imageContentSchema = import_zod2.z.object({
   id: import_zod2.z.string().optional(),
   link: import_zod2.z.string().url().optional(),
   caption: import_zod2.z.string().max(1024).optional()
 }).refine((data) => data.link || data.id, "Either link or id must be provided");
-var sendImageRequestSchema = baseMessageRequestSchema.extend({
-  image: imageSchema
-});
-var textSchema = import_zod2.z.object({
-  body: import_zod2.z.string().min(1).max(4096),
-  preview_url: import_zod2.z.boolean().optional()
-});
-var sendTextRequestSchema = baseMessageRequestSchema.extend({
-  text: textSchema
-});
-var locationSchema = import_zod2.z.object({
+var locationContentSchema = import_zod2.z.object({
   longitude: import_zod2.z.number().min(-180).max(180),
   latitude: import_zod2.z.number().min(-90).max(90),
   name: import_zod2.z.string().optional(),
   address: import_zod2.z.string().optional()
 });
-var sendLocationRequestSchema = baseMessageRequestSchema.extend({
-  location: locationSchema
-});
-var reactionSchema = import_zod2.z.object({
+var reactionContentSchema = import_zod2.z.object({
   message_id: import_zod2.z.string().min(1),
   emoji: import_zod2.z.string().min(1).max(1)
-  // Single emoji character
 });
-var sendReactionRequestSchema = baseMessageRequestSchema.extend({
-  reaction: reactionSchema
+var sendTextInputSchema = baseOutgoingMessageSchema.extend({
+  text: textContentSchema
 });
+var sendImageInputSchema = baseOutgoingMessageSchema.extend({
+  image: imageContentSchema
+});
+var sendLocationInputSchema = baseOutgoingMessageSchema.extend({
+  location: locationContentSchema
+});
+var sendReactionInputSchema = baseOutgoingMessageSchema.extend({
+  reaction: reactionContentSchema
+});
+var outgoingTextMessageSchema = sendTextInputSchema.extend({
+  type: import_zod2.z.literal("text")
+});
+var outgoingImageMessageSchema = sendImageInputSchema.extend({
+  type: import_zod2.z.literal("image")
+});
+var outgoingLocationMessageSchema = sendLocationInputSchema.extend({
+  type: import_zod2.z.literal("location")
+});
+var outgoingReactionMessageSchema = sendReactionInputSchema.extend({
+  type: import_zod2.z.literal("reaction")
+});
+var outgoingMessageSchema = import_zod2.z.discriminatedUnion("type", [
+  outgoingTextMessageSchema,
+  outgoingImageMessageSchema,
+  outgoingLocationMessageSchema,
+  outgoingReactionMessageSchema
+]);
 
 // src/services/messages/utils/build-message-payload.ts
 function buildMessagePayload(to, type, content) {
@@ -345,8 +368,8 @@ function transformZodError(error) {
 }
 
 // src/services/messages/methods/send-text.ts
-async function sendText(messagesClient, request) {
-  const result = sendTextRequestSchema.safeParse(request);
+async function sendText(messagesClient, input) {
+  const result = sendTextInputSchema.safeParse(input);
   if (!result.success) {
     throw transformZodError(result.error);
   }
@@ -358,8 +381,8 @@ async function sendText(messagesClient, request) {
 }
 
 // src/services/messages/methods/send-image.ts
-async function sendImage(messagesClient, request) {
-  const result = sendImageRequestSchema.safeParse(request);
+async function sendImage(messagesClient, input) {
+  const result = sendImageInputSchema.safeParse(input);
   if (!result.success) {
     throw transformZodError(result.error);
   }
@@ -371,8 +394,8 @@ async function sendImage(messagesClient, request) {
 }
 
 // src/services/messages/methods/send-location.ts
-async function sendLocation(messagesClient, request) {
-  const result = sendLocationRequestSchema.safeParse(request);
+async function sendLocation(messagesClient, input) {
+  const result = sendLocationInputSchema.safeParse(input);
   if (!result.success) {
     throw transformZodError(result.error);
   }
@@ -384,8 +407,8 @@ async function sendLocation(messagesClient, request) {
 }
 
 // src/services/messages/methods/send-reaction.ts
-async function sendReaction(messagesClient, request) {
-  const result = sendReactionRequestSchema.safeParse(request);
+async function sendReaction(messagesClient, input) {
+  const result = sendReactionInputSchema.safeParse(input);
   if (!result.success) {
     throw transformZodError(result.error);
   }
@@ -443,42 +466,42 @@ var MessagesService = class {
   /**
    * Send a text message
    *
-   * @param request - Text message request (to, text)
+   * @param input - Text message input (to, text)
    * @param phoneNumberId - Optional phone number ID (overrides client config)
    */
-  async sendText(request, phoneNumberId) {
+  async sendText(input, phoneNumberId) {
     const client = this.getClient(phoneNumberId);
-    return sendText(client, request);
+    return sendText(client, input);
   }
   /**
    * Send an image message
    *
-   * @param request - Image message request (to, image)
+   * @param input - Image message input (to, image)
    * @param phoneNumberId - Optional phone number ID (overrides client config)
    */
-  async sendImage(request, phoneNumberId) {
+  async sendImage(input, phoneNumberId) {
     const client = this.getClient(phoneNumberId);
-    return sendImage(client, request);
+    return sendImage(client, input);
   }
   /**
    * Send a location message
    *
-   * @param request - Location message request (to, location)
+   * @param input - Location message input (to, location)
    * @param phoneNumberId - Optional phone number ID (overrides client config)
    */
-  async sendLocation(request, phoneNumberId) {
+  async sendLocation(input, phoneNumberId) {
     const client = this.getClient(phoneNumberId);
-    return sendLocation(client, request);
+    return sendLocation(client, input);
   }
   /**
    * Send a reaction message
    *
-   * @param request - Reaction message request (to, reaction)
+   * @param input - Reaction message input (to, reaction)
    * @param phoneNumberId - Optional phone number ID (overrides client config)
    */
-  async sendReaction(request, phoneNumberId) {
+  async sendReaction(input, phoneNumberId) {
     const client = this.getClient(phoneNumberId);
-    return sendReaction(client, request);
+    return sendReaction(client, input);
   }
 };
 
@@ -1191,7 +1214,7 @@ function verifyWebhook(query, verifyToken) {
 // src/schemas/webhooks/payload.ts
 var import_zod8 = require("zod");
 
-// src/schemas/webhooks/incoming-message.ts
+// src/schemas/messages/incoming.ts
 var import_zod7 = require("zod");
 var baseIncomingMessageSchema = import_zod7.z.object({
   from: import_zod7.z.string(),
@@ -1249,14 +1272,78 @@ var webhookMetadataSchema = import_zod8.z.object({
   display_phone_number: import_zod8.z.string(),
   phone_number_id: import_zod8.z.string()
 });
+var conversationOriginSchema = import_zod8.z.object({
+  type: import_zod8.z.enum([
+    "authentication",
+    "authentication_international",
+    "marketing",
+    "marketing_lite",
+    "referral_conversion",
+    "service",
+    "utility"
+  ])
+});
+var conversationSchema = import_zod8.z.object({
+  id: import_zod8.z.string(),
+  expiration_timestamp: import_zod8.z.string().optional(),
+  // Only for sent status
+  origin: conversationOriginSchema
+});
+var pricingSchema = import_zod8.z.object({
+  billable: import_zod8.z.boolean(),
+  // Deprecated but still present
+  pricing_model: import_zod8.z.enum(["CBP", "PMP"]),
+  type: import_zod8.z.enum(["regular", "free_customer_service", "free_entry_point"]),
+  category: import_zod8.z.enum([
+    "authentication",
+    "authentication-international",
+    "marketing",
+    "marketing_lite",
+    "referral_conversion",
+    "service",
+    "utility"
+  ])
+});
+var statusErrorSchema = import_zod8.z.object({
+  code: import_zod8.z.number(),
+  title: import_zod8.z.string(),
+  message: import_zod8.z.string(),
+  error_data: import_zod8.z.object({
+    details: import_zod8.z.string()
+  }),
+  href: import_zod8.z.string()
+});
+var statusSchema = import_zod8.z.object({
+  id: import_zod8.z.string(),
+  // WhatsApp message ID
+  status: import_zod8.z.enum(["sent", "delivered", "read", "failed", "played"]),
+  timestamp: import_zod8.z.string(),
+  // Unix timestamp
+  recipient_id: import_zod8.z.string(),
+  // User phone number or group ID
+  recipient_type: import_zod8.z.literal("group").optional(),
+  // Only included if message sent to a group
+  recipient_participant_id: import_zod8.z.string().optional(),
+  // Only included if message sent to a group
+  recipient_identity_key_hash: import_zod8.z.string().optional(),
+  // Only included if identity change check enabled
+  biz_opaque_callback_data: import_zod8.z.string().optional(),
+  // Only included if message sent with biz_opaque_callback_data
+  conversation: conversationSchema.optional(),
+  // Conditional inclusion (see conversationSchema docs)
+  pricing: pricingSchema.optional(),
+  // Conditional inclusion (see pricingSchema docs)
+  errors: import_zod8.z.array(statusErrorSchema).optional()
+  // Only included if failure to send or deliver message
+});
 var webhookValueSchema = import_zod8.z.object({
   messaging_product: import_zod8.z.literal("whatsapp"),
   metadata: webhookMetadataSchema,
   contacts: import_zod8.z.array(contactSchema).optional(),
   messages: import_zod8.z.array(incomingMessageSchema).optional(),
   // Incoming messages
-  statuses: import_zod8.z.array(import_zod8.z.any()).optional()
-  // Status updates (for later)
+  statuses: import_zod8.z.array(statusSchema).optional()
+  // Status updates
 });
 var webhookChangeSchema = import_zod8.z.object({
   value: webhookValueSchema,
@@ -1371,6 +1458,9 @@ var WebhooksService = class {
    * Handlers are processed asynchronously. If you need to await handler completion,
    * use the low-level `extractMessages()` method instead.
    *
+   * The `beforeHandler` return type is automatically inferred and provides
+   * full type safety in message handlers.
+   *
    * @param payload - Webhook payload from Meta (will be validated)
    * @param handlers - Object with handler functions for each message type
    * @param options - Optional error handling configuration
@@ -1388,7 +1478,7 @@ var WebhooksService = class {
           const contacts = change.value.contacts || [];
           for (const message of change.value.messages) {
             const contact = contacts.find((c) => c.wa_id === message.from);
-            const context = {
+            const webhook = {
               metadata,
               ...contact && {
                 contact: {
@@ -1398,20 +1488,39 @@ var WebhooksService = class {
               }
             };
             Promise.resolve().then(async () => {
+              let before = void 0;
+              if (handlers.beforeHandler) {
+                try {
+                  before = await handlers.beforeHandler(
+                    message,
+                    webhook
+                  );
+                } catch (error) {
+                  if (options?.onError) {
+                    options.onError(error, message);
+                  } else {
+                    console.error(
+                      `Error in beforeHandler for message ${message.id}:`,
+                      error
+                    );
+                  }
+                  before = void 0;
+                }
+              }
               switch (message.type) {
                 case "text":
                   if (handlers.text) {
-                    await handlers.text(message, context);
+                    await handlers.text(message, webhook, before);
                   }
                   break;
                 case "audio":
                   if (handlers.audio) {
-                    await handlers.audio(message, context);
+                    await handlers.audio(message, webhook, before);
                   }
                   break;
                 case "image":
                   if (handlers.image) {
-                    await handlers.image(message, context);
+                    await handlers.image(message, webhook, before);
                   }
                   break;
                 default:
@@ -1487,7 +1596,9 @@ var messageResponseSchema = import_zod10.z.object({
   ),
   messages: import_zod10.z.array(
     import_zod10.z.object({
-      id: import_zod10.z.string()
+      id: import_zod10.z.string(),
+      group_id: import_zod10.z.string().optional(),
+      message_status: import_zod10.z.string().optional()
     })
   )
 });
@@ -1597,12 +1708,18 @@ var debugTokenResponseSchema = import_zod14.z.object({
   incomingMessageSchema,
   incomingTextMessageSchema,
   messageResponseSchema,
+  outgoingImageMessageSchema,
+  outgoingLocationMessageSchema,
+  outgoingMessageSchema,
+  outgoingReactionMessageSchema,
+  outgoingTextMessageSchema,
   phoneNumberListResponseSchema,
   phoneNumberResponseSchema,
-  sendImageRequestSchema,
-  sendLocationRequestSchema,
-  sendReactionRequestSchema,
-  sendTextRequestSchema,
+  sendImageInputSchema,
+  sendLocationInputSchema,
+  sendReactionInputSchema,
+  sendTextInputSchema,
+  statusSchema,
   templateBodyComponentSchema,
   templateButtonSchema,
   templateButtonsComponentSchema,

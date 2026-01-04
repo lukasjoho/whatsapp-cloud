@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { incomingMessageSchema } from "./incoming-message";
+import { incomingMessageSchema } from "../messages/incoming";
 
 /**
  * Contact information in webhook

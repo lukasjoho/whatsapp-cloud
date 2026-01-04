@@ -3,14 +3,13 @@ import { extractMessages } from "./utils/extract-messages";
 import { extractStatuses } from "./utils/extract-statuses";
 import { verifyWebhook } from "./utils/verify";
 import { webhookPayloadSchema } from "../../schemas/webhooks/payload";
+import type { WebhookPayload, Status } from "../../types/webhooks";
 import type {
-  WebhookPayload,
   IncomingTextMessage,
   IncomingAudioMessage,
   IncomingImageMessage,
   IncomingMessage,
-  Status,
-} from "../../types/webhooks";
+} from "../../types/messages";
 
 /**
  * WhatsApp webhook context - data from Meta's webhook payload

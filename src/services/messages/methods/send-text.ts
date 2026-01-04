@@ -1,6 +1,6 @@
 import type { MessagesClient } from "../MessagesClient";
-import { sendTextRequestSchema } from "../../../schemas/messages/request";
-import type { SendTextRequest } from "../../../types/messages/request";
+import { sendTextInputSchema } from "../../../schemas/messages/outgoing";
+import type { SendTextInput } from "../../../types/messages/outgoing";
 import type { MessageResponse } from "../../../types/messages/response";
 import { buildMessagePayload } from "../utils/build-message-payload";
 import { transformZodError } from "../../../utils/zod-error";
@@ -13,10 +13,10 @@ import { transformZodError } from "../../../utils/zod-error";
  */
 export async function sendText(
   messagesClient: MessagesClient,
-  request: SendTextRequest
+  input: SendTextInput
 ): Promise<MessageResponse> {
-  // Validate request with schema - throws WhatsAppValidationError if invalid
-  const result = sendTextRequestSchema.safeParse(request);
+  // Validate input with schema - throws WhatsAppValidationError if invalid
+  const result = sendTextInputSchema.safeParse(input);
   if (!result.success) {
     throw transformZodError(result.error);
   }

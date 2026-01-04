@@ -1,22 +1,22 @@
 import type { MessagesClient } from "../MessagesClient";
-import { sendReactionRequestSchema } from "../../../schemas/messages/request";
-import type { SendReactionRequest } from "../../../types/messages/request";
+import { sendReactionInputSchema } from "../../../schemas/messages/outgoing";
+import type { SendReactionInput } from "../../../types/messages/outgoing";
 import type { MessageResponse } from "../../../types/messages/response";
 import { buildMessagePayload } from "../utils/build-message-payload";
 import { transformZodError } from "../../../utils/zod-error";
 
 /**
  * Send a reaction message
- * 
+ *
  * @param messagesClient - Messages client with phone number ID baked in
- * @param request - Reaction message request (to, reaction)
+ * @param input - Reaction message input (to, reaction)
  */
 export async function sendReaction(
   messagesClient: MessagesClient,
-  request: SendReactionRequest
+  input: SendReactionInput
 ): Promise<MessageResponse> {
-  // Validate request with schema - throws WhatsAppValidationError if invalid
-  const result = sendReactionRequestSchema.safeParse(request);
+  // Validate input with schema - throws WhatsAppValidationError if invalid
+  const result = sendReactionInputSchema.safeParse(input);
   if (!result.success) {
     throw transformZodError(result.error);
   }
@@ -30,4 +30,3 @@ export async function sendReaction(
   // Make API request - messagesClient handles the phoneNumberId prefix automatically
   return messagesClient.post<MessageResponse>("/messages", payload);
 }
-
