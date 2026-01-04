@@ -9,6 +9,7 @@ import type {
   IncomingAudioMessage,
   IncomingImageMessage,
   IncomingMessage,
+  Status,
 } from "../../types/webhooks";
 
 /**
@@ -164,7 +165,7 @@ export class WebhooksService {
    * @param payload - Webhook payload from Meta
    * @returns Flat array of status updates
    */
-  extractStatuses(payload: WebhookPayload): unknown[] {
+  extractStatuses(payload: WebhookPayload): Status[] {
     return extractStatuses(payload);
   }
 

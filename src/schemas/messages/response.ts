@@ -14,6 +14,8 @@ export const messageResponseSchema = z.object({
   messages: z.array(
     z.object({
       id: z.string(),
+      group_id: z.string().optional(),
+      message_status: z.string().optional(),
     })
   ),
 });

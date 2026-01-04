@@ -1,4 +1,4 @@
-import type { WebhookPayload } from "../../../types/webhooks";
+import type { WebhookPayload, Status } from "../../../types/webhooks";
 
 /**
  * Extract status updates from webhook payload
@@ -9,8 +9,8 @@ import type { WebhookPayload } from "../../../types/webhooks";
  * @param payload - Webhook payload from Meta
  * @returns Flat array of status updates
  */
-export function extractStatuses(payload: WebhookPayload): unknown[] {
-  const statuses: unknown[] = [];
+export function extractStatuses(payload: WebhookPayload): Status[] {
+  const statuses: Status[] = [];
 
   for (const entry of payload.entry) {
     for (const change of entry.changes) {
@@ -22,4 +22,3 @@ export function extractStatuses(payload: WebhookPayload): unknown[] {
 
   return statuses;
 }
-
