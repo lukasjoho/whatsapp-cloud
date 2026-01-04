@@ -1,5 +1,11 @@
 # whatzapp
 
+## 0.1.1
+
+### Patch Changes
+
+- 22da507: add statuses
+
 ## 0.1.0
 
 ### Minor Changes
