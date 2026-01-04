@@ -1,5 +1,11 @@
 # whatzapp
 
+## 0.1.2
+
+### Patch Changes
+
+- b71b674: change input types
+
 ## 0.1.1
 
 ### Patch Changes
