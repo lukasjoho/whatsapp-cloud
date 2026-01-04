@@ -7,9 +7,10 @@
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
     "lint": "tsc",
-    "example": "tsx src/examples/main.ts"
+    "example": "tsx src/examples/main.ts",
+    "prepublishOnly": "pnpm build"
   },
   "keywords": [],
   "author": "",
