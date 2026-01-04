@@ -1,5 +1,11 @@
 # whatzapp
 
+## 0.1.4
+
+### Patch Changes
+
+- 0741aba: add sendMessage method
+
 ## 0.1.3
 
 ### Patch Changes
