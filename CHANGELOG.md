@@ -1,5 +1,11 @@
 # whatzapp
 
+## 0.1.3
+
+### Patch Changes
+
+- 6b76203: remove pkg
+
 ## 0.1.2
 
 ### Patch Changes
