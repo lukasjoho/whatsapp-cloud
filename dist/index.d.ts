@@ -279,6 +279,13 @@ declare class MessagesService {
      * @param phoneNumberId - Optional phone number ID (overrides client config)
      */
     sendReaction(input: SendReactionInput, phoneNumberId?: string): Promise<MessageResponse>;
+    /**
+     * Send any message type using the discriminated union
+     *
+     * @param message - Any outgoing message (text, image, location, reaction)
+     * @param phoneNumberId - Optional phone number ID (overrides client config)
+     */
+    sendMessage(message: OutgoingMessage, phoneNumberId?: string): Promise<MessageResponse>;
 }
 
 /**

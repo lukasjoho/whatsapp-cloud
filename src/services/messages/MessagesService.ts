@@ -10,6 +10,7 @@ import type {
   SendImageInput,
   SendLocationInput,
   SendReactionInput,
+  OutgoingMessage,
 } from "../../types/messages/outgoing";
 import type { MessageResponse } from "../../types/messages/response";
 
@@ -93,5 +94,27 @@ export class MessagesService {
   ): Promise<MessageResponse> {
     const client = this.getClient(phoneNumberId);
     return sendReaction(client, input);
+  }
+
+  /**
+   * Send any message type using the discriminated union
+   *
+   * @param message - Any outgoing message (text, image, location, reaction)
+   * @param phoneNumberId - Optional phone number ID (overrides client config)
+   */
+  async sendMessage(
+    message: OutgoingMessage,
+    phoneNumberId?: string
+  ): Promise<MessageResponse> {
+    switch (message.type) {
+      case "text":
+        return this.sendText(message, phoneNumberId);
+      case "image":
+        return this.sendImage(message, phoneNumberId);
+      case "location":
+        return this.sendLocation(message, phoneNumberId);
+      case "reaction":
+        return this.sendReaction(message, phoneNumberId);
+    }
   }
 }

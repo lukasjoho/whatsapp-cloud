@@ -1,5 +1,5 @@
 import type { WebhookPayload } from "../../../types/webhooks";
-import type { IncomingMessage } from "../../../types/webhooks/incoming-message";
+import type { IncomingMessage } from "../../../types/messages/incoming";
 
 /**
  * Extract all incoming messages from webhook payload
