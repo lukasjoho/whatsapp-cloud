@@ -6,6 +6,7 @@ import { AccountsService } from "../services/accounts/index";
 import { BusinessService } from "../services/business/index";
 import { TemplatesService } from "../services/templates/index";
 import { WebhooksService } from "../services/webhooks/index";
+import { MediaService } from "../services/media/index";
 import { ZodError } from "zod";
 import { transformZodError } from "../utils/zod-error";
 import type { DebugTokenResponse } from "../types/debug";
@@ -19,6 +20,7 @@ export class WhatsAppClient {
   public readonly business: BusinessService;
   public readonly templates: TemplatesService;
   public readonly webhooks: WebhooksService;
+  public readonly media: MediaService;
 
   private readonly httpClient: HttpClient;
 
@@ -43,6 +45,7 @@ export class WhatsAppClient {
     this.business = new BusinessService(this.httpClient);
     this.templates = new TemplatesService(this.httpClient);
     this.webhooks = new WebhooksService(this.httpClient);
+    this.media = new MediaService(this.httpClient);
   }
 
   /**

@@ -169,37 +169,6 @@ export class WebhooksService {
   }
 
   /**
-   * Download media file by media ID
-   *
-   * Downloads media files (images, audio, video, documents) from WhatsApp servers.
-   * Uses the access token from the client configuration automatically.
-   *
-   * @param mediaId - Media ID from incoming message (e.g., message.image.id, message.audio.id)
-   * @returns Promise resolving to ArrayBuffer containing the media file
-   * @throws Error if download fails or media ID is invalid
-   *
-   * @example
-   * ```typescript
-   * client.webhooks.handle(req.body, {
-   *   image: async (message, context) => {
-   *     const mediaData = await client.webhooks.downloadMedia(message.image.id);
-   *     // Upload to S3, save to disk, etc.
-   *     await s3.upload({ key: message.image.id, body: Buffer.from(mediaData) });
-   *   },
-   * });
-   * ```
-   */
-  async downloadMedia(mediaId: string): Promise<ArrayBuffer> {
-    if (!mediaId || mediaId.trim().length === 0) {
-      throw new Error("Media ID is required");
-    }
-
-    // WhatsApp API endpoint: GET /{version}/{media-id}
-    // Use HttpClient's getBinary method which handles baseURL, apiVersion, and auth automatically
-    return this.httpClient.getBinary(`/${mediaId}`);
-  }
-
-  /**
    * Validate webhook payload structure
    *
    * Validates the payload against the schema. Logs errors if malformed

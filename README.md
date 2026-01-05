@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       console.log(`Image from ${context.contact?.name || message.from}`);
 
       // Download the image
-      const imageData = await client.webhooks.downloadMedia(message.image.id);
+      const imageData = await client.media.download(message.image.id);
 
       // Process the image (save to storage, analyze, etc.)
       // const buffer = Buffer.from(imageData);
@@ -107,4 +107,5 @@ export async function POST(request: NextRequest) {
 - `client.accounts` - Manage WhatsApp Business Accounts
 - `client.business` - Manage Business Portfolios
 - `client.templates` - Create, retrieve and send WhatsApp templates
+- `client.media` - Upload, download, and manage media files
 - ... more to come very soon. 🕒
