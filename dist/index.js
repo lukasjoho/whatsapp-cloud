@@ -574,343 +574,213 @@ var BusinessService = class {
   }
 };
 
-// src/services/templates/TemplatesClient.ts
-var TemplatesClient = class {
-  constructor(httpClient, businessAccountId) {
-    this.httpClient = httpClient;
-    this.businessAccountId = businessAccountId;
-  }
-  /**
-   * Make a GET request with WABA ID prefix
-   */
-  async get(path) {
-    return this.httpClient.get(`/${this.businessAccountId}${path}`);
-  }
-  /**
-   * Make a POST request with WABA ID prefix
-   */
-  async post(path, body) {
-    return this.httpClient.post(`/${this.businessAccountId}${path}`, body);
-  }
-  /**
-   * Make a DELETE request with WABA ID prefix
-   */
-  async delete(path) {
-    return this.httpClient.delete(`/${this.businessAccountId}${path}`);
-  }
-};
-
-// src/schemas/templates/request.ts
-import { z as z5 } from "zod";
-
-// src/schemas/templates/component.ts
+// src/resources/templates/schema.ts
 import { z as z3 } from "zod";
-var templateQuickReplyButtonSchema = z3.object({
-  type: z3.literal("QUICK_REPLY"),
-  text: z3.string().min(1).max(25, "Button text must be 25 characters or less")
-});
-var templateUrlButtonSchema = z3.object({
-  type: z3.literal("URL"),
-  text: z3.string().min(1).max(25, "Button text must be 25 characters or less"),
-  url: z3.string().url().max(2e3, "URL must be 2000 characters or less")
-  // example: z.array(z.string()).optional(), // For later: when URL contains variables
-});
-var templatePhoneNumberButtonSchema = z3.object({
-  type: z3.literal("PHONE_NUMBER"),
-  text: z3.string().min(1).max(25, "Button text must be 25 characters or less"),
-  phone_number: z3.string().min(1).max(20, "Phone number must be 20 characters or less")
-});
-var templateCopyCodeButtonSchema = z3.object({
-  type: z3.literal("COPY_CODE")
-  // example: z.string().max(15).optional(), // For later: example value to copy
-});
-var templateFlowButtonSchema = z3.object({
-  type: z3.literal("FLOW"),
-  text: z3.string().min(1).max(25, "Button text must be 25 characters or less"),
-  flow_action: z3.string().optional(),
-  flow_id: z3.string().optional(),
-  navigate_screen: z3.string().optional()
-});
-var templateButtonSchema = z3.discriminatedUnion("type", [
-  templateQuickReplyButtonSchema,
-  templateUrlButtonSchema,
-  templatePhoneNumberButtonSchema,
-  templateCopyCodeButtonSchema,
-  templateFlowButtonSchema
-]);
-var templateHeaderComponentSchema = z3.object({
-  type: z3.literal("HEADER"),
-  format: z3.enum(["TEXT", "IMAGE", "VIDEO", "DOCUMENT", "LOCATION"]),
-  text: z3.string().max(60, "Header text must be 60 characters or less").optional(),
-  example: z3.object({
-    header_handle: z3.array(z3.string()).min(1, "At least one header_handle is required")
-  }).optional()
-}).refine(
-  (data) => {
-    if (data.format === "TEXT" && !data.text) {
-      return false;
-    }
-    if (data.format === "LOCATION") {
-      return true;
-    }
-    if (["IMAGE", "VIDEO", "DOCUMENT"].includes(data.format)) {
-      if (!data.example || !data.example.header_handle || data.example.header_handle.length === 0) {
-        return false;
-      }
-    }
-    return true;
-  },
-  {
-    message: "TEXT format requires text field; IMAGE/VIDEO/DOCUMENT formats require example.header_handle"
-  }
-).refine(
-  (data) => {
-    if (data.format === "TEXT") {
-      return !!data.text;
-    }
-    return true;
-  },
-  {
-    message: "TEXT format header requires text field"
-  }
-).refine(
-  (data) => {
-    if (["IMAGE", "VIDEO", "DOCUMENT"].includes(data.format)) {
-      return !!(data.example?.header_handle && data.example.header_handle.length > 0);
-    }
-    return true;
-  },
-  {
-    message: "IMAGE/VIDEO/DOCUMENT format header requires example.header_handle (asset handle from Resumable Upload API)"
-  }
-);
-var templateBodyComponentSchema = z3.object({
-  type: z3.literal("BODY"),
-  text: z3.string().min(1).max(1024, "Body text must be 1024 characters or less")
-  // example: z.object({...}).optional(), // For later: when using variables
-});
-var templateFooterComponentSchema = z3.object({
-  type: z3.literal("FOOTER"),
-  text: z3.string().min(1).max(60, "Footer text must be 60 characters or less")
-});
-var templateButtonsComponentSchema = z3.object({
-  type: z3.literal("BUTTONS"),
-  buttons: z3.array(templateButtonSchema).min(1).max(10, "Maximum 10 buttons allowed")
-});
-var templateComponentSchema = z3.discriminatedUnion("type", [
-  templateHeaderComponentSchema,
-  templateBodyComponentSchema,
-  templateFooterComponentSchema,
-  templateButtonsComponentSchema
-]);
-
-// src/schemas/templates/language.ts
-import { z as z4 } from "zod";
-var templateLanguageSchema = z4.enum([
+var templateLanguageSchema = z3.enum([
   "af",
   // Afrikaans
   "sq",
-  // Albanisch
+  // Albanian
   "ar",
-  // Arabisch
+  // Arabic
   "ar_EG",
-  // Arabisch (Ägypten)
+  // Arabic (Egypt)
   "ar_AE",
-  // Arabisch (Vereinigte Arabische Emirate)
+  // Arabic (UAE)
   "ar_LB",
-  // Arabisch (LBN)
+  // Arabic (Lebanon)
   "ar_MA",
-  // Arabisch (MAR)
+  // Arabic (Morocco)
   "ar_QA",
-  // Arabisch (QAT)
+  // Arabic (Qatar)
   "az",
-  // Aserbaidschanisch
+  // Azerbaijani
   "be_BY",
-  // Belarussisch
+  // Belarusian
   "bn",
-  // Bengalisch
+  // Bengali
   "bn_IN",
-  // Bengali (IND)
+  // Bengali (India)
   "bg",
-  // Bulgarisch
+  // Bulgarian
   "ca",
-  // Katalanisch
+  // Catalan
   "zh_CN",
-  // Chinesisch (CHN)
+  // Chinese (China)
   "zh_HK",
-  // Chinesisch (HKG)
+  // Chinese (Hong Kong)
   "zh_TW",
-  // Chinesisch (TAI)
+  // Chinese (Taiwan)
   "hr",
-  // Kroatisch
+  // Croatian
   "cs",
-  // Tschechisch
+  // Czech
   "da",
-  // Dänisch
+  // Danish
   "prs_AF",
   // Dari
   "nl",
-  // Niederländisch
+  // Dutch
   "nl_BE",
-  // Niederländisch (BEL)
+  // Dutch (Belgium)
   "en",
-  // Englisch
+  // English
   "en_GB",
-  // Englisch (UK)
+  // English (UK)
   "en_US",
-  // Englisch (USA)
+  // English (US)
   "en_AE",
-  // Englisch (Vereinigte Arabische Emirate)
+  // English (UAE)
   "en_AU",
-  // Englisch (AUS)
+  // English (Australia)
   "en_CA",
-  // Englisch (Kanada)
+  // English (Canada)
   "en_GH",
-  // Englisch (GHA)
+  // English (Ghana)
   "en_IE",
-  // English (IRL)
+  // English (Ireland)
   "en_IN",
-  // Englisch (Indien)
+  // English (India)
   "en_JM",
-  // Englisch (JAM)
+  // English (Jamaica)
   "en_MY",
-  // Englisch (MYS)
+  // English (Malaysia)
   "en_NZ",
-  // Englisch (Neuseeland)
+  // English (New Zealand)
   "en_QA",
-  // Englisch (QAT)
+  // English (Qatar)
   "en_SG",
-  // Englisch (SGP)
+  // English (Singapore)
   "en_UG",
-  // Englisch (UGA)
+  // English (Uganda)
   "en_ZA",
-  // Englisch (ZAF)
+  // English (South Africa)
   "et",
-  // Estnisch
+  // Estonian
   "fil",
   // Filipino
   "fi",
-  // Finnisch
+  // Finnish
   "fr",
-  // Französisch
+  // French
   "fr_BE",
-  // Französisch (BEL)
+  // French (Belgium)
   "fr_CA",
-  // Französisch (Kanada)
+  // French (Canada)
   "fr_CH",
-  // Französisch (CHE)
+  // French (Switzerland)
   "fr_CI",
-  // Französisch (CIV)
+  // French (Ivory Coast)
   "fr_MA",
-  // Französisch (MAR)
+  // French (Morocco)
   "ka",
-  // Georgisch
+  // Georgian
   "de",
-  // Deutsch
+  // German
   "de_AT",
-  // Deutsch (Österreich)
+  // German (Austria)
   "de_CH",
-  // Deutsch (CHE)
+  // German (Switzerland)
   "el",
-  // Griechisch
+  // Greek
   "gu",
   // Gujarati
   "ha",
   // Hausa
   "he",
-  // Hebräisch
+  // Hebrew
   "hi",
   // Hindi
   "hu",
-  // Ungarisch
+  // Hungarian
   "id",
-  // Indonesisch
+  // Indonesian
   "ga",
-  // Irisch
+  // Irish
   "it",
-  // Italienisch
+  // Italian
   "ja",
-  // Japanisch
+  // Japanese
   "kn",
   // Kannada
   "kk",
-  // Kasachisch
+  // Kazakh
   "rw_RW",
   // Kinyarwanda
   "ko",
-  // Koreanisch
+  // Korean
   "ky_KG",
-  // Kirgisisch (Kirgisistan)
+  // Kyrgyz
   "lo",
-  // Laotisch
+  // Lao
   "lv",
-  // Lettisch
+  // Latvian
   "lt",
-  // Litauisch
+  // Lithuanian
   "mk",
-  // Mazedonisch
+  // Macedonian
   "ms",
-  // Malaiisch
+  // Malay
   "ml",
   // Malayalam
   "mr",
   // Marathi
   "nb",
-  // Norwegisch
+  // Norwegian
   "ps_AF",
-  // Paschtunisch
+  // Pashto
   "fa",
-  // Persisch
+  // Persian
   "pl",
-  // Polnisch
+  // Polish
   "pt_BR",
-  // Portugiesisch (BR)
+  // Portuguese (Brazil)
   "pt_PT",
-  // Portugiesisch (POR)
+  // Portuguese (Portugal)
   "pa",
-  // Panjabi
+  // Punjabi
   "ro",
-  // Rumänisch
+  // Romanian
   "ru",
-  // Russisch
+  // Russian
   "sr",
-  // Serbisch
+  // Serbian
   "si_LK",
   // Sinhala
   "sk",
-  // Slowakisch
+  // Slovak
   "sl",
-  // Slowenisch
+  // Slovenian
   "es",
-  // Spanisch
+  // Spanish
   "es_AR",
-  // Spanisch (ARG)
+  // Spanish (Argentina)
   "es_CL",
-  // Spanisch (CHL)
+  // Spanish (Chile)
   "es_CO",
-  // Spanisch (Kolumbien)
+  // Spanish (Colombia)
   "es_CR",
-  // Spanisch (CRI)
+  // Spanish (Costa Rica)
   "es_DO",
-  // Spanisch (DOM)
+  // Spanish (Dominican Republic)
   "es_EC",
-  // Spanisch (ECU)
+  // Spanish (Ecuador)
   "es_HN",
-  // Spanisch (Honduras)
+  // Spanish (Honduras)
   "es_MX",
-  // Spanisch (MEX)
+  // Spanish (Mexico)
   "es_PA",
-  // Spanisch (PAN)
+  // Spanish (Panama)
   "es_PE",
-  // Spanisch (Peru)
+  // Spanish (Peru)
   "es_ES",
-  // Spanisch (SPA)
+  // Spanish (Spain)
   "es_UY",
-  // Spanisch (URY)
+  // Spanish (Uruguay)
   "sw",
   // Swahili
   "sv",
-  // Schwedisch
+  // Swedish
   "ta",
   // Tamil
   "te",
@@ -918,145 +788,253 @@ var templateLanguageSchema = z4.enum([
   "th",
   // Thai
   "tr",
-  // Türkisch
+  // Turkish
   "uk",
-  // Ukrainisch
+  // Ukrainian
   "ur",
   // Urdu
   "uz",
-  // Usbekisch
+  // Uzbek
   "vi",
-  // Vietnamesisch
+  // Vietnamese
   "zu"
   // Zulu
 ]);
-
-// src/schemas/templates/request.ts
-var templateCreateSchema = z5.object({
-  name: z5.string().min(1).max(512, "Template name must be 512 characters or less"),
+var templateCategorySchema = z3.enum([
+  "AUTHENTICATION",
+  "MARKETING",
+  "UTILITY"
+]);
+var templateParameterFormatSchema = z3.enum(["positional", "named"]);
+var templateStatusSchema = z3.enum([
+  "APPROVED",
+  "PENDING",
+  "REJECTED",
+  "PAUSED",
+  "DISABLED",
+  "IN_APPEAL",
+  "PENDING_DELETION",
+  "DELETED",
+  "LIMIT_EXCEEDED"
+]);
+var templateQualityScoreSchema = z3.object({
+  score: z3.enum(["GREEN", "YELLOW", "RED", "UNKNOWN"]).optional(),
+  date: z3.number().optional()
+});
+var templateNamedParamExampleSchema = z3.object({
+  param_name: z3.string(),
+  example: z3.string()
+});
+var templateQuickReplyButtonInputSchema = z3.object({
+  type: z3.literal("QUICK_REPLY"),
+  text: z3.string().min(1).max(25, "Button text must be 25 characters or less")
+});
+var templateUrlButtonInputSchema = z3.object({
+  type: z3.literal("URL"),
+  text: z3.string().min(1).max(25, "Button text must be 25 characters or less"),
+  url: z3.string().url().max(2e3, "URL must be 2000 characters or less"),
+  example: z3.array(z3.string()).optional()
+});
+var templatePhoneNumberButtonInputSchema = z3.object({
+  type: z3.literal("PHONE_NUMBER"),
+  text: z3.string().min(1).max(25, "Button text must be 25 characters or less"),
+  phone_number: z3.string().min(1).max(20, "Phone number must be 20 characters or less")
+});
+var templateCopyCodeButtonInputSchema = z3.object({
+  type: z3.literal("COPY_CODE"),
+  example: z3.string().max(15).optional()
+});
+var templateFlowButtonInputSchema = z3.object({
+  type: z3.literal("FLOW"),
+  text: z3.string().min(1).max(25, "Button text must be 25 characters or less"),
+  flow_id: z3.string().optional(),
+  flow_action: z3.enum(["navigate", "data_exchange"]).optional(),
+  navigate_screen: z3.string().optional()
+});
+var templateButtonInputSchema = z3.discriminatedUnion("type", [
+  templateQuickReplyButtonInputSchema,
+  templateUrlButtonInputSchema,
+  templatePhoneNumberButtonInputSchema,
+  templateCopyCodeButtonInputSchema,
+  templateFlowButtonInputSchema
+]);
+var templateHeaderTextExampleSchema = z3.object({
+  // Positional: header_text: ["value1"]
+  header_text: z3.array(z3.string()).optional(),
+  // Named: header_text_named_params: [{ param_name: "name", example: "value" }]
+  header_text_named_params: z3.array(templateNamedParamExampleSchema).optional()
+});
+var templateHeaderTextInputSchema = z3.object({
+  type: z3.literal("HEADER"),
+  format: z3.literal("TEXT"),
+  text: z3.string().min(1).max(60, "Header text must be 60 characters or less"),
+  example: templateHeaderTextExampleSchema.optional()
+});
+var templateHeaderMediaInputSchema = z3.object({
+  type: z3.literal("HEADER"),
+  format: z3.enum(["IMAGE", "VIDEO", "DOCUMENT"]),
+  example: z3.object({
+    header_handle: z3.array(z3.string()).min(1, "At least one header_handle is required")
+  })
+});
+var templateHeaderLocationInputSchema = z3.object({
+  type: z3.literal("HEADER"),
+  format: z3.literal("LOCATION")
+});
+var templateHeaderComponentInputSchema = z3.discriminatedUnion(
+  "format",
+  [
+    templateHeaderTextInputSchema,
+    templateHeaderMediaInputSchema,
+    templateHeaderLocationInputSchema
+  ]
+);
+var templateBodyExampleSchema = z3.object({
+  // Positional: body_text: [["value1", "value2"]]
+  body_text: z3.array(z3.array(z3.string())).optional(),
+  // Named: body_text_named_params: [{ param_name: "name", example: "value" }]
+  body_text_named_params: z3.array(templateNamedParamExampleSchema).optional()
+});
+var templateBodyComponentInputSchema = z3.object({
+  type: z3.literal("BODY"),
+  text: z3.string().min(1).max(1024, "Body text must be 1024 characters or less"),
+  example: templateBodyExampleSchema.optional()
+});
+var templateFooterComponentInputSchema = z3.object({
+  type: z3.literal("FOOTER"),
+  text: z3.string().min(1).max(60, "Footer text must be 60 characters or less")
+});
+var templateButtonsComponentInputSchema = z3.object({
+  type: z3.literal("BUTTONS"),
+  buttons: z3.array(templateButtonInputSchema).min(1).max(10, "Maximum 10 buttons allowed")
+});
+var templateComponentInputSchema = z3.union([
+  templateHeaderComponentInputSchema,
+  templateBodyComponentInputSchema,
+  templateFooterComponentInputSchema,
+  templateButtonsComponentInputSchema
+]);
+var templateButtonSchema = z3.object({
+  type: z3.string(),
+  text: z3.string().optional(),
+  url: z3.string().optional(),
+  phone_number: z3.string().optional(),
+  example: z3.union([z3.array(z3.string()), z3.string()]).optional(),
+  flow_id: z3.string().optional(),
+  flow_action: z3.string().optional(),
+  navigate_screen: z3.string().optional()
+});
+var templateComponentSchema = z3.object({
+  type: z3.enum(["HEADER", "BODY", "FOOTER", "BUTTONS"]),
+  format: z3.string().optional(),
+  text: z3.string().optional(),
+  buttons: z3.array(templateButtonSchema).optional(),
+  example: z3.object({
+    header_text: z3.array(z3.string()).optional(),
+    header_text_named_params: z3.array(templateNamedParamExampleSchema).optional(),
+    header_handle: z3.array(z3.string()).optional(),
+    body_text: z3.array(z3.array(z3.string())).optional(),
+    body_text_named_params: z3.array(templateNamedParamExampleSchema).optional()
+  }).optional()
+});
+var hasBody = (components) => components.some((c) => c.type === "BODY");
+var hasMaxOneHeader = (components) => components.filter((c) => c.type === "HEADER").length <= 1;
+var hasMaxOneFooter = (components) => components.filter((c) => c.type === "FOOTER").length <= 1;
+var hasMaxOneButtons = (components) => components.filter((c) => c.type === "BUTTONS").length <= 1;
+var baseComponentsSchema = z3.array(templateComponentInputSchema).min(1, "At least one component is required").refine(hasBody, { message: "BODY component is required" }).refine(hasMaxOneHeader, { message: "Only one HEADER component is allowed" }).refine(hasMaxOneFooter, { message: "Only one FOOTER component is allowed" }).refine(hasMaxOneButtons, {
+  message: "Only one BUTTONS component is allowed"
+});
+var templateNameSchema = z3.string().min(1, "Template name is required").max(512, "Template name must be 512 characters or less");
+var templateCreateMarketingSchema = z3.object({
+  name: templateNameSchema,
   language: templateLanguageSchema,
-  category: z5.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]),
-  components: z5.array(templateComponentSchema).min(1, "At least one component is required").refine(
-    (components) => {
-      return components.some((c) => c.type === "BODY");
-    },
-    { message: "BODY component is required" }
-  ).refine(
-    (components) => {
-      const headers = components.filter((c) => c.type === "HEADER");
-      return headers.length <= 1;
-    },
-    { message: "Only one HEADER component is allowed" }
-  ).refine(
-    (components) => {
-      const footers = components.filter((c) => c.type === "FOOTER");
-      return footers.length <= 1;
-    },
-    { message: "Only one FOOTER component is allowed" }
-  ).refine(
-    (components) => {
-      const buttons = components.filter((c) => c.type === "BUTTONS");
-      return buttons.length <= 1;
-    },
-    { message: "Only one BUTTONS component is allowed" }
-  )
+  category: z3.literal("MARKETING"),
+  parameter_format: templateParameterFormatSchema.optional(),
+  components: baseComponentsSchema
 });
-var templateUpdateSchema = z5.object({
-  category: z5.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]).optional(),
-  components: z5.array(templateComponentSchema).optional(),
+var templateCreateUtilitySchema = z3.object({
+  name: templateNameSchema,
+  language: templateLanguageSchema,
+  category: z3.literal("UTILITY"),
+  parameter_format: templateParameterFormatSchema.optional(),
+  components: baseComponentsSchema
+});
+var templateCreateAuthenticationSchema = z3.object({
+  name: templateNameSchema,
+  language: templateLanguageSchema,
+  category: z3.literal("AUTHENTICATION"),
+  parameter_format: templateParameterFormatSchema.optional(),
+  components: z3.array(templateComponentInputSchema).min(1, "At least one component is required").refine(hasBody, { message: "BODY component is required" })
+});
+var templateCreateSchema = z3.discriminatedUnion("category", [
+  templateCreateMarketingSchema,
+  templateCreateUtilitySchema,
+  templateCreateAuthenticationSchema
+]);
+var templateUpdateSchema = z3.object({
+  category: templateCategorySchema.optional(),
+  components: z3.array(templateComponentInputSchema).optional(),
   language: templateLanguageSchema.optional(),
-  name: z5.string().min(1).max(512).optional()
+  name: z3.string().min(1).max(512).optional()
 });
-var templateListSchema = z5.object({
-  name: z5.string().optional()
-  // Filter by template name
+var templateListSchema = z3.object({
+  name: z3.string().optional(),
+  limit: z3.number().min(1).max(1e3).optional(),
+  after: z3.string().optional(),
+  before: z3.string().optional()
 });
-var templateDeleteSchema = z5.object({
-  name: z5.string().optional(),
-  hsm_id: z5.string().optional()
+var templateDeleteSchema = z3.object({
+  name: z3.string().optional(),
+  hsm_id: z3.string().optional()
 }).refine((data) => data.name || data.hsm_id, {
   message: "Either name or hsm_id must be provided"
 });
+var templateSchema = z3.object({
+  id: z3.string(),
+  name: z3.string(),
+  language: z3.string(),
+  status: templateStatusSchema,
+  category: templateCategorySchema,
+  components: z3.array(templateComponentSchema),
+  parameter_format: templateParameterFormatSchema.optional(),
+  quality_score: templateQualityScoreSchema.optional(),
+  rejected_reason: z3.string().optional(),
+  previous_category: z3.string().optional()
+});
+var templateCreateResponseSchema = z3.object({
+  id: z3.string(),
+  status: templateStatusSchema,
+  category: templateCategorySchema
+});
+var templatePagingCursorsSchema = z3.object({
+  before: z3.string().optional(),
+  after: z3.string().optional()
+});
+var templatePagingSchema = z3.object({
+  cursors: templatePagingCursorsSchema.optional(),
+  next: z3.string().optional(),
+  previous: z3.string().optional()
+});
+var templateListResponseSchema = z3.object({
+  data: z3.array(templateSchema),
+  paging: templatePagingSchema.optional()
+});
+var templateUpdateResponseSchema = z3.object({
+  success: z3.boolean()
+});
+var templateDeleteResponseSchema = z3.object({
+  success: z3.boolean()
+});
 
-// src/services/templates/methods/create.ts
-async function createTemplate(templatesClient, request) {
-  const result = templateCreateSchema.safeParse(request);
-  if (!result.success) {
-    throw transformZodError(result.error);
-  }
-  const data = result.data;
-  return templatesClient.post(
-    "/message_templates",
-    data
-  );
-}
-
-// src/services/templates/methods/list.ts
-async function listTemplates(templatesClient, options) {
-  if (options) {
-    const result = templateListSchema.safeParse(options);
-    if (!result.success) {
-      throw transformZodError(result.error);
-    }
-  }
-  const params = new URLSearchParams();
-  if (options?.name) {
-    params.append("name", options.name);
-  }
-  const queryString = params.toString();
-  const path = queryString ? `/message_templates?${queryString}` : "/message_templates";
-  return templatesClient.get(path);
-}
-
-// src/services/templates/methods/get.ts
-async function getTemplate(httpClient, templateId) {
-  if (!templateId || templateId.trim().length === 0) {
-    throw new Error("Template ID is required");
-  }
-  return httpClient.get(`/${templateId}`);
-}
-
-// src/services/templates/methods/update.ts
-async function updateTemplate(httpClient, templateId, request) {
-  if (!templateId || templateId.trim().length === 0) {
-    throw new Error("Template ID is required");
-  }
-  const result = templateUpdateSchema.safeParse(request);
-  if (!result.success) {
-    throw transformZodError(result.error);
-  }
-  const data = result.data;
-  return httpClient.post(`/${templateId}`, data);
-}
-
-// src/services/templates/methods/delete.ts
-async function deleteTemplate(templatesClient, options) {
-  const result = templateDeleteSchema.safeParse(options);
-  if (!result.success) {
-    throw transformZodError(result.error);
-  }
-  const data = result.data;
-  const params = new URLSearchParams();
-  if (data.name) {
-    params.append("name", data.name);
-  }
-  if (data.hsm_id) {
-    params.append("hsm_id", data.hsm_id);
-  }
-  const queryString = params.toString();
-  const path = `/message_templates?${queryString}`;
-  return templatesClient.delete(path);
-}
-
-// src/services/templates/TemplatesService.ts
-var TemplatesService = class {
+// src/resources/templates/resource.ts
+var TemplatesResource = class {
   constructor(httpClient) {
     this.httpClient = httpClient;
   }
   /**
-   * Helper to create a Scoped Client (prefer override, fallback to config)
+   * Get the business account ID (with validation)
    */
-  getClient(overrideId) {
+  getBusinessAccountId(overrideId) {
     const id = overrideId || this.httpClient.businessAccountId;
     if (!id) {
       throw new WhatsAppValidationError(
@@ -1064,58 +1042,152 @@ var TemplatesService = class {
         "businessAccountId"
       );
     }
-    return new TemplatesClient(this.httpClient, id);
+    return id;
   }
   /**
    * Create a message template
    *
-   * @param request - Template creation request
+   * @param input - Template creation input
    * @param businessAccountId - Optional WABA ID (overrides client config)
+   * @returns Created template info (id, status, category)
+   * @throws {ZodError} If input validation fails
+   *
+   * @example
+   * ```typescript
+   * const response = await client.templates.create({
+   *   name: "welcome_message",
+   *   category: "MARKETING",
+   *   language: "en_US",
+   *   components: [
+   *     { type: "HEADER", format: "TEXT", text: "Welcome!" },
+   *     {
+   *       type: "BODY",
+   *       text: "Hello {{1}}, thanks for joining us!",
+   *       example: { body_text: [["Pablo"]] }
+   *     },
+   *     { type: "FOOTER", text: "Reply STOP to unsubscribe" }
+   *   ]
+   * });
+   * ```
    */
-  async create(request, businessAccountId) {
-    const client = this.getClient(businessAccountId);
-    return createTemplate(client, request);
+  async create(input, businessAccountId) {
+    const wabaId = this.getBusinessAccountId(businessAccountId);
+    const body = templateCreateSchema.parse(input);
+    return this.httpClient.post(
+      `/${wabaId}/message_templates`,
+      body
+    );
   }
   /**
    * List message templates
    *
-   * @param options - Optional filter options (name)
+   * @param options - Optional filter/pagination options
    * @param businessAccountId - Optional WABA ID (overrides client config)
+   * @returns List of templates with pagination info
+   * @throws {ZodError} If options validation fails
+   *
+   * @example
+   * ```typescript
+   * // List all templates
+   * const all = await client.templates.list();
+   *
+   * // Filter by name
+   * const filtered = await client.templates.list({ name: "welcome" });
+   *
+   * // With pagination
+   * const page = await client.templates.list({ limit: 10, after: "cursor" });
+   * ```
    */
   async list(options, businessAccountId) {
-    const client = this.getClient(businessAccountId);
-    return listTemplates(client, options);
+    const wabaId = this.getBusinessAccountId(businessAccountId);
+    const query = options ? templateListSchema.parse(options) : {};
+    const params = new URLSearchParams();
+    if (query.name) params.append("name", query.name);
+    if (query.limit) params.append("limit", query.limit.toString());
+    if (query.after) params.append("after", query.after);
+    if (query.before) params.append("before", query.before);
+    const queryString = params.toString();
+    const path = queryString ? `/${wabaId}/message_templates?${queryString}` : `/${wabaId}/message_templates`;
+    return this.httpClient.get(path);
   }
   /**
    * Get a template by ID
    *
-   * Note: This uses the template ID directly (no WABA prefix needed)
+   * Note: Uses template ID directly (no WABA prefix needed)
    *
-   * @param templateId - Template ID
+   * @param templateId - The template ID
+   * @returns Template details
+   *
+   * @example
+   * ```typescript
+   * const template = await client.templates.get("123456789012345");
+   * console.log(template.name, template.status);
+   * ```
    */
   async get(templateId) {
-    return getTemplate(this.httpClient, templateId);
+    if (!templateId?.trim()) {
+      throw new WhatsAppValidationError(
+        "Template ID is required",
+        "templateId"
+      );
+    }
+    return this.httpClient.get(`/${templateId}`);
   }
   /**
    * Update a template
    *
-   * Note: This uses the template ID directly (no WABA prefix needed)
+   * Note: Uses template ID directly (no WABA prefix needed)
    *
-   * @param templateId - Template ID
-   * @param request - Template update request
+   * @param templateId - The template ID
+   * @param input - Fields to update
+   * @returns Success status
+   * @throws {ZodError} If input validation fails
+   *
+   * @example
+   * ```typescript
+   * await client.templates.update("123456789012345", {
+   *   components: [
+   *     { type: "BODY", text: "Updated message text" }
+   *   ]
+   * });
+   * ```
    */
-  async update(templateId, request) {
-    return updateTemplate(this.httpClient, templateId, request);
+  async update(templateId, input) {
+    if (!templateId?.trim()) {
+      throw new WhatsAppValidationError(
+        "Template ID is required",
+        "templateId"
+      );
+    }
+    const body = templateUpdateSchema.parse(input);
+    return this.httpClient.post(`/${templateId}`, body);
   }
   /**
    * Delete a template
    *
-   * @param options - Delete options (name or hsm_id)
+   * @param input - Delete by name or hsm_id
    * @param businessAccountId - Optional WABA ID (overrides client config)
+   * @returns Success status
+   * @throws {ZodError} If input validation fails
+   *
+   * @example
+   * ```typescript
+   * // Delete by name
+   * await client.templates.delete({ name: "old_template" });
+   *
+   * // Delete by template ID (hsm_id)
+   * await client.templates.delete({ hsm_id: "123456789012345" });
+   * ```
    */
-  async delete(options, businessAccountId) {
-    const client = this.getClient(businessAccountId);
-    return deleteTemplate(client, options);
+  async delete(input, businessAccountId) {
+    const wabaId = this.getBusinessAccountId(businessAccountId);
+    const query = templateDeleteSchema.parse(input);
+    const params = new URLSearchParams();
+    if (query.name) params.append("name", query.name);
+    if (query.hsm_id) params.append("hsm_id", query.hsm_id);
+    return this.httpClient.delete(
+      `/${wabaId}/message_templates?${params.toString()}`
+    );
   }
 };
 
@@ -1157,68 +1229,68 @@ function verifyWebhook(query, verifyToken) {
 }
 
 // src/schemas/webhooks/payload.ts
-import { z as z7 } from "zod";
+import { z as z5 } from "zod";
 
 // src/schemas/messages/incoming.ts
-import { z as z6 } from "zod";
-var baseIncomingMessageSchema = z6.object({
-  from: z6.string(),
+import { z as z4 } from "zod";
+var baseIncomingMessageSchema = z4.object({
+  from: z4.string(),
   // WhatsApp ID (phone number without +)
-  id: z6.string(),
+  id: z4.string(),
   // Message ID (wamid.*)
-  timestamp: z6.string(),
+  timestamp: z4.string(),
   // Unix timestamp as string
-  type: z6.string()
+  type: z4.string()
   // Message type discriminator
 });
-var incomingTextContentSchema = z6.object({
-  body: z6.string()
+var incomingTextContentSchema = z4.object({
+  body: z4.string()
 });
-var incomingAudioContentSchema = z6.object({
-  id: z6.string(),
+var incomingAudioContentSchema = z4.object({
+  id: z4.string(),
   // Media ID for downloading
-  mime_type: z6.string().optional()
+  mime_type: z4.string().optional()
   // e.g., "audio/ogg; codecs=opus"
 });
-var incomingImageContentSchema = z6.object({
-  id: z6.string(),
+var incomingImageContentSchema = z4.object({
+  id: z4.string(),
   // Media ID for downloading
-  mime_type: z6.string().optional(),
+  mime_type: z4.string().optional(),
   // e.g., "image/jpeg"
-  caption: z6.string().optional()
+  caption: z4.string().optional()
   // Optional caption text
 });
 var incomingTextMessageSchema = baseIncomingMessageSchema.extend({
-  type: z6.literal("text"),
+  type: z4.literal("text"),
   text: incomingTextContentSchema
 });
 var incomingAudioMessageSchema = baseIncomingMessageSchema.extend({
-  type: z6.literal("audio"),
+  type: z4.literal("audio"),
   audio: incomingAudioContentSchema
 });
 var incomingImageMessageSchema = baseIncomingMessageSchema.extend({
-  type: z6.literal("image"),
+  type: z4.literal("image"),
   image: incomingImageContentSchema
 });
-var incomingMessageSchema = z6.discriminatedUnion("type", [
+var incomingMessageSchema = z4.discriminatedUnion("type", [
   incomingTextMessageSchema,
   incomingAudioMessageSchema,
   incomingImageMessageSchema
 ]);
 
 // src/schemas/webhooks/payload.ts
-var contactSchema = z7.object({
-  profile: z7.object({
-    name: z7.string()
+var contactSchema = z5.object({
+  profile: z5.object({
+    name: z5.string()
   }),
-  wa_id: z7.string()
+  wa_id: z5.string()
 });
-var webhookMetadataSchema = z7.object({
-  display_phone_number: z7.string(),
-  phone_number_id: z7.string()
+var webhookMetadataSchema = z5.object({
+  display_phone_number: z5.string(),
+  phone_number_id: z5.string()
 });
-var conversationOriginSchema = z7.object({
-  type: z7.enum([
+var conversationOriginSchema = z5.object({
+  type: z5.enum([
     "authentication",
     "authentication_international",
     "marketing",
@@ -1228,18 +1300,18 @@ var conversationOriginSchema = z7.object({
     "utility"
   ])
 });
-var conversationSchema = z7.object({
-  id: z7.string(),
-  expiration_timestamp: z7.string().optional(),
+var conversationSchema = z5.object({
+  id: z5.string(),
+  expiration_timestamp: z5.string().optional(),
   // Only for sent status
   origin: conversationOriginSchema
 });
-var pricingSchema = z7.object({
-  billable: z7.boolean(),
+var pricingSchema = z5.object({
+  billable: z5.boolean(),
   // Deprecated but still present
-  pricing_model: z7.enum(["CBP", "PMP"]),
-  type: z7.enum(["regular", "free_customer_service", "free_entry_point"]),
-  category: z7.enum([
+  pricing_model: z5.enum(["CBP", "PMP"]),
+  type: z5.enum(["regular", "free_customer_service", "free_entry_point"]),
+  category: z5.enum([
     "authentication",
     "authentication-international",
     "marketing",
@@ -1249,60 +1321,60 @@ var pricingSchema = z7.object({
     "utility"
   ])
 });
-var statusErrorSchema = z7.object({
-  code: z7.number(),
-  title: z7.string(),
-  message: z7.string(),
-  error_data: z7.object({
-    details: z7.string()
+var statusErrorSchema = z5.object({
+  code: z5.number(),
+  title: z5.string(),
+  message: z5.string(),
+  error_data: z5.object({
+    details: z5.string()
   }),
-  href: z7.string()
+  href: z5.string()
 });
-var statusSchema = z7.object({
-  id: z7.string(),
+var statusSchema = z5.object({
+  id: z5.string(),
   // WhatsApp message ID
-  status: z7.enum(["sent", "delivered", "read", "failed", "played"]),
-  timestamp: z7.string(),
+  status: z5.enum(["sent", "delivered", "read", "failed", "played"]),
+  timestamp: z5.string(),
   // Unix timestamp
-  recipient_id: z7.string(),
+  recipient_id: z5.string(),
   // User phone number or group ID
-  recipient_type: z7.literal("group").optional(),
+  recipient_type: z5.literal("group").optional(),
   // Only included if message sent to a group
-  recipient_participant_id: z7.string().optional(),
+  recipient_participant_id: z5.string().optional(),
   // Only included if message sent to a group
-  recipient_identity_key_hash: z7.string().optional(),
+  recipient_identity_key_hash: z5.string().optional(),
   // Only included if identity change check enabled
-  biz_opaque_callback_data: z7.string().optional(),
+  biz_opaque_callback_data: z5.string().optional(),
   // Only included if message sent with biz_opaque_callback_data
   conversation: conversationSchema.optional(),
   // Conditional inclusion (see conversationSchema docs)
   pricing: pricingSchema.optional(),
   // Conditional inclusion (see pricingSchema docs)
-  errors: z7.array(statusErrorSchema).optional()
+  errors: z5.array(statusErrorSchema).optional()
   // Only included if failure to send or deliver message
 });
-var webhookValueSchema = z7.object({
-  messaging_product: z7.literal("whatsapp"),
+var webhookValueSchema = z5.object({
+  messaging_product: z5.literal("whatsapp"),
   metadata: webhookMetadataSchema,
-  contacts: z7.array(contactSchema).optional(),
-  messages: z7.array(incomingMessageSchema).optional(),
+  contacts: z5.array(contactSchema).optional(),
+  messages: z5.array(incomingMessageSchema).optional(),
   // Incoming messages
-  statuses: z7.array(statusSchema).optional()
+  statuses: z5.array(statusSchema).optional()
   // Status updates
 });
-var webhookChangeSchema = z7.object({
+var webhookChangeSchema = z5.object({
   value: webhookValueSchema,
-  field: z7.literal("messages")
+  field: z5.literal("messages")
   // For now: only messages field
 });
-var webhookEntrySchema = z7.object({
-  id: z7.string(),
+var webhookEntrySchema = z5.object({
+  id: z5.string(),
   // WABA ID
-  changes: z7.array(webhookChangeSchema)
+  changes: z5.array(webhookChangeSchema)
 });
-var webhookPayloadSchema = z7.object({
-  object: z7.literal("whatsapp_business_account"),
-  entry: z7.array(webhookEntrySchema)
+var webhookPayloadSchema = z5.object({
+  object: z5.literal("whatsapp_business_account"),
+  entry: z5.array(webhookEntrySchema)
 });
 
 // src/services/webhooks/WebhooksService.ts
@@ -1345,33 +1417,6 @@ var WebhooksService = class {
    */
   extractStatuses(payload) {
     return extractStatuses(payload);
-  }
-  /**
-   * Download media file by media ID
-   *
-   * Downloads media files (images, audio, video, documents) from WhatsApp servers.
-   * Uses the access token from the client configuration automatically.
-   *
-   * @param mediaId - Media ID from incoming message (e.g., message.image.id, message.audio.id)
-   * @returns Promise resolving to ArrayBuffer containing the media file
-   * @throws Error if download fails or media ID is invalid
-   *
-   * @example
-   * ```typescript
-   * client.webhooks.handle(req.body, {
-   *   image: async (message, context) => {
-   *     const mediaData = await client.webhooks.downloadMedia(message.image.id);
-   *     // Upload to S3, save to disk, etc.
-   *     await s3.upload({ key: message.image.id, body: Buffer.from(mediaData) });
-   *   },
-   * });
-   * ```
-   */
-  async downloadMedia(mediaId) {
-    if (!mediaId || mediaId.trim().length === 0) {
-      throw new Error("Media ID is required");
-    }
-    return this.httpClient.getBinary(`/${mediaId}`);
   }
   /**
    * Validate webhook payload structure
@@ -1488,6 +1533,57 @@ var WebhooksService = class {
   }
 };
 
+// src/services/media/MediaService.ts
+var MediaService = class {
+  constructor(httpClient) {
+    this.httpClient = httpClient;
+  }
+  /**
+   * Download media file by media ID
+   *
+   * Downloads media files (images, audio, video, documents) from WhatsApp servers.
+   * Uses the access token from the client configuration automatically.
+   *
+   * According to WhatsApp API docs, you cannot download directly from the media ID endpoint.
+   * The flow is:
+   * 1. GET /MEDIA_ID → returns JSON metadata with a URL
+   * 2. GET /MEDIA_URL → returns the actual binary data
+   *
+   * @param mediaId - Media ID from incoming message (e.g., message.image.id, message.audio.id)
+   * @returns Promise resolving to ArrayBuffer containing the media file
+   * @throws Error if download fails or media ID is invalid
+   *
+   * @example
+   * ```typescript
+   * const mediaData = await client.media.download(message.image.id);
+   * // Upload to S3, save to disk, etc.
+   * await s3.upload({ key: message.image.id, body: Buffer.from(mediaData) });
+   * ```
+   */
+  async download(mediaId) {
+    if (!mediaId || mediaId.trim().length === 0) {
+      throw new Error("Media ID is required");
+    }
+    const metadata = await this.httpClient.get(`/${mediaId}`);
+    const response = await fetch(metadata.url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${this.httpClient.accessToken}`
+      }
+    });
+    if (!response.ok) {
+      let errorMessage = `API Error: ${response.statusText}`;
+      try {
+        const error = await response.json();
+        errorMessage = `API Error: ${error.error?.message || response.statusText} (${error.error?.code || response.status})`;
+      } catch {
+      }
+      throw new Error(errorMessage);
+    }
+    return response.arrayBuffer();
+  }
+};
+
 // src/client/WhatsAppClient.ts
 import { ZodError as ZodError2 } from "zod";
 var WhatsAppClient = class {
@@ -1496,6 +1592,7 @@ var WhatsAppClient = class {
   business;
   templates;
   webhooks;
+  media;
   httpClient;
   constructor(config) {
     let validated;
@@ -1511,8 +1608,9 @@ var WhatsAppClient = class {
     this.messages = new MessagesService(this.httpClient);
     this.accounts = new AccountsService(this.httpClient);
     this.business = new BusinessService(this.httpClient);
-    this.templates = new TemplatesService(this.httpClient);
+    this.templates = new TemplatesResource(this.httpClient);
     this.webhooks = new WebhooksService(this.httpClient);
+    this.media = new MediaService(this.httpClient);
   }
   /**
    * Debug the current access token
@@ -1530,114 +1628,89 @@ var WhatsAppClient = class {
 };
 
 // src/schemas/messages/response.ts
-import { z as z8 } from "zod";
-var messageResponseSchema = z8.object({
-  messaging_product: z8.literal("whatsapp"),
-  contacts: z8.array(
-    z8.object({
-      input: z8.string(),
-      wa_id: z8.string()
+import { z as z6 } from "zod";
+var messageResponseSchema = z6.object({
+  messaging_product: z6.literal("whatsapp"),
+  contacts: z6.array(
+    z6.object({
+      input: z6.string(),
+      wa_id: z6.string()
     })
   ),
-  messages: z8.array(
-    z8.object({
-      id: z8.string(),
-      group_id: z8.string().optional(),
-      message_status: z8.string().optional()
+  messages: z6.array(
+    z6.object({
+      id: z6.string(),
+      group_id: z6.string().optional(),
+      message_status: z6.string().optional()
     })
   )
 });
 
 // src/schemas/accounts/phone-number.ts
-import { z as z9 } from "zod";
-var phoneNumberResponseSchema = z9.object({
-  verified_name: z9.string(),
-  display_phone_number: z9.string(),
-  id: z9.string(),
-  quality_rating: z9.string()
+import { z as z7 } from "zod";
+var phoneNumberResponseSchema = z7.object({
+  verified_name: z7.string(),
+  display_phone_number: z7.string(),
+  id: z7.string(),
+  quality_rating: z7.string()
 });
-var phoneNumberListResponseSchema = z9.object({
-  data: z9.array(phoneNumberResponseSchema)
+var phoneNumberListResponseSchema = z7.object({
+  data: z7.array(phoneNumberResponseSchema)
 });
 
 // src/schemas/business/account.ts
-import { z as z10 } from "zod";
-var businessAccountResponseSchema = z10.object({
-  id: z10.string(),
-  name: z10.string().optional(),
-  account_review_status: z10.string().optional(),
-  currency: z10.string().optional(),
-  country: z10.string().optional(),
-  timezone_id: z10.string().optional(),
-  business_verification_status: z10.string().optional(),
-  is_enabled_for_insights: z10.boolean().optional(),
-  message_template_namespace: z10.string().optional()
+import { z as z8 } from "zod";
+var businessAccountResponseSchema = z8.object({
+  id: z8.string(),
+  name: z8.string().optional(),
+  account_review_status: z8.string().optional(),
+  currency: z8.string().optional(),
+  country: z8.string().optional(),
+  timezone_id: z8.string().optional(),
+  business_verification_status: z8.string().optional(),
+  is_enabled_for_insights: z8.boolean().optional(),
+  message_template_namespace: z8.string().optional()
 });
-var businessAccountsListResponseSchema = z10.object({
-  data: z10.record(z10.string(), businessAccountResponseSchema).or(
-    z10.array(businessAccountResponseSchema)
+var businessAccountsListResponseSchema = z8.object({
+  data: z8.record(z8.string(), businessAccountResponseSchema).or(
+    z8.array(businessAccountResponseSchema)
   ),
-  paging: z10.object({
-    cursors: z10.object({
-      before: z10.string().optional(),
-      after: z10.string().optional()
+  paging: z8.object({
+    cursors: z8.object({
+      before: z8.string().optional(),
+      after: z8.string().optional()
     }).optional(),
-    next: z10.string().url().optional(),
-    previous: z10.string().url().optional()
+    next: z8.string().url().optional(),
+    previous: z8.string().url().optional()
   }).optional()
-});
-
-// src/schemas/templates/response.ts
-import { z as z11 } from "zod";
-var templateSchema = z11.object({
-  id: z11.string(),
-  name: z11.string(),
-  language: z11.string(),
-  status: z11.string(),
-  category: z11.string(),
-  components: z11.array(templateComponentSchema)
-});
-var templateCreateResponseSchema = z11.object({
-  id: z11.string(),
-  status: z11.string(),
-  category: z11.string()
-});
-var templateListResponseSchema = z11.object({
-  data: z11.array(templateSchema),
-  paging: z11.object({
-    cursors: z11.object({
-      before: z11.string().optional(),
-      after: z11.string().optional()
-    }).optional()
-  }).optional()
-});
-var templateUpdateResponseSchema = z11.object({
-  success: z11.boolean()
-});
-var templateDeleteResponseSchema = z11.object({
-  success: z11.boolean()
 });
 
 // src/schemas/debug.ts
-import { z as z12 } from "zod";
-var debugTokenResponseSchema = z12.object({
-  data: z12.object({
-    app_id: z12.string().optional(),
-    type: z12.string().optional(),
-    application: z12.string().optional(),
-    data_access_expires_at: z12.number().optional(),
-    expires_at: z12.number().optional(),
-    is_valid: z12.boolean().optional(),
-    issued_at: z12.number().optional(),
-    metadata: z12.object({
-      auth_type: z12.string().optional(),
-      sso: z12.string().optional()
+import { z as z9 } from "zod";
+var debugTokenResponseSchema = z9.object({
+  data: z9.object({
+    app_id: z9.string().optional(),
+    type: z9.string().optional(),
+    application: z9.string().optional(),
+    data_access_expires_at: z9.number().optional(),
+    expires_at: z9.number().optional(),
+    is_valid: z9.boolean().optional(),
+    issued_at: z9.number().optional(),
+    metadata: z9.object({
+      auth_type: z9.string().optional(),
+      sso: z9.string().optional()
     }).optional(),
-    scopes: z12.array(z12.string()).optional(),
-    user_id: z12.string().optional()
+    scopes: z9.array(z9.string()).optional(),
+    user_id: z9.string().optional()
   })
 });
+
+// src/utils/templates.ts
+function toTemplateName(input) {
+  return input.toLowerCase().trim().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "").replace(/_+/g, "_").replace(/^_|_$/g, "");
+}
 export {
+  TemplatesResource,
   WhatsAppAPIError,
   WhatsAppClient,
   WhatsAppError,
@@ -1664,26 +1737,44 @@ export {
   sendReactionInputSchema,
   sendTextInputSchema,
   statusSchema,
-  templateBodyComponentSchema,
+  templateBodyComponentInputSchema,
+  templateBodyExampleSchema,
+  templateButtonInputSchema,
   templateButtonSchema,
-  templateButtonsComponentSchema,
+  templateButtonsComponentInputSchema,
+  templateCategorySchema,
+  templateComponentInputSchema,
   templateComponentSchema,
-  templateCopyCodeButtonSchema,
+  templateCopyCodeButtonInputSchema,
+  templateCreateAuthenticationSchema,
+  templateCreateMarketingSchema,
   templateCreateResponseSchema,
   templateCreateSchema,
+  templateCreateUtilitySchema,
   templateDeleteResponseSchema,
   templateDeleteSchema,
-  templateFlowButtonSchema,
-  templateFooterComponentSchema,
-  templateHeaderComponentSchema,
+  templateFlowButtonInputSchema,
+  templateFooterComponentInputSchema,
+  templateHeaderComponentInputSchema,
+  templateHeaderLocationInputSchema,
+  templateHeaderMediaInputSchema,
+  templateHeaderTextExampleSchema,
+  templateHeaderTextInputSchema,
   templateLanguageSchema,
   templateListResponseSchema,
   templateListSchema,
-  templatePhoneNumberButtonSchema,
-  templateQuickReplyButtonSchema,
+  templateNamedParamExampleSchema,
+  templatePagingCursorsSchema,
+  templatePagingSchema,
+  templateParameterFormatSchema,
+  templatePhoneNumberButtonInputSchema,
+  templateQualityScoreSchema,
+  templateQuickReplyButtonInputSchema,
   templateSchema,
+  templateStatusSchema,
   templateUpdateResponseSchema,
   templateUpdateSchema,
-  templateUrlButtonSchema,
+  templateUrlButtonInputSchema,
+  toTemplateName,
   webhookPayloadSchema
 };

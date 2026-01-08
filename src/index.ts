@@ -1,10 +1,13 @@
 // WhatsApp Cloud API SDK
 export { WhatsAppClient } from "./client/index";
 
-// Export schemas (AI-ready)
+// Export resources (new domain-colocated structure)
+export * from "./resources/index";
+
+// Export schemas (AI-ready) - legacy path, prefer resources/
 export * from "./schemas/index";
 
-// Export types (primary export point)
+// Export types (primary export point) - legacy path, prefer resources/
 export type * from "./types/index";
 
 // Export webhook handler types (convenience exports)
@@ -22,3 +25,6 @@ export {
   WhatsAppAPIError,
   WhatsAppRateLimitError,
 } from "./errors";
+
+// Export utilities
+export { toTemplateName } from "./utils/templates";

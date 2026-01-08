@@ -1,5 +1,31 @@
 import { z } from "zod";
 import { templateComponentSchema } from "./component";
+import { templateCategorySchema } from "./request";
+
+/**
+ * Template status schema
+ * All possible status values returned by the API
+ */
+export const templateStatusSchema = z.enum([
+  "APPROVED",
+  "PENDING",
+  "REJECTED",
+  "PAUSED",
+  "DISABLED",
+  "IN_APPEAL",
+  "PENDING_DELETION",
+  "DELETED",
+  "LIMIT_EXCEEDED",
+]);
+
+/**
+ * Quality score schema
+ * Returned for templates with quality tracking
+ */
+export const templateQualityScoreSchema = z.object({
+  score: z.enum(["GREEN", "YELLOW", "RED", "UNKNOWN"]).optional(),
+  date: z.number().optional(),
+});
 
 /**
  * Schema for template (the base/select model - what you get from API)
@@ -8,9 +34,13 @@ export const templateSchema = z.object({
   id: z.string(),
   name: z.string(),
   language: z.string(),
-  status: z.string(),
-  category: z.string(),
+  status: templateStatusSchema,
+  category: templateCategorySchema,
   components: z.array(templateComponentSchema),
+  // Additional response fields
+  quality_score: templateQualityScoreSchema.optional(),
+  rejected_reason: z.string().optional(),
+  previous_category: z.string().optional(),
 });
 
 /**
@@ -18,8 +48,25 @@ export const templateSchema = z.object({
  */
 export const templateCreateResponseSchema = z.object({
   id: z.string(),
-  status: z.string(),
-  category: z.string(),
+  status: templateStatusSchema,
+  category: templateCategorySchema,
+});
+
+/**
+ * Paging cursors schema
+ */
+export const templatePagingCursorsSchema = z.object({
+  before: z.string().optional(),
+  after: z.string().optional(),
+});
+
+/**
+ * Paging schema for list responses
+ */
+export const templatePagingSchema = z.object({
+  cursors: templatePagingCursorsSchema.optional(),
+  next: z.string().optional(),
+  previous: z.string().optional(),
 });
 
 /**
@@ -27,16 +74,7 @@ export const templateCreateResponseSchema = z.object({
  */
 export const templateListResponseSchema = z.object({
   data: z.array(templateSchema),
-  paging: z
-    .object({
-      cursors: z
-        .object({
-          before: z.string().optional(),
-          after: z.string().optional(),
-        })
-        .optional(),
-    })
-    .optional(),
+  paging: templatePagingSchema.optional(),
 });
 
 /**

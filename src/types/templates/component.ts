@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   templateButtonSchema,
   templateComponentSchema,
+  // Legacy schemas for backwards compatibility
   templateQuickReplyButtonSchema,
   templateUrlButtonSchema,
   templatePhoneNumberButtonSchema,
@@ -14,7 +15,14 @@ import {
 } from "../../schemas/templates/component";
 
 /**
- * Button types
+ * Response types - what API returns
+ */
+export type TemplateButton = z.infer<typeof templateButtonSchema>;
+export type TemplateComponent = z.infer<typeof templateComponentSchema>;
+
+/**
+ * Legacy types for backwards compatibility
+ * @deprecated Use input types from component-input.ts for requests
  */
 export type TemplateQuickReplyButton = z.infer<
   typeof templateQuickReplyButtonSchema
@@ -27,11 +35,6 @@ export type TemplateCopyCodeButton = z.infer<
   typeof templateCopyCodeButtonSchema
 >;
 export type TemplateFlowButton = z.infer<typeof templateFlowButtonSchema>;
-export type TemplateButton = z.infer<typeof templateButtonSchema>;
-
-/**
- * Component types
- */
 export type TemplateHeaderComponent = z.infer<
   typeof templateHeaderComponentSchema
 >;
@@ -42,4 +45,3 @@ export type TemplateFooterComponent = z.infer<
 export type TemplateButtonsComponent = z.infer<
   typeof templateButtonsComponentSchema
 >;
-export type TemplateComponent = z.infer<typeof templateComponentSchema>;

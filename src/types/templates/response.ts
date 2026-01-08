@@ -5,7 +5,31 @@ import {
   templateListResponseSchema,
   templateUpdateResponseSchema,
   templateDeleteResponseSchema,
+  templateStatusSchema,
+  templateQualityScoreSchema,
+  templatePagingSchema,
+  templatePagingCursorsSchema,
 } from "../../schemas/templates/response";
+
+/**
+ * Template status type
+ */
+export type TemplateStatus = z.infer<typeof templateStatusSchema>;
+
+/**
+ * Template quality score type
+ */
+export type TemplateQualityScore = z.infer<typeof templateQualityScoreSchema>;
+
+/**
+ * Paging cursors type
+ */
+export type TemplatePagingCursors = z.infer<typeof templatePagingCursorsSchema>;
+
+/**
+ * Paging type for list responses
+ */
+export type TemplatePaging = z.infer<typeof templatePagingSchema>;
 
 /**
  * Type for a template (the base/select model - what you get from API)

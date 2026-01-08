@@ -20,6 +20,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/index.ts
 var index_exports = {};
 __export(index_exports, {
+  TemplatesResource: () => TemplatesResource,
   WhatsAppAPIError: () => WhatsAppAPIError,
   WhatsAppClient: () => WhatsAppClient,
   WhatsAppError: () => WhatsAppError,
@@ -46,27 +47,45 @@ __export(index_exports, {
   sendReactionInputSchema: () => sendReactionInputSchema,
   sendTextInputSchema: () => sendTextInputSchema,
   statusSchema: () => statusSchema,
-  templateBodyComponentSchema: () => templateBodyComponentSchema,
+  templateBodyComponentInputSchema: () => templateBodyComponentInputSchema,
+  templateBodyExampleSchema: () => templateBodyExampleSchema,
+  templateButtonInputSchema: () => templateButtonInputSchema,
   templateButtonSchema: () => templateButtonSchema,
-  templateButtonsComponentSchema: () => templateButtonsComponentSchema,
+  templateButtonsComponentInputSchema: () => templateButtonsComponentInputSchema,
+  templateCategorySchema: () => templateCategorySchema,
+  templateComponentInputSchema: () => templateComponentInputSchema,
   templateComponentSchema: () => templateComponentSchema,
-  templateCopyCodeButtonSchema: () => templateCopyCodeButtonSchema,
+  templateCopyCodeButtonInputSchema: () => templateCopyCodeButtonInputSchema,
+  templateCreateAuthenticationSchema: () => templateCreateAuthenticationSchema,
+  templateCreateMarketingSchema: () => templateCreateMarketingSchema,
   templateCreateResponseSchema: () => templateCreateResponseSchema,
   templateCreateSchema: () => templateCreateSchema,
+  templateCreateUtilitySchema: () => templateCreateUtilitySchema,
   templateDeleteResponseSchema: () => templateDeleteResponseSchema,
   templateDeleteSchema: () => templateDeleteSchema,
-  templateFlowButtonSchema: () => templateFlowButtonSchema,
-  templateFooterComponentSchema: () => templateFooterComponentSchema,
-  templateHeaderComponentSchema: () => templateHeaderComponentSchema,
+  templateFlowButtonInputSchema: () => templateFlowButtonInputSchema,
+  templateFooterComponentInputSchema: () => templateFooterComponentInputSchema,
+  templateHeaderComponentInputSchema: () => templateHeaderComponentInputSchema,
+  templateHeaderLocationInputSchema: () => templateHeaderLocationInputSchema,
+  templateHeaderMediaInputSchema: () => templateHeaderMediaInputSchema,
+  templateHeaderTextExampleSchema: () => templateHeaderTextExampleSchema,
+  templateHeaderTextInputSchema: () => templateHeaderTextInputSchema,
   templateLanguageSchema: () => templateLanguageSchema,
   templateListResponseSchema: () => templateListResponseSchema,
   templateListSchema: () => templateListSchema,
-  templatePhoneNumberButtonSchema: () => templatePhoneNumberButtonSchema,
-  templateQuickReplyButtonSchema: () => templateQuickReplyButtonSchema,
+  templateNamedParamExampleSchema: () => templateNamedParamExampleSchema,
+  templatePagingCursorsSchema: () => templatePagingCursorsSchema,
+  templatePagingSchema: () => templatePagingSchema,
+  templateParameterFormatSchema: () => templateParameterFormatSchema,
+  templatePhoneNumberButtonInputSchema: () => templatePhoneNumberButtonInputSchema,
+  templateQualityScoreSchema: () => templateQualityScoreSchema,
+  templateQuickReplyButtonInputSchema: () => templateQuickReplyButtonInputSchema,
   templateSchema: () => templateSchema,
+  templateStatusSchema: () => templateStatusSchema,
   templateUpdateResponseSchema: () => templateUpdateResponseSchema,
   templateUpdateSchema: () => templateUpdateSchema,
-  templateUrlButtonSchema: () => templateUrlButtonSchema,
+  templateUrlButtonInputSchema: () => templateUrlButtonInputSchema,
+  toTemplateName: () => toTemplateName,
   webhookPayloadSchema: () => webhookPayloadSchema
 });
 module.exports = __toCommonJS(index_exports);
@@ -647,343 +666,213 @@ var BusinessService = class {
   }
 };
 
-// src/services/templates/TemplatesClient.ts
-var TemplatesClient = class {
-  constructor(httpClient, businessAccountId) {
-    this.httpClient = httpClient;
-    this.businessAccountId = businessAccountId;
-  }
-  /**
-   * Make a GET request with WABA ID prefix
-   */
-  async get(path) {
-    return this.httpClient.get(`/${this.businessAccountId}${path}`);
-  }
-  /**
-   * Make a POST request with WABA ID prefix
-   */
-  async post(path, body) {
-    return this.httpClient.post(`/${this.businessAccountId}${path}`, body);
-  }
-  /**
-   * Make a DELETE request with WABA ID prefix
-   */
-  async delete(path) {
-    return this.httpClient.delete(`/${this.businessAccountId}${path}`);
-  }
-};
-
-// src/schemas/templates/request.ts
-var import_zod6 = require("zod");
-
-// src/schemas/templates/component.ts
+// src/resources/templates/schema.ts
 var import_zod4 = require("zod");
-var templateQuickReplyButtonSchema = import_zod4.z.object({
-  type: import_zod4.z.literal("QUICK_REPLY"),
-  text: import_zod4.z.string().min(1).max(25, "Button text must be 25 characters or less")
-});
-var templateUrlButtonSchema = import_zod4.z.object({
-  type: import_zod4.z.literal("URL"),
-  text: import_zod4.z.string().min(1).max(25, "Button text must be 25 characters or less"),
-  url: import_zod4.z.string().url().max(2e3, "URL must be 2000 characters or less")
-  // example: z.array(z.string()).optional(), // For later: when URL contains variables
-});
-var templatePhoneNumberButtonSchema = import_zod4.z.object({
-  type: import_zod4.z.literal("PHONE_NUMBER"),
-  text: import_zod4.z.string().min(1).max(25, "Button text must be 25 characters or less"),
-  phone_number: import_zod4.z.string().min(1).max(20, "Phone number must be 20 characters or less")
-});
-var templateCopyCodeButtonSchema = import_zod4.z.object({
-  type: import_zod4.z.literal("COPY_CODE")
-  // example: z.string().max(15).optional(), // For later: example value to copy
-});
-var templateFlowButtonSchema = import_zod4.z.object({
-  type: import_zod4.z.literal("FLOW"),
-  text: import_zod4.z.string().min(1).max(25, "Button text must be 25 characters or less"),
-  flow_action: import_zod4.z.string().optional(),
-  flow_id: import_zod4.z.string().optional(),
-  navigate_screen: import_zod4.z.string().optional()
-});
-var templateButtonSchema = import_zod4.z.discriminatedUnion("type", [
-  templateQuickReplyButtonSchema,
-  templateUrlButtonSchema,
-  templatePhoneNumberButtonSchema,
-  templateCopyCodeButtonSchema,
-  templateFlowButtonSchema
-]);
-var templateHeaderComponentSchema = import_zod4.z.object({
-  type: import_zod4.z.literal("HEADER"),
-  format: import_zod4.z.enum(["TEXT", "IMAGE", "VIDEO", "DOCUMENT", "LOCATION"]),
-  text: import_zod4.z.string().max(60, "Header text must be 60 characters or less").optional(),
-  example: import_zod4.z.object({
-    header_handle: import_zod4.z.array(import_zod4.z.string()).min(1, "At least one header_handle is required")
-  }).optional()
-}).refine(
-  (data) => {
-    if (data.format === "TEXT" && !data.text) {
-      return false;
-    }
-    if (data.format === "LOCATION") {
-      return true;
-    }
-    if (["IMAGE", "VIDEO", "DOCUMENT"].includes(data.format)) {
-      if (!data.example || !data.example.header_handle || data.example.header_handle.length === 0) {
-        return false;
-      }
-    }
-    return true;
-  },
-  {
-    message: "TEXT format requires text field; IMAGE/VIDEO/DOCUMENT formats require example.header_handle"
-  }
-).refine(
-  (data) => {
-    if (data.format === "TEXT") {
-      return !!data.text;
-    }
-    return true;
-  },
-  {
-    message: "TEXT format header requires text field"
-  }
-).refine(
-  (data) => {
-    if (["IMAGE", "VIDEO", "DOCUMENT"].includes(data.format)) {
-      return !!(data.example?.header_handle && data.example.header_handle.length > 0);
-    }
-    return true;
-  },
-  {
-    message: "IMAGE/VIDEO/DOCUMENT format header requires example.header_handle (asset handle from Resumable Upload API)"
-  }
-);
-var templateBodyComponentSchema = import_zod4.z.object({
-  type: import_zod4.z.literal("BODY"),
-  text: import_zod4.z.string().min(1).max(1024, "Body text must be 1024 characters or less")
-  // example: z.object({...}).optional(), // For later: when using variables
-});
-var templateFooterComponentSchema = import_zod4.z.object({
-  type: import_zod4.z.literal("FOOTER"),
-  text: import_zod4.z.string().min(1).max(60, "Footer text must be 60 characters or less")
-});
-var templateButtonsComponentSchema = import_zod4.z.object({
-  type: import_zod4.z.literal("BUTTONS"),
-  buttons: import_zod4.z.array(templateButtonSchema).min(1).max(10, "Maximum 10 buttons allowed")
-});
-var templateComponentSchema = import_zod4.z.discriminatedUnion("type", [
-  templateHeaderComponentSchema,
-  templateBodyComponentSchema,
-  templateFooterComponentSchema,
-  templateButtonsComponentSchema
-]);
-
-// src/schemas/templates/language.ts
-var import_zod5 = require("zod");
-var templateLanguageSchema = import_zod5.z.enum([
+var templateLanguageSchema = import_zod4.z.enum([
   "af",
   // Afrikaans
   "sq",
-  // Albanisch
+  // Albanian
   "ar",
-  // Arabisch
+  // Arabic
   "ar_EG",
-  // Arabisch (Ägypten)
+  // Arabic (Egypt)
   "ar_AE",
-  // Arabisch (Vereinigte Arabische Emirate)
+  // Arabic (UAE)
   "ar_LB",
-  // Arabisch (LBN)
+  // Arabic (Lebanon)
   "ar_MA",
-  // Arabisch (MAR)
+  // Arabic (Morocco)
   "ar_QA",
-  // Arabisch (QAT)
+  // Arabic (Qatar)
   "az",
-  // Aserbaidschanisch
+  // Azerbaijani
   "be_BY",
-  // Belarussisch
+  // Belarusian
   "bn",
-  // Bengalisch
+  // Bengali
   "bn_IN",
-  // Bengali (IND)
+  // Bengali (India)
   "bg",
-  // Bulgarisch
+  // Bulgarian
   "ca",
-  // Katalanisch
+  // Catalan
   "zh_CN",
-  // Chinesisch (CHN)
+  // Chinese (China)
   "zh_HK",
-  // Chinesisch (HKG)
+  // Chinese (Hong Kong)
   "zh_TW",
-  // Chinesisch (TAI)
+  // Chinese (Taiwan)
   "hr",
-  // Kroatisch
+  // Croatian
   "cs",
-  // Tschechisch
+  // Czech
   "da",
-  // Dänisch
+  // Danish
   "prs_AF",
   // Dari
   "nl",
-  // Niederländisch
+  // Dutch
   "nl_BE",
-  // Niederländisch (BEL)
+  // Dutch (Belgium)
   "en",
-  // Englisch
+  // English
   "en_GB",
-  // Englisch (UK)
+  // English (UK)
   "en_US",
-  // Englisch (USA)
+  // English (US)
   "en_AE",
-  // Englisch (Vereinigte Arabische Emirate)
+  // English (UAE)
   "en_AU",
-  // Englisch (AUS)
+  // English (Australia)
   "en_CA",
-  // Englisch (Kanada)
+  // English (Canada)
   "en_GH",
-  // Englisch (GHA)
+  // English (Ghana)
   "en_IE",
-  // English (IRL)
+  // English (Ireland)
   "en_IN",
-  // Englisch (Indien)
+  // English (India)
   "en_JM",
-  // Englisch (JAM)
+  // English (Jamaica)
   "en_MY",
-  // Englisch (MYS)
+  // English (Malaysia)
   "en_NZ",
-  // Englisch (Neuseeland)
+  // English (New Zealand)
   "en_QA",
-  // Englisch (QAT)
+  // English (Qatar)
   "en_SG",
-  // Englisch (SGP)
+  // English (Singapore)
   "en_UG",
-  // Englisch (UGA)
+  // English (Uganda)
   "en_ZA",
-  // Englisch (ZAF)
+  // English (South Africa)
   "et",
-  // Estnisch
+  // Estonian
   "fil",
   // Filipino
   "fi",
-  // Finnisch
+  // Finnish
   "fr",
-  // Französisch
+  // French
   "fr_BE",
-  // Französisch (BEL)
+  // French (Belgium)
   "fr_CA",
-  // Französisch (Kanada)
+  // French (Canada)
   "fr_CH",
-  // Französisch (CHE)
+  // French (Switzerland)
   "fr_CI",
-  // Französisch (CIV)
+  // French (Ivory Coast)
   "fr_MA",
-  // Französisch (MAR)
+  // French (Morocco)
   "ka",
-  // Georgisch
+  // Georgian
   "de",
-  // Deutsch
+  // German
   "de_AT",
-  // Deutsch (Österreich)
+  // German (Austria)
   "de_CH",
-  // Deutsch (CHE)
+  // German (Switzerland)
   "el",
-  // Griechisch
+  // Greek
   "gu",
   // Gujarati
   "ha",
   // Hausa
   "he",
-  // Hebräisch
+  // Hebrew
   "hi",
   // Hindi
   "hu",
-  // Ungarisch
+  // Hungarian
   "id",
-  // Indonesisch
+  // Indonesian
   "ga",
-  // Irisch
+  // Irish
   "it",
-  // Italienisch
+  // Italian
   "ja",
-  // Japanisch
+  // Japanese
   "kn",
   // Kannada
   "kk",
-  // Kasachisch
+  // Kazakh
   "rw_RW",
   // Kinyarwanda
   "ko",
-  // Koreanisch
+  // Korean
   "ky_KG",
-  // Kirgisisch (Kirgisistan)
+  // Kyrgyz
   "lo",
-  // Laotisch
+  // Lao
   "lv",
-  // Lettisch
+  // Latvian
   "lt",
-  // Litauisch
+  // Lithuanian
   "mk",
-  // Mazedonisch
+  // Macedonian
   "ms",
-  // Malaiisch
+  // Malay
   "ml",
   // Malayalam
   "mr",
   // Marathi
   "nb",
-  // Norwegisch
+  // Norwegian
   "ps_AF",
-  // Paschtunisch
+  // Pashto
   "fa",
-  // Persisch
+  // Persian
   "pl",
-  // Polnisch
+  // Polish
   "pt_BR",
-  // Portugiesisch (BR)
+  // Portuguese (Brazil)
   "pt_PT",
-  // Portugiesisch (POR)
+  // Portuguese (Portugal)
   "pa",
-  // Panjabi
+  // Punjabi
   "ro",
-  // Rumänisch
+  // Romanian
   "ru",
-  // Russisch
+  // Russian
   "sr",
-  // Serbisch
+  // Serbian
   "si_LK",
   // Sinhala
   "sk",
-  // Slowakisch
+  // Slovak
   "sl",
-  // Slowenisch
+  // Slovenian
   "es",
-  // Spanisch
+  // Spanish
   "es_AR",
-  // Spanisch (ARG)
+  // Spanish (Argentina)
   "es_CL",
-  // Spanisch (CHL)
+  // Spanish (Chile)
   "es_CO",
-  // Spanisch (Kolumbien)
+  // Spanish (Colombia)
   "es_CR",
-  // Spanisch (CRI)
+  // Spanish (Costa Rica)
   "es_DO",
-  // Spanisch (DOM)
+  // Spanish (Dominican Republic)
   "es_EC",
-  // Spanisch (ECU)
+  // Spanish (Ecuador)
   "es_HN",
-  // Spanisch (Honduras)
+  // Spanish (Honduras)
   "es_MX",
-  // Spanisch (MEX)
+  // Spanish (Mexico)
   "es_PA",
-  // Spanisch (PAN)
+  // Spanish (Panama)
   "es_PE",
-  // Spanisch (Peru)
+  // Spanish (Peru)
   "es_ES",
-  // Spanisch (SPA)
+  // Spanish (Spain)
   "es_UY",
-  // Spanisch (URY)
+  // Spanish (Uruguay)
   "sw",
   // Swahili
   "sv",
-  // Schwedisch
+  // Swedish
   "ta",
   // Tamil
   "te",
@@ -991,145 +880,253 @@ var templateLanguageSchema = import_zod5.z.enum([
   "th",
   // Thai
   "tr",
-  // Türkisch
+  // Turkish
   "uk",
-  // Ukrainisch
+  // Ukrainian
   "ur",
   // Urdu
   "uz",
-  // Usbekisch
+  // Uzbek
   "vi",
-  // Vietnamesisch
+  // Vietnamese
   "zu"
   // Zulu
 ]);
-
-// src/schemas/templates/request.ts
-var templateCreateSchema = import_zod6.z.object({
-  name: import_zod6.z.string().min(1).max(512, "Template name must be 512 characters or less"),
+var templateCategorySchema = import_zod4.z.enum([
+  "AUTHENTICATION",
+  "MARKETING",
+  "UTILITY"
+]);
+var templateParameterFormatSchema = import_zod4.z.enum(["positional", "named"]);
+var templateStatusSchema = import_zod4.z.enum([
+  "APPROVED",
+  "PENDING",
+  "REJECTED",
+  "PAUSED",
+  "DISABLED",
+  "IN_APPEAL",
+  "PENDING_DELETION",
+  "DELETED",
+  "LIMIT_EXCEEDED"
+]);
+var templateQualityScoreSchema = import_zod4.z.object({
+  score: import_zod4.z.enum(["GREEN", "YELLOW", "RED", "UNKNOWN"]).optional(),
+  date: import_zod4.z.number().optional()
+});
+var templateNamedParamExampleSchema = import_zod4.z.object({
+  param_name: import_zod4.z.string(),
+  example: import_zod4.z.string()
+});
+var templateQuickReplyButtonInputSchema = import_zod4.z.object({
+  type: import_zod4.z.literal("QUICK_REPLY"),
+  text: import_zod4.z.string().min(1).max(25, "Button text must be 25 characters or less")
+});
+var templateUrlButtonInputSchema = import_zod4.z.object({
+  type: import_zod4.z.literal("URL"),
+  text: import_zod4.z.string().min(1).max(25, "Button text must be 25 characters or less"),
+  url: import_zod4.z.string().url().max(2e3, "URL must be 2000 characters or less"),
+  example: import_zod4.z.array(import_zod4.z.string()).optional()
+});
+var templatePhoneNumberButtonInputSchema = import_zod4.z.object({
+  type: import_zod4.z.literal("PHONE_NUMBER"),
+  text: import_zod4.z.string().min(1).max(25, "Button text must be 25 characters or less"),
+  phone_number: import_zod4.z.string().min(1).max(20, "Phone number must be 20 characters or less")
+});
+var templateCopyCodeButtonInputSchema = import_zod4.z.object({
+  type: import_zod4.z.literal("COPY_CODE"),
+  example: import_zod4.z.string().max(15).optional()
+});
+var templateFlowButtonInputSchema = import_zod4.z.object({
+  type: import_zod4.z.literal("FLOW"),
+  text: import_zod4.z.string().min(1).max(25, "Button text must be 25 characters or less"),
+  flow_id: import_zod4.z.string().optional(),
+  flow_action: import_zod4.z.enum(["navigate", "data_exchange"]).optional(),
+  navigate_screen: import_zod4.z.string().optional()
+});
+var templateButtonInputSchema = import_zod4.z.discriminatedUnion("type", [
+  templateQuickReplyButtonInputSchema,
+  templateUrlButtonInputSchema,
+  templatePhoneNumberButtonInputSchema,
+  templateCopyCodeButtonInputSchema,
+  templateFlowButtonInputSchema
+]);
+var templateHeaderTextExampleSchema = import_zod4.z.object({
+  // Positional: header_text: ["value1"]
+  header_text: import_zod4.z.array(import_zod4.z.string()).optional(),
+  // Named: header_text_named_params: [{ param_name: "name", example: "value" }]
+  header_text_named_params: import_zod4.z.array(templateNamedParamExampleSchema).optional()
+});
+var templateHeaderTextInputSchema = import_zod4.z.object({
+  type: import_zod4.z.literal("HEADER"),
+  format: import_zod4.z.literal("TEXT"),
+  text: import_zod4.z.string().min(1).max(60, "Header text must be 60 characters or less"),
+  example: templateHeaderTextExampleSchema.optional()
+});
+var templateHeaderMediaInputSchema = import_zod4.z.object({
+  type: import_zod4.z.literal("HEADER"),
+  format: import_zod4.z.enum(["IMAGE", "VIDEO", "DOCUMENT"]),
+  example: import_zod4.z.object({
+    header_handle: import_zod4.z.array(import_zod4.z.string()).min(1, "At least one header_handle is required")
+  })
+});
+var templateHeaderLocationInputSchema = import_zod4.z.object({
+  type: import_zod4.z.literal("HEADER"),
+  format: import_zod4.z.literal("LOCATION")
+});
+var templateHeaderComponentInputSchema = import_zod4.z.discriminatedUnion(
+  "format",
+  [
+    templateHeaderTextInputSchema,
+    templateHeaderMediaInputSchema,
+    templateHeaderLocationInputSchema
+  ]
+);
+var templateBodyExampleSchema = import_zod4.z.object({
+  // Positional: body_text: [["value1", "value2"]]
+  body_text: import_zod4.z.array(import_zod4.z.array(import_zod4.z.string())).optional(),
+  // Named: body_text_named_params: [{ param_name: "name", example: "value" }]
+  body_text_named_params: import_zod4.z.array(templateNamedParamExampleSchema).optional()
+});
+var templateBodyComponentInputSchema = import_zod4.z.object({
+  type: import_zod4.z.literal("BODY"),
+  text: import_zod4.z.string().min(1).max(1024, "Body text must be 1024 characters or less"),
+  example: templateBodyExampleSchema.optional()
+});
+var templateFooterComponentInputSchema = import_zod4.z.object({
+  type: import_zod4.z.literal("FOOTER"),
+  text: import_zod4.z.string().min(1).max(60, "Footer text must be 60 characters or less")
+});
+var templateButtonsComponentInputSchema = import_zod4.z.object({
+  type: import_zod4.z.literal("BUTTONS"),
+  buttons: import_zod4.z.array(templateButtonInputSchema).min(1).max(10, "Maximum 10 buttons allowed")
+});
+var templateComponentInputSchema = import_zod4.z.union([
+  templateHeaderComponentInputSchema,
+  templateBodyComponentInputSchema,
+  templateFooterComponentInputSchema,
+  templateButtonsComponentInputSchema
+]);
+var templateButtonSchema = import_zod4.z.object({
+  type: import_zod4.z.string(),
+  text: import_zod4.z.string().optional(),
+  url: import_zod4.z.string().optional(),
+  phone_number: import_zod4.z.string().optional(),
+  example: import_zod4.z.union([import_zod4.z.array(import_zod4.z.string()), import_zod4.z.string()]).optional(),
+  flow_id: import_zod4.z.string().optional(),
+  flow_action: import_zod4.z.string().optional(),
+  navigate_screen: import_zod4.z.string().optional()
+});
+var templateComponentSchema = import_zod4.z.object({
+  type: import_zod4.z.enum(["HEADER", "BODY", "FOOTER", "BUTTONS"]),
+  format: import_zod4.z.string().optional(),
+  text: import_zod4.z.string().optional(),
+  buttons: import_zod4.z.array(templateButtonSchema).optional(),
+  example: import_zod4.z.object({
+    header_text: import_zod4.z.array(import_zod4.z.string()).optional(),
+    header_text_named_params: import_zod4.z.array(templateNamedParamExampleSchema).optional(),
+    header_handle: import_zod4.z.array(import_zod4.z.string()).optional(),
+    body_text: import_zod4.z.array(import_zod4.z.array(import_zod4.z.string())).optional(),
+    body_text_named_params: import_zod4.z.array(templateNamedParamExampleSchema).optional()
+  }).optional()
+});
+var hasBody = (components) => components.some((c) => c.type === "BODY");
+var hasMaxOneHeader = (components) => components.filter((c) => c.type === "HEADER").length <= 1;
+var hasMaxOneFooter = (components) => components.filter((c) => c.type === "FOOTER").length <= 1;
+var hasMaxOneButtons = (components) => components.filter((c) => c.type === "BUTTONS").length <= 1;
+var baseComponentsSchema = import_zod4.z.array(templateComponentInputSchema).min(1, "At least one component is required").refine(hasBody, { message: "BODY component is required" }).refine(hasMaxOneHeader, { message: "Only one HEADER component is allowed" }).refine(hasMaxOneFooter, { message: "Only one FOOTER component is allowed" }).refine(hasMaxOneButtons, {
+  message: "Only one BUTTONS component is allowed"
+});
+var templateNameSchema = import_zod4.z.string().min(1, "Template name is required").max(512, "Template name must be 512 characters or less");
+var templateCreateMarketingSchema = import_zod4.z.object({
+  name: templateNameSchema,
   language: templateLanguageSchema,
-  category: import_zod6.z.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]),
-  components: import_zod6.z.array(templateComponentSchema).min(1, "At least one component is required").refine(
-    (components) => {
-      return components.some((c) => c.type === "BODY");
-    },
-    { message: "BODY component is required" }
-  ).refine(
-    (components) => {
-      const headers = components.filter((c) => c.type === "HEADER");
-      return headers.length <= 1;
-    },
-    { message: "Only one HEADER component is allowed" }
-  ).refine(
-    (components) => {
-      const footers = components.filter((c) => c.type === "FOOTER");
-      return footers.length <= 1;
-    },
-    { message: "Only one FOOTER component is allowed" }
-  ).refine(
-    (components) => {
-      const buttons = components.filter((c) => c.type === "BUTTONS");
-      return buttons.length <= 1;
-    },
-    { message: "Only one BUTTONS component is allowed" }
-  )
+  category: import_zod4.z.literal("MARKETING"),
+  parameter_format: templateParameterFormatSchema.optional(),
+  components: baseComponentsSchema
 });
-var templateUpdateSchema = import_zod6.z.object({
-  category: import_zod6.z.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]).optional(),
-  components: import_zod6.z.array(templateComponentSchema).optional(),
+var templateCreateUtilitySchema = import_zod4.z.object({
+  name: templateNameSchema,
+  language: templateLanguageSchema,
+  category: import_zod4.z.literal("UTILITY"),
+  parameter_format: templateParameterFormatSchema.optional(),
+  components: baseComponentsSchema
+});
+var templateCreateAuthenticationSchema = import_zod4.z.object({
+  name: templateNameSchema,
+  language: templateLanguageSchema,
+  category: import_zod4.z.literal("AUTHENTICATION"),
+  parameter_format: templateParameterFormatSchema.optional(),
+  components: import_zod4.z.array(templateComponentInputSchema).min(1, "At least one component is required").refine(hasBody, { message: "BODY component is required" })
+});
+var templateCreateSchema = import_zod4.z.discriminatedUnion("category", [
+  templateCreateMarketingSchema,
+  templateCreateUtilitySchema,
+  templateCreateAuthenticationSchema
+]);
+var templateUpdateSchema = import_zod4.z.object({
+  category: templateCategorySchema.optional(),
+  components: import_zod4.z.array(templateComponentInputSchema).optional(),
   language: templateLanguageSchema.optional(),
-  name: import_zod6.z.string().min(1).max(512).optional()
+  name: import_zod4.z.string().min(1).max(512).optional()
 });
-var templateListSchema = import_zod6.z.object({
-  name: import_zod6.z.string().optional()
-  // Filter by template name
+var templateListSchema = import_zod4.z.object({
+  name: import_zod4.z.string().optional(),
+  limit: import_zod4.z.number().min(1).max(1e3).optional(),
+  after: import_zod4.z.string().optional(),
+  before: import_zod4.z.string().optional()
 });
-var templateDeleteSchema = import_zod6.z.object({
-  name: import_zod6.z.string().optional(),
-  hsm_id: import_zod6.z.string().optional()
+var templateDeleteSchema = import_zod4.z.object({
+  name: import_zod4.z.string().optional(),
+  hsm_id: import_zod4.z.string().optional()
 }).refine((data) => data.name || data.hsm_id, {
   message: "Either name or hsm_id must be provided"
 });
+var templateSchema = import_zod4.z.object({
+  id: import_zod4.z.string(),
+  name: import_zod4.z.string(),
+  language: import_zod4.z.string(),
+  status: templateStatusSchema,
+  category: templateCategorySchema,
+  components: import_zod4.z.array(templateComponentSchema),
+  parameter_format: templateParameterFormatSchema.optional(),
+  quality_score: templateQualityScoreSchema.optional(),
+  rejected_reason: import_zod4.z.string().optional(),
+  previous_category: import_zod4.z.string().optional()
+});
+var templateCreateResponseSchema = import_zod4.z.object({
+  id: import_zod4.z.string(),
+  status: templateStatusSchema,
+  category: templateCategorySchema
+});
+var templatePagingCursorsSchema = import_zod4.z.object({
+  before: import_zod4.z.string().optional(),
+  after: import_zod4.z.string().optional()
+});
+var templatePagingSchema = import_zod4.z.object({
+  cursors: templatePagingCursorsSchema.optional(),
+  next: import_zod4.z.string().optional(),
+  previous: import_zod4.z.string().optional()
+});
+var templateListResponseSchema = import_zod4.z.object({
+  data: import_zod4.z.array(templateSchema),
+  paging: templatePagingSchema.optional()
+});
+var templateUpdateResponseSchema = import_zod4.z.object({
+  success: import_zod4.z.boolean()
+});
+var templateDeleteResponseSchema = import_zod4.z.object({
+  success: import_zod4.z.boolean()
+});
 
-// src/services/templates/methods/create.ts
-async function createTemplate(templatesClient, request) {
-  const result = templateCreateSchema.safeParse(request);
-  if (!result.success) {
-    throw transformZodError(result.error);
-  }
-  const data = result.data;
-  return templatesClient.post(
-    "/message_templates",
-    data
-  );
-}
-
-// src/services/templates/methods/list.ts
-async function listTemplates(templatesClient, options) {
-  if (options) {
-    const result = templateListSchema.safeParse(options);
-    if (!result.success) {
-      throw transformZodError(result.error);
-    }
-  }
-  const params = new URLSearchParams();
-  if (options?.name) {
-    params.append("name", options.name);
-  }
-  const queryString = params.toString();
-  const path = queryString ? `/message_templates?${queryString}` : "/message_templates";
-  return templatesClient.get(path);
-}
-
-// src/services/templates/methods/get.ts
-async function getTemplate(httpClient, templateId) {
-  if (!templateId || templateId.trim().length === 0) {
-    throw new Error("Template ID is required");
-  }
-  return httpClient.get(`/${templateId}`);
-}
-
-// src/services/templates/methods/update.ts
-async function updateTemplate(httpClient, templateId, request) {
-  if (!templateId || templateId.trim().length === 0) {
-    throw new Error("Template ID is required");
-  }
-  const result = templateUpdateSchema.safeParse(request);
-  if (!result.success) {
-    throw transformZodError(result.error);
-  }
-  const data = result.data;
-  return httpClient.post(`/${templateId}`, data);
-}
-
-// src/services/templates/methods/delete.ts
-async function deleteTemplate(templatesClient, options) {
-  const result = templateDeleteSchema.safeParse(options);
-  if (!result.success) {
-    throw transformZodError(result.error);
-  }
-  const data = result.data;
-  const params = new URLSearchParams();
-  if (data.name) {
-    params.append("name", data.name);
-  }
-  if (data.hsm_id) {
-    params.append("hsm_id", data.hsm_id);
-  }
-  const queryString = params.toString();
-  const path = `/message_templates?${queryString}`;
-  return templatesClient.delete(path);
-}
-
-// src/services/templates/TemplatesService.ts
-var TemplatesService = class {
+// src/resources/templates/resource.ts
+var TemplatesResource = class {
   constructor(httpClient) {
     this.httpClient = httpClient;
   }
   /**
-   * Helper to create a Scoped Client (prefer override, fallback to config)
+   * Get the business account ID (with validation)
    */
-  getClient(overrideId) {
+  getBusinessAccountId(overrideId) {
     const id = overrideId || this.httpClient.businessAccountId;
     if (!id) {
       throw new WhatsAppValidationError(
@@ -1137,58 +1134,152 @@ var TemplatesService = class {
         "businessAccountId"
       );
     }
-    return new TemplatesClient(this.httpClient, id);
+    return id;
   }
   /**
    * Create a message template
    *
-   * @param request - Template creation request
+   * @param input - Template creation input
    * @param businessAccountId - Optional WABA ID (overrides client config)
+   * @returns Created template info (id, status, category)
+   * @throws {ZodError} If input validation fails
+   *
+   * @example
+   * ```typescript
+   * const response = await client.templates.create({
+   *   name: "welcome_message",
+   *   category: "MARKETING",
+   *   language: "en_US",
+   *   components: [
+   *     { type: "HEADER", format: "TEXT", text: "Welcome!" },
+   *     {
+   *       type: "BODY",
+   *       text: "Hello {{1}}, thanks for joining us!",
+   *       example: { body_text: [["Pablo"]] }
+   *     },
+   *     { type: "FOOTER", text: "Reply STOP to unsubscribe" }
+   *   ]
+   * });
+   * ```
    */
-  async create(request, businessAccountId) {
-    const client = this.getClient(businessAccountId);
-    return createTemplate(client, request);
+  async create(input, businessAccountId) {
+    const wabaId = this.getBusinessAccountId(businessAccountId);
+    const body = templateCreateSchema.parse(input);
+    return this.httpClient.post(
+      `/${wabaId}/message_templates`,
+      body
+    );
   }
   /**
    * List message templates
    *
-   * @param options - Optional filter options (name)
+   * @param options - Optional filter/pagination options
    * @param businessAccountId - Optional WABA ID (overrides client config)
+   * @returns List of templates with pagination info
+   * @throws {ZodError} If options validation fails
+   *
+   * @example
+   * ```typescript
+   * // List all templates
+   * const all = await client.templates.list();
+   *
+   * // Filter by name
+   * const filtered = await client.templates.list({ name: "welcome" });
+   *
+   * // With pagination
+   * const page = await client.templates.list({ limit: 10, after: "cursor" });
+   * ```
    */
   async list(options, businessAccountId) {
-    const client = this.getClient(businessAccountId);
-    return listTemplates(client, options);
+    const wabaId = this.getBusinessAccountId(businessAccountId);
+    const query = options ? templateListSchema.parse(options) : {};
+    const params = new URLSearchParams();
+    if (query.name) params.append("name", query.name);
+    if (query.limit) params.append("limit", query.limit.toString());
+    if (query.after) params.append("after", query.after);
+    if (query.before) params.append("before", query.before);
+    const queryString = params.toString();
+    const path = queryString ? `/${wabaId}/message_templates?${queryString}` : `/${wabaId}/message_templates`;
+    return this.httpClient.get(path);
   }
   /**
    * Get a template by ID
    *
-   * Note: This uses the template ID directly (no WABA prefix needed)
+   * Note: Uses template ID directly (no WABA prefix needed)
    *
-   * @param templateId - Template ID
+   * @param templateId - The template ID
+   * @returns Template details
+   *
+   * @example
+   * ```typescript
+   * const template = await client.templates.get("123456789012345");
+   * console.log(template.name, template.status);
+   * ```
    */
   async get(templateId) {
-    return getTemplate(this.httpClient, templateId);
+    if (!templateId?.trim()) {
+      throw new WhatsAppValidationError(
+        "Template ID is required",
+        "templateId"
+      );
+    }
+    return this.httpClient.get(`/${templateId}`);
   }
   /**
    * Update a template
    *
-   * Note: This uses the template ID directly (no WABA prefix needed)
+   * Note: Uses template ID directly (no WABA prefix needed)
    *
-   * @param templateId - Template ID
-   * @param request - Template update request
+   * @param templateId - The template ID
+   * @param input - Fields to update
+   * @returns Success status
+   * @throws {ZodError} If input validation fails
+   *
+   * @example
+   * ```typescript
+   * await client.templates.update("123456789012345", {
+   *   components: [
+   *     { type: "BODY", text: "Updated message text" }
+   *   ]
+   * });
+   * ```
    */
-  async update(templateId, request) {
-    return updateTemplate(this.httpClient, templateId, request);
+  async update(templateId, input) {
+    if (!templateId?.trim()) {
+      throw new WhatsAppValidationError(
+        "Template ID is required",
+        "templateId"
+      );
+    }
+    const body = templateUpdateSchema.parse(input);
+    return this.httpClient.post(`/${templateId}`, body);
   }
   /**
    * Delete a template
    *
-   * @param options - Delete options (name or hsm_id)
+   * @param input - Delete by name or hsm_id
    * @param businessAccountId - Optional WABA ID (overrides client config)
+   * @returns Success status
+   * @throws {ZodError} If input validation fails
+   *
+   * @example
+   * ```typescript
+   * // Delete by name
+   * await client.templates.delete({ name: "old_template" });
+   *
+   * // Delete by template ID (hsm_id)
+   * await client.templates.delete({ hsm_id: "123456789012345" });
+   * ```
    */
-  async delete(options, businessAccountId) {
-    const client = this.getClient(businessAccountId);
-    return deleteTemplate(client, options);
+  async delete(input, businessAccountId) {
+    const wabaId = this.getBusinessAccountId(businessAccountId);
+    const query = templateDeleteSchema.parse(input);
+    const params = new URLSearchParams();
+    if (query.name) params.append("name", query.name);
+    if (query.hsm_id) params.append("hsm_id", query.hsm_id);
+    return this.httpClient.delete(
+      `/${wabaId}/message_templates?${params.toString()}`
+    );
   }
 };
 
@@ -1230,68 +1321,68 @@ function verifyWebhook(query, verifyToken) {
 }
 
 // src/schemas/webhooks/payload.ts
-var import_zod8 = require("zod");
+var import_zod6 = require("zod");
 
 // src/schemas/messages/incoming.ts
-var import_zod7 = require("zod");
-var baseIncomingMessageSchema = import_zod7.z.object({
-  from: import_zod7.z.string(),
+var import_zod5 = require("zod");
+var baseIncomingMessageSchema = import_zod5.z.object({
+  from: import_zod5.z.string(),
   // WhatsApp ID (phone number without +)
-  id: import_zod7.z.string(),
+  id: import_zod5.z.string(),
   // Message ID (wamid.*)
-  timestamp: import_zod7.z.string(),
+  timestamp: import_zod5.z.string(),
   // Unix timestamp as string
-  type: import_zod7.z.string()
+  type: import_zod5.z.string()
   // Message type discriminator
 });
-var incomingTextContentSchema = import_zod7.z.object({
-  body: import_zod7.z.string()
+var incomingTextContentSchema = import_zod5.z.object({
+  body: import_zod5.z.string()
 });
-var incomingAudioContentSchema = import_zod7.z.object({
-  id: import_zod7.z.string(),
+var incomingAudioContentSchema = import_zod5.z.object({
+  id: import_zod5.z.string(),
   // Media ID for downloading
-  mime_type: import_zod7.z.string().optional()
+  mime_type: import_zod5.z.string().optional()
   // e.g., "audio/ogg; codecs=opus"
 });
-var incomingImageContentSchema = import_zod7.z.object({
-  id: import_zod7.z.string(),
+var incomingImageContentSchema = import_zod5.z.object({
+  id: import_zod5.z.string(),
   // Media ID for downloading
-  mime_type: import_zod7.z.string().optional(),
+  mime_type: import_zod5.z.string().optional(),
   // e.g., "image/jpeg"
-  caption: import_zod7.z.string().optional()
+  caption: import_zod5.z.string().optional()
   // Optional caption text
 });
 var incomingTextMessageSchema = baseIncomingMessageSchema.extend({
-  type: import_zod7.z.literal("text"),
+  type: import_zod5.z.literal("text"),
   text: incomingTextContentSchema
 });
 var incomingAudioMessageSchema = baseIncomingMessageSchema.extend({
-  type: import_zod7.z.literal("audio"),
+  type: import_zod5.z.literal("audio"),
   audio: incomingAudioContentSchema
 });
 var incomingImageMessageSchema = baseIncomingMessageSchema.extend({
-  type: import_zod7.z.literal("image"),
+  type: import_zod5.z.literal("image"),
   image: incomingImageContentSchema
 });
-var incomingMessageSchema = import_zod7.z.discriminatedUnion("type", [
+var incomingMessageSchema = import_zod5.z.discriminatedUnion("type", [
   incomingTextMessageSchema,
   incomingAudioMessageSchema,
   incomingImageMessageSchema
 ]);
 
 // src/schemas/webhooks/payload.ts
-var contactSchema = import_zod8.z.object({
-  profile: import_zod8.z.object({
-    name: import_zod8.z.string()
+var contactSchema = import_zod6.z.object({
+  profile: import_zod6.z.object({
+    name: import_zod6.z.string()
   }),
-  wa_id: import_zod8.z.string()
+  wa_id: import_zod6.z.string()
 });
-var webhookMetadataSchema = import_zod8.z.object({
-  display_phone_number: import_zod8.z.string(),
-  phone_number_id: import_zod8.z.string()
+var webhookMetadataSchema = import_zod6.z.object({
+  display_phone_number: import_zod6.z.string(),
+  phone_number_id: import_zod6.z.string()
 });
-var conversationOriginSchema = import_zod8.z.object({
-  type: import_zod8.z.enum([
+var conversationOriginSchema = import_zod6.z.object({
+  type: import_zod6.z.enum([
     "authentication",
     "authentication_international",
     "marketing",
@@ -1301,18 +1392,18 @@ var conversationOriginSchema = import_zod8.z.object({
     "utility"
   ])
 });
-var conversationSchema = import_zod8.z.object({
-  id: import_zod8.z.string(),
-  expiration_timestamp: import_zod8.z.string().optional(),
+var conversationSchema = import_zod6.z.object({
+  id: import_zod6.z.string(),
+  expiration_timestamp: import_zod6.z.string().optional(),
   // Only for sent status
   origin: conversationOriginSchema
 });
-var pricingSchema = import_zod8.z.object({
-  billable: import_zod8.z.boolean(),
+var pricingSchema = import_zod6.z.object({
+  billable: import_zod6.z.boolean(),
   // Deprecated but still present
-  pricing_model: import_zod8.z.enum(["CBP", "PMP"]),
-  type: import_zod8.z.enum(["regular", "free_customer_service", "free_entry_point"]),
-  category: import_zod8.z.enum([
+  pricing_model: import_zod6.z.enum(["CBP", "PMP"]),
+  type: import_zod6.z.enum(["regular", "free_customer_service", "free_entry_point"]),
+  category: import_zod6.z.enum([
     "authentication",
     "authentication-international",
     "marketing",
@@ -1322,60 +1413,60 @@ var pricingSchema = import_zod8.z.object({
     "utility"
   ])
 });
-var statusErrorSchema = import_zod8.z.object({
-  code: import_zod8.z.number(),
-  title: import_zod8.z.string(),
-  message: import_zod8.z.string(),
-  error_data: import_zod8.z.object({
-    details: import_zod8.z.string()
+var statusErrorSchema = import_zod6.z.object({
+  code: import_zod6.z.number(),
+  title: import_zod6.z.string(),
+  message: import_zod6.z.string(),
+  error_data: import_zod6.z.object({
+    details: import_zod6.z.string()
   }),
-  href: import_zod8.z.string()
+  href: import_zod6.z.string()
 });
-var statusSchema = import_zod8.z.object({
-  id: import_zod8.z.string(),
+var statusSchema = import_zod6.z.object({
+  id: import_zod6.z.string(),
   // WhatsApp message ID
-  status: import_zod8.z.enum(["sent", "delivered", "read", "failed", "played"]),
-  timestamp: import_zod8.z.string(),
+  status: import_zod6.z.enum(["sent", "delivered", "read", "failed", "played"]),
+  timestamp: import_zod6.z.string(),
   // Unix timestamp
-  recipient_id: import_zod8.z.string(),
+  recipient_id: import_zod6.z.string(),
   // User phone number or group ID
-  recipient_type: import_zod8.z.literal("group").optional(),
+  recipient_type: import_zod6.z.literal("group").optional(),
   // Only included if message sent to a group
-  recipient_participant_id: import_zod8.z.string().optional(),
+  recipient_participant_id: import_zod6.z.string().optional(),
   // Only included if message sent to a group
-  recipient_identity_key_hash: import_zod8.z.string().optional(),
+  recipient_identity_key_hash: import_zod6.z.string().optional(),
   // Only included if identity change check enabled
-  biz_opaque_callback_data: import_zod8.z.string().optional(),
+  biz_opaque_callback_data: import_zod6.z.string().optional(),
   // Only included if message sent with biz_opaque_callback_data
   conversation: conversationSchema.optional(),
   // Conditional inclusion (see conversationSchema docs)
   pricing: pricingSchema.optional(),
   // Conditional inclusion (see pricingSchema docs)
-  errors: import_zod8.z.array(statusErrorSchema).optional()
+  errors: import_zod6.z.array(statusErrorSchema).optional()
   // Only included if failure to send or deliver message
 });
-var webhookValueSchema = import_zod8.z.object({
-  messaging_product: import_zod8.z.literal("whatsapp"),
+var webhookValueSchema = import_zod6.z.object({
+  messaging_product: import_zod6.z.literal("whatsapp"),
   metadata: webhookMetadataSchema,
-  contacts: import_zod8.z.array(contactSchema).optional(),
-  messages: import_zod8.z.array(incomingMessageSchema).optional(),
+  contacts: import_zod6.z.array(contactSchema).optional(),
+  messages: import_zod6.z.array(incomingMessageSchema).optional(),
   // Incoming messages
-  statuses: import_zod8.z.array(statusSchema).optional()
+  statuses: import_zod6.z.array(statusSchema).optional()
   // Status updates
 });
-var webhookChangeSchema = import_zod8.z.object({
+var webhookChangeSchema = import_zod6.z.object({
   value: webhookValueSchema,
-  field: import_zod8.z.literal("messages")
+  field: import_zod6.z.literal("messages")
   // For now: only messages field
 });
-var webhookEntrySchema = import_zod8.z.object({
-  id: import_zod8.z.string(),
+var webhookEntrySchema = import_zod6.z.object({
+  id: import_zod6.z.string(),
   // WABA ID
-  changes: import_zod8.z.array(webhookChangeSchema)
+  changes: import_zod6.z.array(webhookChangeSchema)
 });
-var webhookPayloadSchema = import_zod8.z.object({
-  object: import_zod8.z.literal("whatsapp_business_account"),
-  entry: import_zod8.z.array(webhookEntrySchema)
+var webhookPayloadSchema = import_zod6.z.object({
+  object: import_zod6.z.literal("whatsapp_business_account"),
+  entry: import_zod6.z.array(webhookEntrySchema)
 });
 
 // src/services/webhooks/WebhooksService.ts
@@ -1418,33 +1509,6 @@ var WebhooksService = class {
    */
   extractStatuses(payload) {
     return extractStatuses(payload);
-  }
-  /**
-   * Download media file by media ID
-   *
-   * Downloads media files (images, audio, video, documents) from WhatsApp servers.
-   * Uses the access token from the client configuration automatically.
-   *
-   * @param mediaId - Media ID from incoming message (e.g., message.image.id, message.audio.id)
-   * @returns Promise resolving to ArrayBuffer containing the media file
-   * @throws Error if download fails or media ID is invalid
-   *
-   * @example
-   * ```typescript
-   * client.webhooks.handle(req.body, {
-   *   image: async (message, context) => {
-   *     const mediaData = await client.webhooks.downloadMedia(message.image.id);
-   *     // Upload to S3, save to disk, etc.
-   *     await s3.upload({ key: message.image.id, body: Buffer.from(mediaData) });
-   *   },
-   * });
-   * ```
-   */
-  async downloadMedia(mediaId) {
-    if (!mediaId || mediaId.trim().length === 0) {
-      throw new Error("Media ID is required");
-    }
-    return this.httpClient.getBinary(`/${mediaId}`);
   }
   /**
    * Validate webhook payload structure
@@ -1561,21 +1625,73 @@ var WebhooksService = class {
   }
 };
 
+// src/services/media/MediaService.ts
+var MediaService = class {
+  constructor(httpClient) {
+    this.httpClient = httpClient;
+  }
+  /**
+   * Download media file by media ID
+   *
+   * Downloads media files (images, audio, video, documents) from WhatsApp servers.
+   * Uses the access token from the client configuration automatically.
+   *
+   * According to WhatsApp API docs, you cannot download directly from the media ID endpoint.
+   * The flow is:
+   * 1. GET /MEDIA_ID → returns JSON metadata with a URL
+   * 2. GET /MEDIA_URL → returns the actual binary data
+   *
+   * @param mediaId - Media ID from incoming message (e.g., message.image.id, message.audio.id)
+   * @returns Promise resolving to ArrayBuffer containing the media file
+   * @throws Error if download fails or media ID is invalid
+   *
+   * @example
+   * ```typescript
+   * const mediaData = await client.media.download(message.image.id);
+   * // Upload to S3, save to disk, etc.
+   * await s3.upload({ key: message.image.id, body: Buffer.from(mediaData) });
+   * ```
+   */
+  async download(mediaId) {
+    if (!mediaId || mediaId.trim().length === 0) {
+      throw new Error("Media ID is required");
+    }
+    const metadata = await this.httpClient.get(`/${mediaId}`);
+    const response = await fetch(metadata.url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${this.httpClient.accessToken}`
+      }
+    });
+    if (!response.ok) {
+      let errorMessage = `API Error: ${response.statusText}`;
+      try {
+        const error = await response.json();
+        errorMessage = `API Error: ${error.error?.message || response.statusText} (${error.error?.code || response.status})`;
+      } catch {
+      }
+      throw new Error(errorMessage);
+    }
+    return response.arrayBuffer();
+  }
+};
+
 // src/client/WhatsAppClient.ts
-var import_zod9 = require("zod");
+var import_zod7 = require("zod");
 var WhatsAppClient = class {
   messages;
   accounts;
   business;
   templates;
   webhooks;
+  media;
   httpClient;
   constructor(config) {
     let validated;
     try {
       validated = clientConfigSchema.parse(config);
     } catch (error) {
-      if (error instanceof import_zod9.ZodError) {
+      if (error instanceof import_zod7.ZodError) {
         throw transformZodError(error);
       }
       throw error;
@@ -1584,8 +1700,9 @@ var WhatsAppClient = class {
     this.messages = new MessagesService(this.httpClient);
     this.accounts = new AccountsService(this.httpClient);
     this.business = new BusinessService(this.httpClient);
-    this.templates = new TemplatesService(this.httpClient);
+    this.templates = new TemplatesResource(this.httpClient);
     this.webhooks = new WebhooksService(this.httpClient);
+    this.media = new MediaService(this.httpClient);
   }
   /**
    * Debug the current access token
@@ -1603,115 +1720,90 @@ var WhatsAppClient = class {
 };
 
 // src/schemas/messages/response.ts
-var import_zod10 = require("zod");
-var messageResponseSchema = import_zod10.z.object({
-  messaging_product: import_zod10.z.literal("whatsapp"),
-  contacts: import_zod10.z.array(
-    import_zod10.z.object({
-      input: import_zod10.z.string(),
-      wa_id: import_zod10.z.string()
+var import_zod8 = require("zod");
+var messageResponseSchema = import_zod8.z.object({
+  messaging_product: import_zod8.z.literal("whatsapp"),
+  contacts: import_zod8.z.array(
+    import_zod8.z.object({
+      input: import_zod8.z.string(),
+      wa_id: import_zod8.z.string()
     })
   ),
-  messages: import_zod10.z.array(
-    import_zod10.z.object({
-      id: import_zod10.z.string(),
-      group_id: import_zod10.z.string().optional(),
-      message_status: import_zod10.z.string().optional()
+  messages: import_zod8.z.array(
+    import_zod8.z.object({
+      id: import_zod8.z.string(),
+      group_id: import_zod8.z.string().optional(),
+      message_status: import_zod8.z.string().optional()
     })
   )
 });
 
 // src/schemas/accounts/phone-number.ts
-var import_zod11 = require("zod");
-var phoneNumberResponseSchema = import_zod11.z.object({
-  verified_name: import_zod11.z.string(),
-  display_phone_number: import_zod11.z.string(),
-  id: import_zod11.z.string(),
-  quality_rating: import_zod11.z.string()
+var import_zod9 = require("zod");
+var phoneNumberResponseSchema = import_zod9.z.object({
+  verified_name: import_zod9.z.string(),
+  display_phone_number: import_zod9.z.string(),
+  id: import_zod9.z.string(),
+  quality_rating: import_zod9.z.string()
 });
-var phoneNumberListResponseSchema = import_zod11.z.object({
-  data: import_zod11.z.array(phoneNumberResponseSchema)
+var phoneNumberListResponseSchema = import_zod9.z.object({
+  data: import_zod9.z.array(phoneNumberResponseSchema)
 });
 
 // src/schemas/business/account.ts
-var import_zod12 = require("zod");
-var businessAccountResponseSchema = import_zod12.z.object({
-  id: import_zod12.z.string(),
-  name: import_zod12.z.string().optional(),
-  account_review_status: import_zod12.z.string().optional(),
-  currency: import_zod12.z.string().optional(),
-  country: import_zod12.z.string().optional(),
-  timezone_id: import_zod12.z.string().optional(),
-  business_verification_status: import_zod12.z.string().optional(),
-  is_enabled_for_insights: import_zod12.z.boolean().optional(),
-  message_template_namespace: import_zod12.z.string().optional()
+var import_zod10 = require("zod");
+var businessAccountResponseSchema = import_zod10.z.object({
+  id: import_zod10.z.string(),
+  name: import_zod10.z.string().optional(),
+  account_review_status: import_zod10.z.string().optional(),
+  currency: import_zod10.z.string().optional(),
+  country: import_zod10.z.string().optional(),
+  timezone_id: import_zod10.z.string().optional(),
+  business_verification_status: import_zod10.z.string().optional(),
+  is_enabled_for_insights: import_zod10.z.boolean().optional(),
+  message_template_namespace: import_zod10.z.string().optional()
 });
-var businessAccountsListResponseSchema = import_zod12.z.object({
-  data: import_zod12.z.record(import_zod12.z.string(), businessAccountResponseSchema).or(
-    import_zod12.z.array(businessAccountResponseSchema)
+var businessAccountsListResponseSchema = import_zod10.z.object({
+  data: import_zod10.z.record(import_zod10.z.string(), businessAccountResponseSchema).or(
+    import_zod10.z.array(businessAccountResponseSchema)
   ),
-  paging: import_zod12.z.object({
-    cursors: import_zod12.z.object({
-      before: import_zod12.z.string().optional(),
-      after: import_zod12.z.string().optional()
+  paging: import_zod10.z.object({
+    cursors: import_zod10.z.object({
+      before: import_zod10.z.string().optional(),
+      after: import_zod10.z.string().optional()
     }).optional(),
-    next: import_zod12.z.string().url().optional(),
-    previous: import_zod12.z.string().url().optional()
+    next: import_zod10.z.string().url().optional(),
+    previous: import_zod10.z.string().url().optional()
   }).optional()
-});
-
-// src/schemas/templates/response.ts
-var import_zod13 = require("zod");
-var templateSchema = import_zod13.z.object({
-  id: import_zod13.z.string(),
-  name: import_zod13.z.string(),
-  language: import_zod13.z.string(),
-  status: import_zod13.z.string(),
-  category: import_zod13.z.string(),
-  components: import_zod13.z.array(templateComponentSchema)
-});
-var templateCreateResponseSchema = import_zod13.z.object({
-  id: import_zod13.z.string(),
-  status: import_zod13.z.string(),
-  category: import_zod13.z.string()
-});
-var templateListResponseSchema = import_zod13.z.object({
-  data: import_zod13.z.array(templateSchema),
-  paging: import_zod13.z.object({
-    cursors: import_zod13.z.object({
-      before: import_zod13.z.string().optional(),
-      after: import_zod13.z.string().optional()
-    }).optional()
-  }).optional()
-});
-var templateUpdateResponseSchema = import_zod13.z.object({
-  success: import_zod13.z.boolean()
-});
-var templateDeleteResponseSchema = import_zod13.z.object({
-  success: import_zod13.z.boolean()
 });
 
 // src/schemas/debug.ts
-var import_zod14 = require("zod");
-var debugTokenResponseSchema = import_zod14.z.object({
-  data: import_zod14.z.object({
-    app_id: import_zod14.z.string().optional(),
-    type: import_zod14.z.string().optional(),
-    application: import_zod14.z.string().optional(),
-    data_access_expires_at: import_zod14.z.number().optional(),
-    expires_at: import_zod14.z.number().optional(),
-    is_valid: import_zod14.z.boolean().optional(),
-    issued_at: import_zod14.z.number().optional(),
-    metadata: import_zod14.z.object({
-      auth_type: import_zod14.z.string().optional(),
-      sso: import_zod14.z.string().optional()
+var import_zod11 = require("zod");
+var debugTokenResponseSchema = import_zod11.z.object({
+  data: import_zod11.z.object({
+    app_id: import_zod11.z.string().optional(),
+    type: import_zod11.z.string().optional(),
+    application: import_zod11.z.string().optional(),
+    data_access_expires_at: import_zod11.z.number().optional(),
+    expires_at: import_zod11.z.number().optional(),
+    is_valid: import_zod11.z.boolean().optional(),
+    issued_at: import_zod11.z.number().optional(),
+    metadata: import_zod11.z.object({
+      auth_type: import_zod11.z.string().optional(),
+      sso: import_zod11.z.string().optional()
     }).optional(),
-    scopes: import_zod14.z.array(import_zod14.z.string()).optional(),
-    user_id: import_zod14.z.string().optional()
+    scopes: import_zod11.z.array(import_zod11.z.string()).optional(),
+    user_id: import_zod11.z.string().optional()
   })
 });
+
+// src/utils/templates.ts
+function toTemplateName(input) {
+  return input.toLowerCase().trim().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "").replace(/_+/g, "_").replace(/^_|_$/g, "");
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  TemplatesResource,
   WhatsAppAPIError,
   WhatsAppClient,
   WhatsAppError,
@@ -1738,26 +1830,44 @@ var debugTokenResponseSchema = import_zod14.z.object({
   sendReactionInputSchema,
   sendTextInputSchema,
   statusSchema,
-  templateBodyComponentSchema,
+  templateBodyComponentInputSchema,
+  templateBodyExampleSchema,
+  templateButtonInputSchema,
   templateButtonSchema,
-  templateButtonsComponentSchema,
+  templateButtonsComponentInputSchema,
+  templateCategorySchema,
+  templateComponentInputSchema,
   templateComponentSchema,
-  templateCopyCodeButtonSchema,
+  templateCopyCodeButtonInputSchema,
+  templateCreateAuthenticationSchema,
+  templateCreateMarketingSchema,
   templateCreateResponseSchema,
   templateCreateSchema,
+  templateCreateUtilitySchema,
   templateDeleteResponseSchema,
   templateDeleteSchema,
-  templateFlowButtonSchema,
-  templateFooterComponentSchema,
-  templateHeaderComponentSchema,
+  templateFlowButtonInputSchema,
+  templateFooterComponentInputSchema,
+  templateHeaderComponentInputSchema,
+  templateHeaderLocationInputSchema,
+  templateHeaderMediaInputSchema,
+  templateHeaderTextExampleSchema,
+  templateHeaderTextInputSchema,
   templateLanguageSchema,
   templateListResponseSchema,
   templateListSchema,
-  templatePhoneNumberButtonSchema,
-  templateQuickReplyButtonSchema,
+  templateNamedParamExampleSchema,
+  templatePagingCursorsSchema,
+  templatePagingSchema,
+  templateParameterFormatSchema,
+  templatePhoneNumberButtonInputSchema,
+  templateQualityScoreSchema,
+  templateQuickReplyButtonInputSchema,
   templateSchema,
+  templateStatusSchema,
   templateUpdateResponseSchema,
   templateUpdateSchema,
-  templateUrlButtonSchema,
+  templateUrlButtonInputSchema,
+  toTemplateName,
   webhookPayloadSchema
 });

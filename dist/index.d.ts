@@ -422,10 +422,442 @@ declare class BusinessService {
 }
 
 /**
- * Schema for creating a template
- * Simplified - no variables/examples for now
+ * Supported WhatsApp template languages
  */
-declare const templateCreateSchema: z.ZodObject<{
+declare const templateLanguageSchema: z.ZodEnum<{
+    te: "te";
+    id: "id";
+    af: "af";
+    sq: "sq";
+    ar: "ar";
+    ar_EG: "ar_EG";
+    ar_AE: "ar_AE";
+    ar_LB: "ar_LB";
+    ar_MA: "ar_MA";
+    ar_QA: "ar_QA";
+    az: "az";
+    be_BY: "be_BY";
+    bn: "bn";
+    bn_IN: "bn_IN";
+    bg: "bg";
+    ca: "ca";
+    zh_CN: "zh_CN";
+    zh_HK: "zh_HK";
+    zh_TW: "zh_TW";
+    hr: "hr";
+    cs: "cs";
+    da: "da";
+    prs_AF: "prs_AF";
+    nl: "nl";
+    nl_BE: "nl_BE";
+    en: "en";
+    en_GB: "en_GB";
+    en_US: "en_US";
+    en_AE: "en_AE";
+    en_AU: "en_AU";
+    en_CA: "en_CA";
+    en_GH: "en_GH";
+    en_IE: "en_IE";
+    en_IN: "en_IN";
+    en_JM: "en_JM";
+    en_MY: "en_MY";
+    en_NZ: "en_NZ";
+    en_QA: "en_QA";
+    en_SG: "en_SG";
+    en_UG: "en_UG";
+    en_ZA: "en_ZA";
+    et: "et";
+    fil: "fil";
+    fi: "fi";
+    fr: "fr";
+    fr_BE: "fr_BE";
+    fr_CA: "fr_CA";
+    fr_CH: "fr_CH";
+    fr_CI: "fr_CI";
+    fr_MA: "fr_MA";
+    ka: "ka";
+    de: "de";
+    de_AT: "de_AT";
+    de_CH: "de_CH";
+    el: "el";
+    gu: "gu";
+    ha: "ha";
+    he: "he";
+    hi: "hi";
+    hu: "hu";
+    ga: "ga";
+    it: "it";
+    ja: "ja";
+    kn: "kn";
+    kk: "kk";
+    rw_RW: "rw_RW";
+    ko: "ko";
+    ky_KG: "ky_KG";
+    lo: "lo";
+    lv: "lv";
+    lt: "lt";
+    mk: "mk";
+    ms: "ms";
+    ml: "ml";
+    mr: "mr";
+    nb: "nb";
+    ps_AF: "ps_AF";
+    fa: "fa";
+    pl: "pl";
+    pt_BR: "pt_BR";
+    pt_PT: "pt_PT";
+    pa: "pa";
+    ro: "ro";
+    ru: "ru";
+    sr: "sr";
+    si_LK: "si_LK";
+    sk: "sk";
+    sl: "sl";
+    es: "es";
+    es_AR: "es_AR";
+    es_CL: "es_CL";
+    es_CO: "es_CO";
+    es_CR: "es_CR";
+    es_DO: "es_DO";
+    es_EC: "es_EC";
+    es_HN: "es_HN";
+    es_MX: "es_MX";
+    es_PA: "es_PA";
+    es_PE: "es_PE";
+    es_ES: "es_ES";
+    es_UY: "es_UY";
+    sw: "sw";
+    sv: "sv";
+    ta: "ta";
+    th: "th";
+    tr: "tr";
+    uk: "uk";
+    ur: "ur";
+    uz: "uz";
+    vi: "vi";
+    zu: "zu";
+}>;
+declare const templateCategorySchema: z.ZodEnum<{
+    AUTHENTICATION: "AUTHENTICATION";
+    MARKETING: "MARKETING";
+    UTILITY: "UTILITY";
+}>;
+/**
+ * Parameter format for template variables
+ * - "positional": Variables use {{1}}, {{2}}, etc.
+ * - "named": Variables use {{name}}, {{order_number}}, etc.
+ */
+declare const templateParameterFormatSchema: z.ZodEnum<{
+    positional: "positional";
+    named: "named";
+}>;
+declare const templateStatusSchema: z.ZodEnum<{
+    APPROVED: "APPROVED";
+    PENDING: "PENDING";
+    REJECTED: "REJECTED";
+    PAUSED: "PAUSED";
+    DISABLED: "DISABLED";
+    IN_APPEAL: "IN_APPEAL";
+    PENDING_DELETION: "PENDING_DELETION";
+    DELETED: "DELETED";
+    LIMIT_EXCEEDED: "LIMIT_EXCEEDED";
+}>;
+declare const templateQualityScoreSchema: z.ZodObject<{
+    score: z.ZodOptional<z.ZodEnum<{
+        GREEN: "GREEN";
+        YELLOW: "YELLOW";
+        RED: "RED";
+        UNKNOWN: "UNKNOWN";
+    }>>;
+    date: z.ZodOptional<z.ZodNumber>;
+}, z.core.$strip>;
+/**
+ * Named parameter example (for parameter_format: "named")
+ */
+declare const templateNamedParamExampleSchema: z.ZodObject<{
+    param_name: z.ZodString;
+    example: z.ZodString;
+}, z.core.$strip>;
+declare const templateQuickReplyButtonInputSchema: z.ZodObject<{
+    type: z.ZodLiteral<"QUICK_REPLY">;
+    text: z.ZodString;
+}, z.core.$strip>;
+declare const templateUrlButtonInputSchema: z.ZodObject<{
+    type: z.ZodLiteral<"URL">;
+    text: z.ZodString;
+    url: z.ZodString;
+    example: z.ZodOptional<z.ZodArray<z.ZodString>>;
+}, z.core.$strip>;
+declare const templatePhoneNumberButtonInputSchema: z.ZodObject<{
+    type: z.ZodLiteral<"PHONE_NUMBER">;
+    text: z.ZodString;
+    phone_number: z.ZodString;
+}, z.core.$strip>;
+declare const templateCopyCodeButtonInputSchema: z.ZodObject<{
+    type: z.ZodLiteral<"COPY_CODE">;
+    example: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+declare const templateFlowButtonInputSchema: z.ZodObject<{
+    type: z.ZodLiteral<"FLOW">;
+    text: z.ZodString;
+    flow_id: z.ZodOptional<z.ZodString>;
+    flow_action: z.ZodOptional<z.ZodEnum<{
+        navigate: "navigate";
+        data_exchange: "data_exchange";
+    }>>;
+    navigate_screen: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+declare const templateButtonInputSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
+    type: z.ZodLiteral<"QUICK_REPLY">;
+    text: z.ZodString;
+}, z.core.$strip>, z.ZodObject<{
+    type: z.ZodLiteral<"URL">;
+    text: z.ZodString;
+    url: z.ZodString;
+    example: z.ZodOptional<z.ZodArray<z.ZodString>>;
+}, z.core.$strip>, z.ZodObject<{
+    type: z.ZodLiteral<"PHONE_NUMBER">;
+    text: z.ZodString;
+    phone_number: z.ZodString;
+}, z.core.$strip>, z.ZodObject<{
+    type: z.ZodLiteral<"COPY_CODE">;
+    example: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>, z.ZodObject<{
+    type: z.ZodLiteral<"FLOW">;
+    text: z.ZodString;
+    flow_id: z.ZodOptional<z.ZodString>;
+    flow_action: z.ZodOptional<z.ZodEnum<{
+        navigate: "navigate";
+        data_exchange: "data_exchange";
+    }>>;
+    navigate_screen: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>], "type">;
+/**
+ * Header text example schema
+ * Supports both positional and named parameter formats
+ */
+declare const templateHeaderTextExampleSchema: z.ZodObject<{
+    header_text: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    header_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        param_name: z.ZodString;
+        example: z.ZodString;
+    }, z.core.$strip>>>;
+}, z.core.$strip>;
+declare const templateHeaderTextInputSchema: z.ZodObject<{
+    type: z.ZodLiteral<"HEADER">;
+    format: z.ZodLiteral<"TEXT">;
+    text: z.ZodString;
+    example: z.ZodOptional<z.ZodObject<{
+        header_text: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        header_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            param_name: z.ZodString;
+            example: z.ZodString;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+declare const templateHeaderMediaInputSchema: z.ZodObject<{
+    type: z.ZodLiteral<"HEADER">;
+    format: z.ZodEnum<{
+        IMAGE: "IMAGE";
+        VIDEO: "VIDEO";
+        DOCUMENT: "DOCUMENT";
+    }>;
+    example: z.ZodObject<{
+        header_handle: z.ZodArray<z.ZodString>;
+    }, z.core.$strip>;
+}, z.core.$strip>;
+declare const templateHeaderLocationInputSchema: z.ZodObject<{
+    type: z.ZodLiteral<"HEADER">;
+    format: z.ZodLiteral<"LOCATION">;
+}, z.core.$strip>;
+declare const templateHeaderComponentInputSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
+    type: z.ZodLiteral<"HEADER">;
+    format: z.ZodLiteral<"TEXT">;
+    text: z.ZodString;
+    example: z.ZodOptional<z.ZodObject<{
+        header_text: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        header_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            param_name: z.ZodString;
+            example: z.ZodString;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>;
+}, z.core.$strip>, z.ZodObject<{
+    type: z.ZodLiteral<"HEADER">;
+    format: z.ZodEnum<{
+        IMAGE: "IMAGE";
+        VIDEO: "VIDEO";
+        DOCUMENT: "DOCUMENT";
+    }>;
+    example: z.ZodObject<{
+        header_handle: z.ZodArray<z.ZodString>;
+    }, z.core.$strip>;
+}, z.core.$strip>, z.ZodObject<{
+    type: z.ZodLiteral<"HEADER">;
+    format: z.ZodLiteral<"LOCATION">;
+}, z.core.$strip>], "format">;
+/**
+ * Body example schema
+ * Supports both positional and named parameter formats
+ */
+declare const templateBodyExampleSchema: z.ZodObject<{
+    body_text: z.ZodOptional<z.ZodArray<z.ZodArray<z.ZodString>>>;
+    body_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        param_name: z.ZodString;
+        example: z.ZodString;
+    }, z.core.$strip>>>;
+}, z.core.$strip>;
+declare const templateBodyComponentInputSchema: z.ZodObject<{
+    type: z.ZodLiteral<"BODY">;
+    text: z.ZodString;
+    example: z.ZodOptional<z.ZodObject<{
+        body_text: z.ZodOptional<z.ZodArray<z.ZodArray<z.ZodString>>>;
+        body_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            param_name: z.ZodString;
+            example: z.ZodString;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+declare const templateFooterComponentInputSchema: z.ZodObject<{
+    type: z.ZodLiteral<"FOOTER">;
+    text: z.ZodString;
+}, z.core.$strip>;
+declare const templateButtonsComponentInputSchema: z.ZodObject<{
+    type: z.ZodLiteral<"BUTTONS">;
+    buttons: z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+        type: z.ZodLiteral<"QUICK_REPLY">;
+        text: z.ZodString;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"URL">;
+        text: z.ZodString;
+        url: z.ZodString;
+        example: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"PHONE_NUMBER">;
+        text: z.ZodString;
+        phone_number: z.ZodString;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"COPY_CODE">;
+        example: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"FLOW">;
+        text: z.ZodString;
+        flow_id: z.ZodOptional<z.ZodString>;
+        flow_action: z.ZodOptional<z.ZodEnum<{
+            navigate: "navigate";
+            data_exchange: "data_exchange";
+        }>>;
+        navigate_screen: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>], "type">>;
+}, z.core.$strip>;
+declare const templateComponentInputSchema: z.ZodUnion<readonly [z.ZodDiscriminatedUnion<[z.ZodObject<{
+    type: z.ZodLiteral<"HEADER">;
+    format: z.ZodLiteral<"TEXT">;
+    text: z.ZodString;
+    example: z.ZodOptional<z.ZodObject<{
+        header_text: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        header_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            param_name: z.ZodString;
+            example: z.ZodString;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>;
+}, z.core.$strip>, z.ZodObject<{
+    type: z.ZodLiteral<"HEADER">;
+    format: z.ZodEnum<{
+        IMAGE: "IMAGE";
+        VIDEO: "VIDEO";
+        DOCUMENT: "DOCUMENT";
+    }>;
+    example: z.ZodObject<{
+        header_handle: z.ZodArray<z.ZodString>;
+    }, z.core.$strip>;
+}, z.core.$strip>, z.ZodObject<{
+    type: z.ZodLiteral<"HEADER">;
+    format: z.ZodLiteral<"LOCATION">;
+}, z.core.$strip>], "format">, z.ZodObject<{
+    type: z.ZodLiteral<"BODY">;
+    text: z.ZodString;
+    example: z.ZodOptional<z.ZodObject<{
+        body_text: z.ZodOptional<z.ZodArray<z.ZodArray<z.ZodString>>>;
+        body_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            param_name: z.ZodString;
+            example: z.ZodString;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>;
+}, z.core.$strip>, z.ZodObject<{
+    type: z.ZodLiteral<"FOOTER">;
+    text: z.ZodString;
+}, z.core.$strip>, z.ZodObject<{
+    type: z.ZodLiteral<"BUTTONS">;
+    buttons: z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+        type: z.ZodLiteral<"QUICK_REPLY">;
+        text: z.ZodString;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"URL">;
+        text: z.ZodString;
+        url: z.ZodString;
+        example: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"PHONE_NUMBER">;
+        text: z.ZodString;
+        phone_number: z.ZodString;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"COPY_CODE">;
+        example: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"FLOW">;
+        text: z.ZodString;
+        flow_id: z.ZodOptional<z.ZodString>;
+        flow_action: z.ZodOptional<z.ZodEnum<{
+            navigate: "navigate";
+            data_exchange: "data_exchange";
+        }>>;
+        navigate_screen: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>], "type">>;
+}, z.core.$strip>]>;
+declare const templateButtonSchema: z.ZodObject<{
+    type: z.ZodString;
+    text: z.ZodOptional<z.ZodString>;
+    url: z.ZodOptional<z.ZodString>;
+    phone_number: z.ZodOptional<z.ZodString>;
+    example: z.ZodOptional<z.ZodUnion<readonly [z.ZodArray<z.ZodString>, z.ZodString]>>;
+    flow_id: z.ZodOptional<z.ZodString>;
+    flow_action: z.ZodOptional<z.ZodString>;
+    navigate_screen: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+declare const templateComponentSchema: z.ZodObject<{
+    type: z.ZodEnum<{
+        HEADER: "HEADER";
+        BODY: "BODY";
+        FOOTER: "FOOTER";
+        BUTTONS: "BUTTONS";
+    }>;
+    format: z.ZodOptional<z.ZodString>;
+    text: z.ZodOptional<z.ZodString>;
+    buttons: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        type: z.ZodString;
+        text: z.ZodOptional<z.ZodString>;
+        url: z.ZodOptional<z.ZodString>;
+        phone_number: z.ZodOptional<z.ZodString>;
+        example: z.ZodOptional<z.ZodUnion<readonly [z.ZodArray<z.ZodString>, z.ZodString]>>;
+        flow_id: z.ZodOptional<z.ZodString>;
+        flow_action: z.ZodOptional<z.ZodString>;
+        navigate_screen: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>>;
+    example: z.ZodOptional<z.ZodObject<{
+        header_text: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        header_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            param_name: z.ZodString;
+            example: z.ZodString;
+        }, z.core.$strip>>>;
+        header_handle: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        body_text: z.ZodOptional<z.ZodArray<z.ZodArray<z.ZodString>>>;
+        body_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            param_name: z.ZodString;
+            example: z.ZodString;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+declare const templateCreateMarketingSchema: z.ZodObject<{
     name: z.ZodString;
     language: z.ZodEnum<{
         te: "te";
@@ -540,27 +972,45 @@ declare const templateCreateSchema: z.ZodObject<{
         vi: "vi";
         zu: "zu";
     }>;
-    category: z.ZodEnum<{
-        AUTHENTICATION: "AUTHENTICATION";
-        MARKETING: "MARKETING";
-        UTILITY: "UTILITY";
-    }>;
-    components: z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+    category: z.ZodLiteral<"MARKETING">;
+    parameter_format: z.ZodOptional<z.ZodEnum<{
+        positional: "positional";
+        named: "named";
+    }>>;
+    components: z.ZodArray<z.ZodUnion<readonly [z.ZodDiscriminatedUnion<[z.ZodObject<{
+        type: z.ZodLiteral<"HEADER">;
+        format: z.ZodLiteral<"TEXT">;
+        text: z.ZodString;
+        example: z.ZodOptional<z.ZodObject<{
+            header_text: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            header_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                param_name: z.ZodString;
+                example: z.ZodString;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>, z.ZodObject<{
         type: z.ZodLiteral<"HEADER">;
         format: z.ZodEnum<{
-            TEXT: "TEXT";
             IMAGE: "IMAGE";
             VIDEO: "VIDEO";
             DOCUMENT: "DOCUMENT";
-            LOCATION: "LOCATION";
         }>;
-        text: z.ZodOptional<z.ZodString>;
-        example: z.ZodOptional<z.ZodObject<{
+        example: z.ZodObject<{
             header_handle: z.ZodArray<z.ZodString>;
-        }, z.core.$strip>>;
+        }, z.core.$strip>;
     }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"HEADER">;
+        format: z.ZodLiteral<"LOCATION">;
+    }, z.core.$strip>], "format">, z.ZodObject<{
         type: z.ZodLiteral<"BODY">;
         text: z.ZodString;
+        example: z.ZodOptional<z.ZodObject<{
+            body_text: z.ZodOptional<z.ZodArray<z.ZodArray<z.ZodString>>>;
+            body_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                param_name: z.ZodString;
+                example: z.ZodString;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
     }, z.core.$strip>, z.ZodObject<{
         type: z.ZodLiteral<"FOOTER">;
         text: z.ZodString;
@@ -573,47 +1023,994 @@ declare const templateCreateSchema: z.ZodObject<{
             type: z.ZodLiteral<"URL">;
             text: z.ZodString;
             url: z.ZodString;
+            example: z.ZodOptional<z.ZodArray<z.ZodString>>;
         }, z.core.$strip>, z.ZodObject<{
             type: z.ZodLiteral<"PHONE_NUMBER">;
             text: z.ZodString;
             phone_number: z.ZodString;
         }, z.core.$strip>, z.ZodObject<{
             type: z.ZodLiteral<"COPY_CODE">;
+            example: z.ZodOptional<z.ZodString>;
         }, z.core.$strip>, z.ZodObject<{
             type: z.ZodLiteral<"FLOW">;
             text: z.ZodString;
-            flow_action: z.ZodOptional<z.ZodString>;
             flow_id: z.ZodOptional<z.ZodString>;
+            flow_action: z.ZodOptional<z.ZodEnum<{
+                navigate: "navigate";
+                data_exchange: "data_exchange";
+            }>>;
             navigate_screen: z.ZodOptional<z.ZodString>;
         }, z.core.$strip>], "type">>;
-    }, z.core.$strip>], "type">>;
+    }, z.core.$strip>]>>;
 }, z.core.$strip>;
-/**
- * Schema for updating a template
- * All fields optional - only update what's provided
- */
+declare const templateCreateUtilitySchema: z.ZodObject<{
+    name: z.ZodString;
+    language: z.ZodEnum<{
+        te: "te";
+        id: "id";
+        af: "af";
+        sq: "sq";
+        ar: "ar";
+        ar_EG: "ar_EG";
+        ar_AE: "ar_AE";
+        ar_LB: "ar_LB";
+        ar_MA: "ar_MA";
+        ar_QA: "ar_QA";
+        az: "az";
+        be_BY: "be_BY";
+        bn: "bn";
+        bn_IN: "bn_IN";
+        bg: "bg";
+        ca: "ca";
+        zh_CN: "zh_CN";
+        zh_HK: "zh_HK";
+        zh_TW: "zh_TW";
+        hr: "hr";
+        cs: "cs";
+        da: "da";
+        prs_AF: "prs_AF";
+        nl: "nl";
+        nl_BE: "nl_BE";
+        en: "en";
+        en_GB: "en_GB";
+        en_US: "en_US";
+        en_AE: "en_AE";
+        en_AU: "en_AU";
+        en_CA: "en_CA";
+        en_GH: "en_GH";
+        en_IE: "en_IE";
+        en_IN: "en_IN";
+        en_JM: "en_JM";
+        en_MY: "en_MY";
+        en_NZ: "en_NZ";
+        en_QA: "en_QA";
+        en_SG: "en_SG";
+        en_UG: "en_UG";
+        en_ZA: "en_ZA";
+        et: "et";
+        fil: "fil";
+        fi: "fi";
+        fr: "fr";
+        fr_BE: "fr_BE";
+        fr_CA: "fr_CA";
+        fr_CH: "fr_CH";
+        fr_CI: "fr_CI";
+        fr_MA: "fr_MA";
+        ka: "ka";
+        de: "de";
+        de_AT: "de_AT";
+        de_CH: "de_CH";
+        el: "el";
+        gu: "gu";
+        ha: "ha";
+        he: "he";
+        hi: "hi";
+        hu: "hu";
+        ga: "ga";
+        it: "it";
+        ja: "ja";
+        kn: "kn";
+        kk: "kk";
+        rw_RW: "rw_RW";
+        ko: "ko";
+        ky_KG: "ky_KG";
+        lo: "lo";
+        lv: "lv";
+        lt: "lt";
+        mk: "mk";
+        ms: "ms";
+        ml: "ml";
+        mr: "mr";
+        nb: "nb";
+        ps_AF: "ps_AF";
+        fa: "fa";
+        pl: "pl";
+        pt_BR: "pt_BR";
+        pt_PT: "pt_PT";
+        pa: "pa";
+        ro: "ro";
+        ru: "ru";
+        sr: "sr";
+        si_LK: "si_LK";
+        sk: "sk";
+        sl: "sl";
+        es: "es";
+        es_AR: "es_AR";
+        es_CL: "es_CL";
+        es_CO: "es_CO";
+        es_CR: "es_CR";
+        es_DO: "es_DO";
+        es_EC: "es_EC";
+        es_HN: "es_HN";
+        es_MX: "es_MX";
+        es_PA: "es_PA";
+        es_PE: "es_PE";
+        es_ES: "es_ES";
+        es_UY: "es_UY";
+        sw: "sw";
+        sv: "sv";
+        ta: "ta";
+        th: "th";
+        tr: "tr";
+        uk: "uk";
+        ur: "ur";
+        uz: "uz";
+        vi: "vi";
+        zu: "zu";
+    }>;
+    category: z.ZodLiteral<"UTILITY">;
+    parameter_format: z.ZodOptional<z.ZodEnum<{
+        positional: "positional";
+        named: "named";
+    }>>;
+    components: z.ZodArray<z.ZodUnion<readonly [z.ZodDiscriminatedUnion<[z.ZodObject<{
+        type: z.ZodLiteral<"HEADER">;
+        format: z.ZodLiteral<"TEXT">;
+        text: z.ZodString;
+        example: z.ZodOptional<z.ZodObject<{
+            header_text: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            header_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                param_name: z.ZodString;
+                example: z.ZodString;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"HEADER">;
+        format: z.ZodEnum<{
+            IMAGE: "IMAGE";
+            VIDEO: "VIDEO";
+            DOCUMENT: "DOCUMENT";
+        }>;
+        example: z.ZodObject<{
+            header_handle: z.ZodArray<z.ZodString>;
+        }, z.core.$strip>;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"HEADER">;
+        format: z.ZodLiteral<"LOCATION">;
+    }, z.core.$strip>], "format">, z.ZodObject<{
+        type: z.ZodLiteral<"BODY">;
+        text: z.ZodString;
+        example: z.ZodOptional<z.ZodObject<{
+            body_text: z.ZodOptional<z.ZodArray<z.ZodArray<z.ZodString>>>;
+            body_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                param_name: z.ZodString;
+                example: z.ZodString;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"FOOTER">;
+        text: z.ZodString;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"BUTTONS">;
+        buttons: z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+            type: z.ZodLiteral<"QUICK_REPLY">;
+            text: z.ZodString;
+        }, z.core.$strip>, z.ZodObject<{
+            type: z.ZodLiteral<"URL">;
+            text: z.ZodString;
+            url: z.ZodString;
+            example: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        }, z.core.$strip>, z.ZodObject<{
+            type: z.ZodLiteral<"PHONE_NUMBER">;
+            text: z.ZodString;
+            phone_number: z.ZodString;
+        }, z.core.$strip>, z.ZodObject<{
+            type: z.ZodLiteral<"COPY_CODE">;
+            example: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>, z.ZodObject<{
+            type: z.ZodLiteral<"FLOW">;
+            text: z.ZodString;
+            flow_id: z.ZodOptional<z.ZodString>;
+            flow_action: z.ZodOptional<z.ZodEnum<{
+                navigate: "navigate";
+                data_exchange: "data_exchange";
+            }>>;
+            navigate_screen: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>], "type">>;
+    }, z.core.$strip>]>>;
+}, z.core.$strip>;
+declare const templateCreateAuthenticationSchema: z.ZodObject<{
+    name: z.ZodString;
+    language: z.ZodEnum<{
+        te: "te";
+        id: "id";
+        af: "af";
+        sq: "sq";
+        ar: "ar";
+        ar_EG: "ar_EG";
+        ar_AE: "ar_AE";
+        ar_LB: "ar_LB";
+        ar_MA: "ar_MA";
+        ar_QA: "ar_QA";
+        az: "az";
+        be_BY: "be_BY";
+        bn: "bn";
+        bn_IN: "bn_IN";
+        bg: "bg";
+        ca: "ca";
+        zh_CN: "zh_CN";
+        zh_HK: "zh_HK";
+        zh_TW: "zh_TW";
+        hr: "hr";
+        cs: "cs";
+        da: "da";
+        prs_AF: "prs_AF";
+        nl: "nl";
+        nl_BE: "nl_BE";
+        en: "en";
+        en_GB: "en_GB";
+        en_US: "en_US";
+        en_AE: "en_AE";
+        en_AU: "en_AU";
+        en_CA: "en_CA";
+        en_GH: "en_GH";
+        en_IE: "en_IE";
+        en_IN: "en_IN";
+        en_JM: "en_JM";
+        en_MY: "en_MY";
+        en_NZ: "en_NZ";
+        en_QA: "en_QA";
+        en_SG: "en_SG";
+        en_UG: "en_UG";
+        en_ZA: "en_ZA";
+        et: "et";
+        fil: "fil";
+        fi: "fi";
+        fr: "fr";
+        fr_BE: "fr_BE";
+        fr_CA: "fr_CA";
+        fr_CH: "fr_CH";
+        fr_CI: "fr_CI";
+        fr_MA: "fr_MA";
+        ka: "ka";
+        de: "de";
+        de_AT: "de_AT";
+        de_CH: "de_CH";
+        el: "el";
+        gu: "gu";
+        ha: "ha";
+        he: "he";
+        hi: "hi";
+        hu: "hu";
+        ga: "ga";
+        it: "it";
+        ja: "ja";
+        kn: "kn";
+        kk: "kk";
+        rw_RW: "rw_RW";
+        ko: "ko";
+        ky_KG: "ky_KG";
+        lo: "lo";
+        lv: "lv";
+        lt: "lt";
+        mk: "mk";
+        ms: "ms";
+        ml: "ml";
+        mr: "mr";
+        nb: "nb";
+        ps_AF: "ps_AF";
+        fa: "fa";
+        pl: "pl";
+        pt_BR: "pt_BR";
+        pt_PT: "pt_PT";
+        pa: "pa";
+        ro: "ro";
+        ru: "ru";
+        sr: "sr";
+        si_LK: "si_LK";
+        sk: "sk";
+        sl: "sl";
+        es: "es";
+        es_AR: "es_AR";
+        es_CL: "es_CL";
+        es_CO: "es_CO";
+        es_CR: "es_CR";
+        es_DO: "es_DO";
+        es_EC: "es_EC";
+        es_HN: "es_HN";
+        es_MX: "es_MX";
+        es_PA: "es_PA";
+        es_PE: "es_PE";
+        es_ES: "es_ES";
+        es_UY: "es_UY";
+        sw: "sw";
+        sv: "sv";
+        ta: "ta";
+        th: "th";
+        tr: "tr";
+        uk: "uk";
+        ur: "ur";
+        uz: "uz";
+        vi: "vi";
+        zu: "zu";
+    }>;
+    category: z.ZodLiteral<"AUTHENTICATION">;
+    parameter_format: z.ZodOptional<z.ZodEnum<{
+        positional: "positional";
+        named: "named";
+    }>>;
+    components: z.ZodArray<z.ZodUnion<readonly [z.ZodDiscriminatedUnion<[z.ZodObject<{
+        type: z.ZodLiteral<"HEADER">;
+        format: z.ZodLiteral<"TEXT">;
+        text: z.ZodString;
+        example: z.ZodOptional<z.ZodObject<{
+            header_text: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            header_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                param_name: z.ZodString;
+                example: z.ZodString;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"HEADER">;
+        format: z.ZodEnum<{
+            IMAGE: "IMAGE";
+            VIDEO: "VIDEO";
+            DOCUMENT: "DOCUMENT";
+        }>;
+        example: z.ZodObject<{
+            header_handle: z.ZodArray<z.ZodString>;
+        }, z.core.$strip>;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"HEADER">;
+        format: z.ZodLiteral<"LOCATION">;
+    }, z.core.$strip>], "format">, z.ZodObject<{
+        type: z.ZodLiteral<"BODY">;
+        text: z.ZodString;
+        example: z.ZodOptional<z.ZodObject<{
+            body_text: z.ZodOptional<z.ZodArray<z.ZodArray<z.ZodString>>>;
+            body_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                param_name: z.ZodString;
+                example: z.ZodString;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"FOOTER">;
+        text: z.ZodString;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"BUTTONS">;
+        buttons: z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+            type: z.ZodLiteral<"QUICK_REPLY">;
+            text: z.ZodString;
+        }, z.core.$strip>, z.ZodObject<{
+            type: z.ZodLiteral<"URL">;
+            text: z.ZodString;
+            url: z.ZodString;
+            example: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        }, z.core.$strip>, z.ZodObject<{
+            type: z.ZodLiteral<"PHONE_NUMBER">;
+            text: z.ZodString;
+            phone_number: z.ZodString;
+        }, z.core.$strip>, z.ZodObject<{
+            type: z.ZodLiteral<"COPY_CODE">;
+            example: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>, z.ZodObject<{
+            type: z.ZodLiteral<"FLOW">;
+            text: z.ZodString;
+            flow_id: z.ZodOptional<z.ZodString>;
+            flow_action: z.ZodOptional<z.ZodEnum<{
+                navigate: "navigate";
+                data_exchange: "data_exchange";
+            }>>;
+            navigate_screen: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>], "type">>;
+    }, z.core.$strip>]>>;
+}, z.core.$strip>;
+declare const templateCreateSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
+    name: z.ZodString;
+    language: z.ZodEnum<{
+        te: "te";
+        id: "id";
+        af: "af";
+        sq: "sq";
+        ar: "ar";
+        ar_EG: "ar_EG";
+        ar_AE: "ar_AE";
+        ar_LB: "ar_LB";
+        ar_MA: "ar_MA";
+        ar_QA: "ar_QA";
+        az: "az";
+        be_BY: "be_BY";
+        bn: "bn";
+        bn_IN: "bn_IN";
+        bg: "bg";
+        ca: "ca";
+        zh_CN: "zh_CN";
+        zh_HK: "zh_HK";
+        zh_TW: "zh_TW";
+        hr: "hr";
+        cs: "cs";
+        da: "da";
+        prs_AF: "prs_AF";
+        nl: "nl";
+        nl_BE: "nl_BE";
+        en: "en";
+        en_GB: "en_GB";
+        en_US: "en_US";
+        en_AE: "en_AE";
+        en_AU: "en_AU";
+        en_CA: "en_CA";
+        en_GH: "en_GH";
+        en_IE: "en_IE";
+        en_IN: "en_IN";
+        en_JM: "en_JM";
+        en_MY: "en_MY";
+        en_NZ: "en_NZ";
+        en_QA: "en_QA";
+        en_SG: "en_SG";
+        en_UG: "en_UG";
+        en_ZA: "en_ZA";
+        et: "et";
+        fil: "fil";
+        fi: "fi";
+        fr: "fr";
+        fr_BE: "fr_BE";
+        fr_CA: "fr_CA";
+        fr_CH: "fr_CH";
+        fr_CI: "fr_CI";
+        fr_MA: "fr_MA";
+        ka: "ka";
+        de: "de";
+        de_AT: "de_AT";
+        de_CH: "de_CH";
+        el: "el";
+        gu: "gu";
+        ha: "ha";
+        he: "he";
+        hi: "hi";
+        hu: "hu";
+        ga: "ga";
+        it: "it";
+        ja: "ja";
+        kn: "kn";
+        kk: "kk";
+        rw_RW: "rw_RW";
+        ko: "ko";
+        ky_KG: "ky_KG";
+        lo: "lo";
+        lv: "lv";
+        lt: "lt";
+        mk: "mk";
+        ms: "ms";
+        ml: "ml";
+        mr: "mr";
+        nb: "nb";
+        ps_AF: "ps_AF";
+        fa: "fa";
+        pl: "pl";
+        pt_BR: "pt_BR";
+        pt_PT: "pt_PT";
+        pa: "pa";
+        ro: "ro";
+        ru: "ru";
+        sr: "sr";
+        si_LK: "si_LK";
+        sk: "sk";
+        sl: "sl";
+        es: "es";
+        es_AR: "es_AR";
+        es_CL: "es_CL";
+        es_CO: "es_CO";
+        es_CR: "es_CR";
+        es_DO: "es_DO";
+        es_EC: "es_EC";
+        es_HN: "es_HN";
+        es_MX: "es_MX";
+        es_PA: "es_PA";
+        es_PE: "es_PE";
+        es_ES: "es_ES";
+        es_UY: "es_UY";
+        sw: "sw";
+        sv: "sv";
+        ta: "ta";
+        th: "th";
+        tr: "tr";
+        uk: "uk";
+        ur: "ur";
+        uz: "uz";
+        vi: "vi";
+        zu: "zu";
+    }>;
+    category: z.ZodLiteral<"MARKETING">;
+    parameter_format: z.ZodOptional<z.ZodEnum<{
+        positional: "positional";
+        named: "named";
+    }>>;
+    components: z.ZodArray<z.ZodUnion<readonly [z.ZodDiscriminatedUnion<[z.ZodObject<{
+        type: z.ZodLiteral<"HEADER">;
+        format: z.ZodLiteral<"TEXT">;
+        text: z.ZodString;
+        example: z.ZodOptional<z.ZodObject<{
+            header_text: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            header_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                param_name: z.ZodString;
+                example: z.ZodString;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"HEADER">;
+        format: z.ZodEnum<{
+            IMAGE: "IMAGE";
+            VIDEO: "VIDEO";
+            DOCUMENT: "DOCUMENT";
+        }>;
+        example: z.ZodObject<{
+            header_handle: z.ZodArray<z.ZodString>;
+        }, z.core.$strip>;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"HEADER">;
+        format: z.ZodLiteral<"LOCATION">;
+    }, z.core.$strip>], "format">, z.ZodObject<{
+        type: z.ZodLiteral<"BODY">;
+        text: z.ZodString;
+        example: z.ZodOptional<z.ZodObject<{
+            body_text: z.ZodOptional<z.ZodArray<z.ZodArray<z.ZodString>>>;
+            body_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                param_name: z.ZodString;
+                example: z.ZodString;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"FOOTER">;
+        text: z.ZodString;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"BUTTONS">;
+        buttons: z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+            type: z.ZodLiteral<"QUICK_REPLY">;
+            text: z.ZodString;
+        }, z.core.$strip>, z.ZodObject<{
+            type: z.ZodLiteral<"URL">;
+            text: z.ZodString;
+            url: z.ZodString;
+            example: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        }, z.core.$strip>, z.ZodObject<{
+            type: z.ZodLiteral<"PHONE_NUMBER">;
+            text: z.ZodString;
+            phone_number: z.ZodString;
+        }, z.core.$strip>, z.ZodObject<{
+            type: z.ZodLiteral<"COPY_CODE">;
+            example: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>, z.ZodObject<{
+            type: z.ZodLiteral<"FLOW">;
+            text: z.ZodString;
+            flow_id: z.ZodOptional<z.ZodString>;
+            flow_action: z.ZodOptional<z.ZodEnum<{
+                navigate: "navigate";
+                data_exchange: "data_exchange";
+            }>>;
+            navigate_screen: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>], "type">>;
+    }, z.core.$strip>]>>;
+}, z.core.$strip>, z.ZodObject<{
+    name: z.ZodString;
+    language: z.ZodEnum<{
+        te: "te";
+        id: "id";
+        af: "af";
+        sq: "sq";
+        ar: "ar";
+        ar_EG: "ar_EG";
+        ar_AE: "ar_AE";
+        ar_LB: "ar_LB";
+        ar_MA: "ar_MA";
+        ar_QA: "ar_QA";
+        az: "az";
+        be_BY: "be_BY";
+        bn: "bn";
+        bn_IN: "bn_IN";
+        bg: "bg";
+        ca: "ca";
+        zh_CN: "zh_CN";
+        zh_HK: "zh_HK";
+        zh_TW: "zh_TW";
+        hr: "hr";
+        cs: "cs";
+        da: "da";
+        prs_AF: "prs_AF";
+        nl: "nl";
+        nl_BE: "nl_BE";
+        en: "en";
+        en_GB: "en_GB";
+        en_US: "en_US";
+        en_AE: "en_AE";
+        en_AU: "en_AU";
+        en_CA: "en_CA";
+        en_GH: "en_GH";
+        en_IE: "en_IE";
+        en_IN: "en_IN";
+        en_JM: "en_JM";
+        en_MY: "en_MY";
+        en_NZ: "en_NZ";
+        en_QA: "en_QA";
+        en_SG: "en_SG";
+        en_UG: "en_UG";
+        en_ZA: "en_ZA";
+        et: "et";
+        fil: "fil";
+        fi: "fi";
+        fr: "fr";
+        fr_BE: "fr_BE";
+        fr_CA: "fr_CA";
+        fr_CH: "fr_CH";
+        fr_CI: "fr_CI";
+        fr_MA: "fr_MA";
+        ka: "ka";
+        de: "de";
+        de_AT: "de_AT";
+        de_CH: "de_CH";
+        el: "el";
+        gu: "gu";
+        ha: "ha";
+        he: "he";
+        hi: "hi";
+        hu: "hu";
+        ga: "ga";
+        it: "it";
+        ja: "ja";
+        kn: "kn";
+        kk: "kk";
+        rw_RW: "rw_RW";
+        ko: "ko";
+        ky_KG: "ky_KG";
+        lo: "lo";
+        lv: "lv";
+        lt: "lt";
+        mk: "mk";
+        ms: "ms";
+        ml: "ml";
+        mr: "mr";
+        nb: "nb";
+        ps_AF: "ps_AF";
+        fa: "fa";
+        pl: "pl";
+        pt_BR: "pt_BR";
+        pt_PT: "pt_PT";
+        pa: "pa";
+        ro: "ro";
+        ru: "ru";
+        sr: "sr";
+        si_LK: "si_LK";
+        sk: "sk";
+        sl: "sl";
+        es: "es";
+        es_AR: "es_AR";
+        es_CL: "es_CL";
+        es_CO: "es_CO";
+        es_CR: "es_CR";
+        es_DO: "es_DO";
+        es_EC: "es_EC";
+        es_HN: "es_HN";
+        es_MX: "es_MX";
+        es_PA: "es_PA";
+        es_PE: "es_PE";
+        es_ES: "es_ES";
+        es_UY: "es_UY";
+        sw: "sw";
+        sv: "sv";
+        ta: "ta";
+        th: "th";
+        tr: "tr";
+        uk: "uk";
+        ur: "ur";
+        uz: "uz";
+        vi: "vi";
+        zu: "zu";
+    }>;
+    category: z.ZodLiteral<"UTILITY">;
+    parameter_format: z.ZodOptional<z.ZodEnum<{
+        positional: "positional";
+        named: "named";
+    }>>;
+    components: z.ZodArray<z.ZodUnion<readonly [z.ZodDiscriminatedUnion<[z.ZodObject<{
+        type: z.ZodLiteral<"HEADER">;
+        format: z.ZodLiteral<"TEXT">;
+        text: z.ZodString;
+        example: z.ZodOptional<z.ZodObject<{
+            header_text: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            header_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                param_name: z.ZodString;
+                example: z.ZodString;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"HEADER">;
+        format: z.ZodEnum<{
+            IMAGE: "IMAGE";
+            VIDEO: "VIDEO";
+            DOCUMENT: "DOCUMENT";
+        }>;
+        example: z.ZodObject<{
+            header_handle: z.ZodArray<z.ZodString>;
+        }, z.core.$strip>;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"HEADER">;
+        format: z.ZodLiteral<"LOCATION">;
+    }, z.core.$strip>], "format">, z.ZodObject<{
+        type: z.ZodLiteral<"BODY">;
+        text: z.ZodString;
+        example: z.ZodOptional<z.ZodObject<{
+            body_text: z.ZodOptional<z.ZodArray<z.ZodArray<z.ZodString>>>;
+            body_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                param_name: z.ZodString;
+                example: z.ZodString;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"FOOTER">;
+        text: z.ZodString;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"BUTTONS">;
+        buttons: z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+            type: z.ZodLiteral<"QUICK_REPLY">;
+            text: z.ZodString;
+        }, z.core.$strip>, z.ZodObject<{
+            type: z.ZodLiteral<"URL">;
+            text: z.ZodString;
+            url: z.ZodString;
+            example: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        }, z.core.$strip>, z.ZodObject<{
+            type: z.ZodLiteral<"PHONE_NUMBER">;
+            text: z.ZodString;
+            phone_number: z.ZodString;
+        }, z.core.$strip>, z.ZodObject<{
+            type: z.ZodLiteral<"COPY_CODE">;
+            example: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>, z.ZodObject<{
+            type: z.ZodLiteral<"FLOW">;
+            text: z.ZodString;
+            flow_id: z.ZodOptional<z.ZodString>;
+            flow_action: z.ZodOptional<z.ZodEnum<{
+                navigate: "navigate";
+                data_exchange: "data_exchange";
+            }>>;
+            navigate_screen: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>], "type">>;
+    }, z.core.$strip>]>>;
+}, z.core.$strip>, z.ZodObject<{
+    name: z.ZodString;
+    language: z.ZodEnum<{
+        te: "te";
+        id: "id";
+        af: "af";
+        sq: "sq";
+        ar: "ar";
+        ar_EG: "ar_EG";
+        ar_AE: "ar_AE";
+        ar_LB: "ar_LB";
+        ar_MA: "ar_MA";
+        ar_QA: "ar_QA";
+        az: "az";
+        be_BY: "be_BY";
+        bn: "bn";
+        bn_IN: "bn_IN";
+        bg: "bg";
+        ca: "ca";
+        zh_CN: "zh_CN";
+        zh_HK: "zh_HK";
+        zh_TW: "zh_TW";
+        hr: "hr";
+        cs: "cs";
+        da: "da";
+        prs_AF: "prs_AF";
+        nl: "nl";
+        nl_BE: "nl_BE";
+        en: "en";
+        en_GB: "en_GB";
+        en_US: "en_US";
+        en_AE: "en_AE";
+        en_AU: "en_AU";
+        en_CA: "en_CA";
+        en_GH: "en_GH";
+        en_IE: "en_IE";
+        en_IN: "en_IN";
+        en_JM: "en_JM";
+        en_MY: "en_MY";
+        en_NZ: "en_NZ";
+        en_QA: "en_QA";
+        en_SG: "en_SG";
+        en_UG: "en_UG";
+        en_ZA: "en_ZA";
+        et: "et";
+        fil: "fil";
+        fi: "fi";
+        fr: "fr";
+        fr_BE: "fr_BE";
+        fr_CA: "fr_CA";
+        fr_CH: "fr_CH";
+        fr_CI: "fr_CI";
+        fr_MA: "fr_MA";
+        ka: "ka";
+        de: "de";
+        de_AT: "de_AT";
+        de_CH: "de_CH";
+        el: "el";
+        gu: "gu";
+        ha: "ha";
+        he: "he";
+        hi: "hi";
+        hu: "hu";
+        ga: "ga";
+        it: "it";
+        ja: "ja";
+        kn: "kn";
+        kk: "kk";
+        rw_RW: "rw_RW";
+        ko: "ko";
+        ky_KG: "ky_KG";
+        lo: "lo";
+        lv: "lv";
+        lt: "lt";
+        mk: "mk";
+        ms: "ms";
+        ml: "ml";
+        mr: "mr";
+        nb: "nb";
+        ps_AF: "ps_AF";
+        fa: "fa";
+        pl: "pl";
+        pt_BR: "pt_BR";
+        pt_PT: "pt_PT";
+        pa: "pa";
+        ro: "ro";
+        ru: "ru";
+        sr: "sr";
+        si_LK: "si_LK";
+        sk: "sk";
+        sl: "sl";
+        es: "es";
+        es_AR: "es_AR";
+        es_CL: "es_CL";
+        es_CO: "es_CO";
+        es_CR: "es_CR";
+        es_DO: "es_DO";
+        es_EC: "es_EC";
+        es_HN: "es_HN";
+        es_MX: "es_MX";
+        es_PA: "es_PA";
+        es_PE: "es_PE";
+        es_ES: "es_ES";
+        es_UY: "es_UY";
+        sw: "sw";
+        sv: "sv";
+        ta: "ta";
+        th: "th";
+        tr: "tr";
+        uk: "uk";
+        ur: "ur";
+        uz: "uz";
+        vi: "vi";
+        zu: "zu";
+    }>;
+    category: z.ZodLiteral<"AUTHENTICATION">;
+    parameter_format: z.ZodOptional<z.ZodEnum<{
+        positional: "positional";
+        named: "named";
+    }>>;
+    components: z.ZodArray<z.ZodUnion<readonly [z.ZodDiscriminatedUnion<[z.ZodObject<{
+        type: z.ZodLiteral<"HEADER">;
+        format: z.ZodLiteral<"TEXT">;
+        text: z.ZodString;
+        example: z.ZodOptional<z.ZodObject<{
+            header_text: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            header_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                param_name: z.ZodString;
+                example: z.ZodString;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"HEADER">;
+        format: z.ZodEnum<{
+            IMAGE: "IMAGE";
+            VIDEO: "VIDEO";
+            DOCUMENT: "DOCUMENT";
+        }>;
+        example: z.ZodObject<{
+            header_handle: z.ZodArray<z.ZodString>;
+        }, z.core.$strip>;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"HEADER">;
+        format: z.ZodLiteral<"LOCATION">;
+    }, z.core.$strip>], "format">, z.ZodObject<{
+        type: z.ZodLiteral<"BODY">;
+        text: z.ZodString;
+        example: z.ZodOptional<z.ZodObject<{
+            body_text: z.ZodOptional<z.ZodArray<z.ZodArray<z.ZodString>>>;
+            body_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                param_name: z.ZodString;
+                example: z.ZodString;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"FOOTER">;
+        text: z.ZodString;
+    }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"BUTTONS">;
+        buttons: z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+            type: z.ZodLiteral<"QUICK_REPLY">;
+            text: z.ZodString;
+        }, z.core.$strip>, z.ZodObject<{
+            type: z.ZodLiteral<"URL">;
+            text: z.ZodString;
+            url: z.ZodString;
+            example: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        }, z.core.$strip>, z.ZodObject<{
+            type: z.ZodLiteral<"PHONE_NUMBER">;
+            text: z.ZodString;
+            phone_number: z.ZodString;
+        }, z.core.$strip>, z.ZodObject<{
+            type: z.ZodLiteral<"COPY_CODE">;
+            example: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>, z.ZodObject<{
+            type: z.ZodLiteral<"FLOW">;
+            text: z.ZodString;
+            flow_id: z.ZodOptional<z.ZodString>;
+            flow_action: z.ZodOptional<z.ZodEnum<{
+                navigate: "navigate";
+                data_exchange: "data_exchange";
+            }>>;
+            navigate_screen: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>], "type">>;
+    }, z.core.$strip>]>>;
+}, z.core.$strip>], "category">;
 declare const templateUpdateSchema: z.ZodObject<{
     category: z.ZodOptional<z.ZodEnum<{
         AUTHENTICATION: "AUTHENTICATION";
         MARKETING: "MARKETING";
         UTILITY: "UTILITY";
     }>>;
-    components: z.ZodOptional<z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+    components: z.ZodOptional<z.ZodArray<z.ZodUnion<readonly [z.ZodDiscriminatedUnion<[z.ZodObject<{
+        type: z.ZodLiteral<"HEADER">;
+        format: z.ZodLiteral<"TEXT">;
+        text: z.ZodString;
+        example: z.ZodOptional<z.ZodObject<{
+            header_text: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            header_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                param_name: z.ZodString;
+                example: z.ZodString;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>, z.ZodObject<{
         type: z.ZodLiteral<"HEADER">;
         format: z.ZodEnum<{
-            TEXT: "TEXT";
             IMAGE: "IMAGE";
             VIDEO: "VIDEO";
             DOCUMENT: "DOCUMENT";
-            LOCATION: "LOCATION";
         }>;
-        text: z.ZodOptional<z.ZodString>;
-        example: z.ZodOptional<z.ZodObject<{
+        example: z.ZodObject<{
             header_handle: z.ZodArray<z.ZodString>;
-        }, z.core.$strip>>;
+        }, z.core.$strip>;
     }, z.core.$strip>, z.ZodObject<{
+        type: z.ZodLiteral<"HEADER">;
+        format: z.ZodLiteral<"LOCATION">;
+    }, z.core.$strip>], "format">, z.ZodObject<{
         type: z.ZodLiteral<"BODY">;
         text: z.ZodString;
+        example: z.ZodOptional<z.ZodObject<{
+            body_text: z.ZodOptional<z.ZodArray<z.ZodArray<z.ZodString>>>;
+            body_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                param_name: z.ZodString;
+                example: z.ZodString;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
     }, z.core.$strip>, z.ZodObject<{
         type: z.ZodLiteral<"FOOTER">;
         text: z.ZodString;
@@ -626,20 +2023,25 @@ declare const templateUpdateSchema: z.ZodObject<{
             type: z.ZodLiteral<"URL">;
             text: z.ZodString;
             url: z.ZodString;
+            example: z.ZodOptional<z.ZodArray<z.ZodString>>;
         }, z.core.$strip>, z.ZodObject<{
             type: z.ZodLiteral<"PHONE_NUMBER">;
             text: z.ZodString;
             phone_number: z.ZodString;
         }, z.core.$strip>, z.ZodObject<{
             type: z.ZodLiteral<"COPY_CODE">;
+            example: z.ZodOptional<z.ZodString>;
         }, z.core.$strip>, z.ZodObject<{
             type: z.ZodLiteral<"FLOW">;
             text: z.ZodString;
-            flow_action: z.ZodOptional<z.ZodString>;
             flow_id: z.ZodOptional<z.ZodString>;
+            flow_action: z.ZodOptional<z.ZodEnum<{
+                navigate: "navigate";
+                data_exchange: "data_exchange";
+            }>>;
             navigate_screen: z.ZodOptional<z.ZodString>;
         }, z.core.$strip>], "type">>;
-    }, z.core.$strip>], "type">>>;
+    }, z.core.$strip>]>>>;
     language: z.ZodOptional<z.ZodEnum<{
         te: "te";
         id: "id";
@@ -755,246 +2157,498 @@ declare const templateUpdateSchema: z.ZodObject<{
     }>>;
     name: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
-/**
- * Schema for listing templates
- */
 declare const templateListSchema: z.ZodObject<{
     name: z.ZodOptional<z.ZodString>;
+    limit: z.ZodOptional<z.ZodNumber>;
+    after: z.ZodOptional<z.ZodString>;
+    before: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
-/**
- * Schema for deleting a template
- * Either name or hsm_id must be provided
- */
 declare const templateDeleteSchema: z.ZodObject<{
     name: z.ZodOptional<z.ZodString>;
     hsm_id: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
-
-/**
- * Type for creating a template
- */
-type TemplateCreate = z.infer<typeof templateCreateSchema>;
-/**
- * Type for updating a template
- */
-type TemplateUpdate = z.infer<typeof templateUpdateSchema>;
-/**
- * Type for listing templates
- */
-type TemplateList = z.infer<typeof templateListSchema>;
-/**
- * Type for deleting a template
- */
-type TemplateDelete = z.infer<typeof templateDeleteSchema>;
-
-/**
- * Schema for template (the base/select model - what you get from API)
- */
 declare const templateSchema: z.ZodObject<{
     id: z.ZodString;
     name: z.ZodString;
     language: z.ZodString;
-    status: z.ZodString;
-    category: z.ZodString;
-    components: z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
-        type: z.ZodLiteral<"HEADER">;
-        format: z.ZodEnum<{
-            TEXT: "TEXT";
-            IMAGE: "IMAGE";
-            VIDEO: "VIDEO";
-            DOCUMENT: "DOCUMENT";
-            LOCATION: "LOCATION";
+    status: z.ZodEnum<{
+        APPROVED: "APPROVED";
+        PENDING: "PENDING";
+        REJECTED: "REJECTED";
+        PAUSED: "PAUSED";
+        DISABLED: "DISABLED";
+        IN_APPEAL: "IN_APPEAL";
+        PENDING_DELETION: "PENDING_DELETION";
+        DELETED: "DELETED";
+        LIMIT_EXCEEDED: "LIMIT_EXCEEDED";
+    }>;
+    category: z.ZodEnum<{
+        AUTHENTICATION: "AUTHENTICATION";
+        MARKETING: "MARKETING";
+        UTILITY: "UTILITY";
+    }>;
+    components: z.ZodArray<z.ZodObject<{
+        type: z.ZodEnum<{
+            HEADER: "HEADER";
+            BODY: "BODY";
+            FOOTER: "FOOTER";
+            BUTTONS: "BUTTONS";
         }>;
+        format: z.ZodOptional<z.ZodString>;
         text: z.ZodOptional<z.ZodString>;
-        example: z.ZodOptional<z.ZodObject<{
-            header_handle: z.ZodArray<z.ZodString>;
-        }, z.core.$strip>>;
-    }, z.core.$strip>, z.ZodObject<{
-        type: z.ZodLiteral<"BODY">;
-        text: z.ZodString;
-    }, z.core.$strip>, z.ZodObject<{
-        type: z.ZodLiteral<"FOOTER">;
-        text: z.ZodString;
-    }, z.core.$strip>, z.ZodObject<{
-        type: z.ZodLiteral<"BUTTONS">;
-        buttons: z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
-            type: z.ZodLiteral<"QUICK_REPLY">;
-            text: z.ZodString;
-        }, z.core.$strip>, z.ZodObject<{
-            type: z.ZodLiteral<"URL">;
-            text: z.ZodString;
-            url: z.ZodString;
-        }, z.core.$strip>, z.ZodObject<{
-            type: z.ZodLiteral<"PHONE_NUMBER">;
-            text: z.ZodString;
-            phone_number: z.ZodString;
-        }, z.core.$strip>, z.ZodObject<{
-            type: z.ZodLiteral<"COPY_CODE">;
-        }, z.core.$strip>, z.ZodObject<{
-            type: z.ZodLiteral<"FLOW">;
-            text: z.ZodString;
-            flow_action: z.ZodOptional<z.ZodString>;
+        buttons: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            type: z.ZodString;
+            text: z.ZodOptional<z.ZodString>;
+            url: z.ZodOptional<z.ZodString>;
+            phone_number: z.ZodOptional<z.ZodString>;
+            example: z.ZodOptional<z.ZodUnion<readonly [z.ZodArray<z.ZodString>, z.ZodString]>>;
             flow_id: z.ZodOptional<z.ZodString>;
+            flow_action: z.ZodOptional<z.ZodString>;
             navigate_screen: z.ZodOptional<z.ZodString>;
-        }, z.core.$strip>], "type">>;
-    }, z.core.$strip>], "type">>;
+        }, z.core.$strip>>>;
+        example: z.ZodOptional<z.ZodObject<{
+            header_text: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            header_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                param_name: z.ZodString;
+                example: z.ZodString;
+            }, z.core.$strip>>>;
+            header_handle: z.ZodOptional<z.ZodArray<z.ZodString>>;
+            body_text: z.ZodOptional<z.ZodArray<z.ZodArray<z.ZodString>>>;
+            body_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                param_name: z.ZodString;
+                example: z.ZodString;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>;
+    parameter_format: z.ZodOptional<z.ZodEnum<{
+        positional: "positional";
+        named: "named";
+    }>>;
+    quality_score: z.ZodOptional<z.ZodObject<{
+        score: z.ZodOptional<z.ZodEnum<{
+            GREEN: "GREEN";
+            YELLOW: "YELLOW";
+            RED: "RED";
+            UNKNOWN: "UNKNOWN";
+        }>>;
+        date: z.ZodOptional<z.ZodNumber>;
+    }, z.core.$strip>>;
+    rejected_reason: z.ZodOptional<z.ZodString>;
+    previous_category: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
-/**
- * Schema for create template response
- */
 declare const templateCreateResponseSchema: z.ZodObject<{
     id: z.ZodString;
-    status: z.ZodString;
-    category: z.ZodString;
+    status: z.ZodEnum<{
+        APPROVED: "APPROVED";
+        PENDING: "PENDING";
+        REJECTED: "REJECTED";
+        PAUSED: "PAUSED";
+        DISABLED: "DISABLED";
+        IN_APPEAL: "IN_APPEAL";
+        PENDING_DELETION: "PENDING_DELETION";
+        DELETED: "DELETED";
+        LIMIT_EXCEEDED: "LIMIT_EXCEEDED";
+    }>;
+    category: z.ZodEnum<{
+        AUTHENTICATION: "AUTHENTICATION";
+        MARKETING: "MARKETING";
+        UTILITY: "UTILITY";
+    }>;
 }, z.core.$strip>;
-/**
- * Schema for list templates response
- */
+declare const templatePagingCursorsSchema: z.ZodObject<{
+    before: z.ZodOptional<z.ZodString>;
+    after: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+declare const templatePagingSchema: z.ZodObject<{
+    cursors: z.ZodOptional<z.ZodObject<{
+        before: z.ZodOptional<z.ZodString>;
+        after: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>;
+    next: z.ZodOptional<z.ZodString>;
+    previous: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
 declare const templateListResponseSchema: z.ZodObject<{
     data: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
         name: z.ZodString;
         language: z.ZodString;
-        status: z.ZodString;
-        category: z.ZodString;
-        components: z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
-            type: z.ZodLiteral<"HEADER">;
-            format: z.ZodEnum<{
-                TEXT: "TEXT";
-                IMAGE: "IMAGE";
-                VIDEO: "VIDEO";
-                DOCUMENT: "DOCUMENT";
-                LOCATION: "LOCATION";
+        status: z.ZodEnum<{
+            APPROVED: "APPROVED";
+            PENDING: "PENDING";
+            REJECTED: "REJECTED";
+            PAUSED: "PAUSED";
+            DISABLED: "DISABLED";
+            IN_APPEAL: "IN_APPEAL";
+            PENDING_DELETION: "PENDING_DELETION";
+            DELETED: "DELETED";
+            LIMIT_EXCEEDED: "LIMIT_EXCEEDED";
+        }>;
+        category: z.ZodEnum<{
+            AUTHENTICATION: "AUTHENTICATION";
+            MARKETING: "MARKETING";
+            UTILITY: "UTILITY";
+        }>;
+        components: z.ZodArray<z.ZodObject<{
+            type: z.ZodEnum<{
+                HEADER: "HEADER";
+                BODY: "BODY";
+                FOOTER: "FOOTER";
+                BUTTONS: "BUTTONS";
             }>;
+            format: z.ZodOptional<z.ZodString>;
             text: z.ZodOptional<z.ZodString>;
-            example: z.ZodOptional<z.ZodObject<{
-                header_handle: z.ZodArray<z.ZodString>;
-            }, z.core.$strip>>;
-        }, z.core.$strip>, z.ZodObject<{
-            type: z.ZodLiteral<"BODY">;
-            text: z.ZodString;
-        }, z.core.$strip>, z.ZodObject<{
-            type: z.ZodLiteral<"FOOTER">;
-            text: z.ZodString;
-        }, z.core.$strip>, z.ZodObject<{
-            type: z.ZodLiteral<"BUTTONS">;
-            buttons: z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
-                type: z.ZodLiteral<"QUICK_REPLY">;
-                text: z.ZodString;
-            }, z.core.$strip>, z.ZodObject<{
-                type: z.ZodLiteral<"URL">;
-                text: z.ZodString;
-                url: z.ZodString;
-            }, z.core.$strip>, z.ZodObject<{
-                type: z.ZodLiteral<"PHONE_NUMBER">;
-                text: z.ZodString;
-                phone_number: z.ZodString;
-            }, z.core.$strip>, z.ZodObject<{
-                type: z.ZodLiteral<"COPY_CODE">;
-            }, z.core.$strip>, z.ZodObject<{
-                type: z.ZodLiteral<"FLOW">;
-                text: z.ZodString;
-                flow_action: z.ZodOptional<z.ZodString>;
+            buttons: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                type: z.ZodString;
+                text: z.ZodOptional<z.ZodString>;
+                url: z.ZodOptional<z.ZodString>;
+                phone_number: z.ZodOptional<z.ZodString>;
+                example: z.ZodOptional<z.ZodUnion<readonly [z.ZodArray<z.ZodString>, z.ZodString]>>;
                 flow_id: z.ZodOptional<z.ZodString>;
+                flow_action: z.ZodOptional<z.ZodString>;
                 navigate_screen: z.ZodOptional<z.ZodString>;
-            }, z.core.$strip>], "type">>;
-        }, z.core.$strip>], "type">>;
+            }, z.core.$strip>>>;
+            example: z.ZodOptional<z.ZodObject<{
+                header_text: z.ZodOptional<z.ZodArray<z.ZodString>>;
+                header_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                    param_name: z.ZodString;
+                    example: z.ZodString;
+                }, z.core.$strip>>>;
+                header_handle: z.ZodOptional<z.ZodArray<z.ZodString>>;
+                body_text: z.ZodOptional<z.ZodArray<z.ZodArray<z.ZodString>>>;
+                body_text_named_params: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                    param_name: z.ZodString;
+                    example: z.ZodString;
+                }, z.core.$strip>>>;
+            }, z.core.$strip>>;
+        }, z.core.$strip>>;
+        parameter_format: z.ZodOptional<z.ZodEnum<{
+            positional: "positional";
+            named: "named";
+        }>>;
+        quality_score: z.ZodOptional<z.ZodObject<{
+            score: z.ZodOptional<z.ZodEnum<{
+                GREEN: "GREEN";
+                YELLOW: "YELLOW";
+                RED: "RED";
+                UNKNOWN: "UNKNOWN";
+            }>>;
+            date: z.ZodOptional<z.ZodNumber>;
+        }, z.core.$strip>>;
+        rejected_reason: z.ZodOptional<z.ZodString>;
+        previous_category: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>>;
     paging: z.ZodOptional<z.ZodObject<{
         cursors: z.ZodOptional<z.ZodObject<{
             before: z.ZodOptional<z.ZodString>;
             after: z.ZodOptional<z.ZodString>;
         }, z.core.$strip>>;
+        next: z.ZodOptional<z.ZodString>;
+        previous: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
-/**
- * Schema for update template response
- */
 declare const templateUpdateResponseSchema: z.ZodObject<{
     success: z.ZodBoolean;
 }, z.core.$strip>;
-/**
- * Schema for delete template response
- */
 declare const templateDeleteResponseSchema: z.ZodObject<{
     success: z.ZodBoolean;
 }, z.core.$strip>;
 
 /**
- * Type for a template (the base/select model - what you get from API)
+ * Supported WhatsApp template language codes
+ */
+type TemplateLanguage = z.infer<typeof templateLanguageSchema>;
+/**
+ * Template category
+ */
+type TemplateCategory = z.infer<typeof templateCategorySchema>;
+/**
+ * Parameter format for template variables
+ * - "positional": Variables use {{1}}, {{2}}, etc.
+ * - "named": Variables use {{name}}, {{order_number}}, etc.
+ */
+type TemplateParameterFormat = z.infer<typeof templateParameterFormatSchema>;
+/**
+ * Template approval status
+ */
+type TemplateStatus = z.infer<typeof templateStatusSchema>;
+/**
+ * Template quality score (returned by API)
+ */
+type TemplateQualityScore = z.infer<typeof templateQualityScoreSchema>;
+/**
+ * Named parameter example for use with parameter_format: "named"
+ *
+ * @example
+ * ```typescript
+ * const param: TemplateNamedParamExample = {
+ *   param_name: "first_name",
+ *   example: "Pablo"
+ * };
+ * ```
+ */
+type TemplateNamedParamExample = z.infer<typeof templateNamedParamExampleSchema>;
+/**
+ * Header text example (supports positional and named formats)
+ */
+type TemplateHeaderTextExample = z.infer<typeof templateHeaderTextExampleSchema>;
+/**
+ * Body example (supports positional and named formats)
+ */
+type TemplateBodyExample = z.infer<typeof templateBodyExampleSchema>;
+type TemplateQuickReplyButtonInput = z.infer<typeof templateQuickReplyButtonInputSchema>;
+type TemplateUrlButtonInput = z.infer<typeof templateUrlButtonInputSchema>;
+type TemplatePhoneNumberButtonInput = z.infer<typeof templatePhoneNumberButtonInputSchema>;
+type TemplateCopyCodeButtonInput = z.infer<typeof templateCopyCodeButtonInputSchema>;
+type TemplateFlowButtonInput = z.infer<typeof templateFlowButtonInputSchema>;
+type TemplateButtonInput = z.infer<typeof templateButtonInputSchema>;
+type TemplateHeaderTextInput = z.infer<typeof templateHeaderTextInputSchema>;
+type TemplateHeaderMediaInput = z.infer<typeof templateHeaderMediaInputSchema>;
+type TemplateHeaderLocationInput = z.infer<typeof templateHeaderLocationInputSchema>;
+type TemplateHeaderComponentInput = z.infer<typeof templateHeaderComponentInputSchema>;
+type TemplateBodyComponentInput = z.infer<typeof templateBodyComponentInputSchema>;
+type TemplateFooterComponentInput = z.infer<typeof templateFooterComponentInputSchema>;
+type TemplateButtonsComponentInput = z.infer<typeof templateButtonsComponentInputSchema>;
+type TemplateComponentInput = z.infer<typeof templateComponentInputSchema>;
+/**
+ * Button as returned by the API
+ */
+type TemplateButton = z.infer<typeof templateButtonSchema>;
+/**
+ * Component as returned by the API
+ */
+type TemplateComponent = z.infer<typeof templateComponentSchema>;
+/**
+ * Input for creating a template
+ *
+ * @example Positional parameters (default)
+ * ```typescript
+ * const input: TemplateCreate = {
+ *   name: "order_confirmation",
+ *   category: "UTILITY",
+ *   language: "en_US",
+ *   components: [
+ *     {
+ *       type: "BODY",
+ *       text: "Hi {{1}}! Your order {{2}} is confirmed.",
+ *       example: { body_text: [["Pablo", "860198-230332"]] }
+ *     }
+ *   ]
+ * };
+ * ```
+ *
+ * @example Named parameters
+ * ```typescript
+ * const input: TemplateCreate = {
+ *   name: "order_confirmation",
+ *   category: "UTILITY",
+ *   language: "en_US",
+ *   parameter_format: "named",
+ *   components: [
+ *     {
+ *       type: "BODY",
+ *       text: "Hi {{first_name}}! Your order {{order_number}} is confirmed.",
+ *       example: {
+ *         body_text_named_params: [
+ *           { param_name: "first_name", example: "Pablo" },
+ *           { param_name: "order_number", example: "860198-230332" }
+ *         ]
+ *       }
+ *     }
+ *   ]
+ * };
+ * ```
+ */
+type TemplateCreate = z.infer<typeof templateCreateSchema>;
+/**
+ * Input for updating a template
+ */
+type TemplateUpdate = z.infer<typeof templateUpdateSchema>;
+/**
+ * Input for listing templates (query params)
+ */
+type TemplateList = z.infer<typeof templateListSchema>;
+/**
+ * Input for deleting a template
+ */
+type TemplateDelete = z.infer<typeof templateDeleteSchema>;
+/**
+ * A WhatsApp message template
  */
 type Template = z.infer<typeof templateSchema>;
 /**
- * Type for create template response
+ * Response after creating a template
  */
 type TemplateCreateResponse = z.infer<typeof templateCreateResponseSchema>;
 /**
- * Type for list templates response
+ * Response containing list of templates with pagination
  */
 type TemplateListResponse = z.infer<typeof templateListResponseSchema>;
 /**
- * Type for update template response
+ * Response after updating a template
  */
 type TemplateUpdateResponse = z.infer<typeof templateUpdateResponseSchema>;
 /**
- * Type for delete template response
+ * Response after deleting a template
  */
 type TemplateDeleteResponse = z.infer<typeof templateDeleteResponseSchema>;
+/**
+ * Pagination info for list responses
+ */
+type TemplatePaging = z.infer<typeof templatePagingSchema>;
+/**
+ * Pagination cursors
+ */
+type TemplatePagingCursors = z.infer<typeof templatePagingCursorsSchema>;
 
 /**
- * Templates service for managing message templates
+ * Templates resource for managing WhatsApp message templates
  *
- * This service handles template operations like creating, listing, and deleting templates.
- * It supports both a globally configured businessAccountId (in WhatsAppClient)
- * and per-request businessAccountId overrides.
+ * @example Positional parameters (default)
+ * ```typescript
+ * await client.templates.create({
+ *   name: "order_confirmation",
+ *   category: "UTILITY",
+ *   language: "en_US",
+ *   components: [
+ *     {
+ *       type: "BODY",
+ *       text: "Hi {{1}}! Your order {{2}} is confirmed.",
+ *       example: { body_text: [["Pablo", "860198-230332"]] }
+ *     }
+ *   ]
+ * });
+ * ```
  *
- * Note: Get and Update operations use template ID directly (no WABA prefix needed).
+ * @example Named parameters
+ * ```typescript
+ * await client.templates.create({
+ *   name: "order_confirmation",
+ *   category: "UTILITY",
+ *   language: "en_US",
+ *   parameter_format: "named",
+ *   components: [
+ *     {
+ *       type: "BODY",
+ *       text: "Hi {{first_name}}! Your order {{order_number}} is confirmed.",
+ *       example: {
+ *         body_text_named_params: [
+ *           { param_name: "first_name", example: "Pablo" },
+ *           { param_name: "order_number", example: "860198-230332" }
+ *         ]
+ *       }
+ *     }
+ *   ]
+ * });
+ * ```
  */
-declare class TemplatesService {
+declare class TemplatesResource {
     private readonly httpClient;
     constructor(httpClient: HttpClient);
     /**
-     * Helper to create a Scoped Client (prefer override, fallback to config)
+     * Get the business account ID (with validation)
      */
-    private getClient;
+    private getBusinessAccountId;
     /**
      * Create a message template
      *
-     * @param request - Template creation request
+     * @param input - Template creation input
      * @param businessAccountId - Optional WABA ID (overrides client config)
+     * @returns Created template info (id, status, category)
+     * @throws {ZodError} If input validation fails
+     *
+     * @example
+     * ```typescript
+     * const response = await client.templates.create({
+     *   name: "welcome_message",
+     *   category: "MARKETING",
+     *   language: "en_US",
+     *   components: [
+     *     { type: "HEADER", format: "TEXT", text: "Welcome!" },
+     *     {
+     *       type: "BODY",
+     *       text: "Hello {{1}}, thanks for joining us!",
+     *       example: { body_text: [["Pablo"]] }
+     *     },
+     *     { type: "FOOTER", text: "Reply STOP to unsubscribe" }
+     *   ]
+     * });
+     * ```
      */
-    create(request: TemplateCreate, businessAccountId?: string): Promise<TemplateCreateResponse>;
+    create(input: TemplateCreate, businessAccountId?: string): Promise<TemplateCreateResponse>;
     /**
      * List message templates
      *
-     * @param options - Optional filter options (name)
+     * @param options - Optional filter/pagination options
      * @param businessAccountId - Optional WABA ID (overrides client config)
+     * @returns List of templates with pagination info
+     * @throws {ZodError} If options validation fails
+     *
+     * @example
+     * ```typescript
+     * // List all templates
+     * const all = await client.templates.list();
+     *
+     * // Filter by name
+     * const filtered = await client.templates.list({ name: "welcome" });
+     *
+     * // With pagination
+     * const page = await client.templates.list({ limit: 10, after: "cursor" });
+     * ```
      */
     list(options?: TemplateList, businessAccountId?: string): Promise<TemplateListResponse>;
     /**
      * Get a template by ID
      *
-     * Note: This uses the template ID directly (no WABA prefix needed)
+     * Note: Uses template ID directly (no WABA prefix needed)
      *
-     * @param templateId - Template ID
+     * @param templateId - The template ID
+     * @returns Template details
+     *
+     * @example
+     * ```typescript
+     * const template = await client.templates.get("123456789012345");
+     * console.log(template.name, template.status);
+     * ```
      */
     get(templateId: string): Promise<Template>;
     /**
      * Update a template
      *
-     * Note: This uses the template ID directly (no WABA prefix needed)
+     * Note: Uses template ID directly (no WABA prefix needed)
      *
-     * @param templateId - Template ID
-     * @param request - Template update request
+     * @param templateId - The template ID
+     * @param input - Fields to update
+     * @returns Success status
+     * @throws {ZodError} If input validation fails
+     *
+     * @example
+     * ```typescript
+     * await client.templates.update("123456789012345", {
+     *   components: [
+     *     { type: "BODY", text: "Updated message text" }
+     *   ]
+     * });
+     * ```
      */
-    update(templateId: string, request: TemplateUpdate): Promise<TemplateUpdateResponse>;
+    update(templateId: string, input: TemplateUpdate): Promise<TemplateUpdateResponse>;
     /**
      * Delete a template
      *
-     * @param options - Delete options (name or hsm_id)
+     * @param input - Delete by name or hsm_id
      * @param businessAccountId - Optional WABA ID (overrides client config)
+     * @returns Success status
+     * @throws {ZodError} If input validation fails
+     *
+     * @example
+     * ```typescript
+     * // Delete by name
+     * await client.templates.delete({ name: "old_template" });
+     *
+     * // Delete by template ID (hsm_id)
+     * await client.templates.delete({ hsm_id: "123456789012345" });
+     * ```
      */
-    delete(options: TemplateDelete, businessAccountId?: string): Promise<TemplateDeleteResponse>;
+    delete(input: TemplateDelete, businessAccountId?: string): Promise<TemplateDeleteResponse>;
 }
 
 /**
@@ -1385,28 +3039,6 @@ declare class WebhooksService {
      */
     extractStatuses(payload: WebhookPayload): Status[];
     /**
-     * Download media file by media ID
-     *
-     * Downloads media files (images, audio, video, documents) from WhatsApp servers.
-     * Uses the access token from the client configuration automatically.
-     *
-     * @param mediaId - Media ID from incoming message (e.g., message.image.id, message.audio.id)
-     * @returns Promise resolving to ArrayBuffer containing the media file
-     * @throws Error if download fails or media ID is invalid
-     *
-     * @example
-     * ```typescript
-     * client.webhooks.handle(req.body, {
-     *   image: async (message, context) => {
-     *     const mediaData = await client.webhooks.downloadMedia(message.image.id);
-     *     // Upload to S3, save to disk, etc.
-     *     await s3.upload({ key: message.image.id, body: Buffer.from(mediaData) });
-     *   },
-     * });
-     * ```
-     */
-    downloadMedia(mediaId: string): Promise<ArrayBuffer>;
-    /**
      * Validate webhook payload structure
      *
      * Validates the payload against the schema. Logs errors if malformed
@@ -1434,6 +3066,39 @@ declare class WebhooksService {
      * @param options - Optional error handling configuration
      */
     handle<THandlers extends MessageHandlers<any>>(payload: unknown, handlers: THandlers, options?: HandleOptions): void;
+}
+
+/**
+ * Media service for downloading WhatsApp media files
+ *
+ * This service handles downloading media files from WhatsApp servers.
+ */
+declare class MediaService {
+    private readonly httpClient;
+    constructor(httpClient: HttpClient);
+    /**
+     * Download media file by media ID
+     *
+     * Downloads media files (images, audio, video, documents) from WhatsApp servers.
+     * Uses the access token from the client configuration automatically.
+     *
+     * According to WhatsApp API docs, you cannot download directly from the media ID endpoint.
+     * The flow is:
+     * 1. GET /MEDIA_ID → returns JSON metadata with a URL
+     * 2. GET /MEDIA_URL → returns the actual binary data
+     *
+     * @param mediaId - Media ID from incoming message (e.g., message.image.id, message.audio.id)
+     * @returns Promise resolving to ArrayBuffer containing the media file
+     * @throws Error if download fails or media ID is invalid
+     *
+     * @example
+     * ```typescript
+     * const mediaData = await client.media.download(message.image.id);
+     * // Upload to S3, save to disk, etc.
+     * await s3.upload({ key: message.image.id, body: Buffer.from(mediaData) });
+     * ```
+     */
+    download(mediaId: string): Promise<ArrayBuffer>;
 }
 
 /**
@@ -1470,8 +3135,9 @@ declare class WhatsAppClient {
     readonly messages: MessagesService;
     readonly accounts: AccountsService;
     readonly business: BusinessService;
-    readonly templates: TemplatesService;
+    readonly templates: TemplatesResource;
     readonly webhooks: WebhooksService;
+    readonly media: MediaService;
     private readonly httpClient;
     constructor(config: ClientConfig);
     /**
@@ -1486,323 +3152,16 @@ declare class WhatsAppClient {
 }
 
 /**
- * Button schemas for template components
- * Simplified version without variables for now
+ * Media metadata response (from GET /MEDIA_ID)
  */
-/**
- * Quick reply button schema
- */
-declare const templateQuickReplyButtonSchema: z.ZodObject<{
-    type: z.ZodLiteral<"QUICK_REPLY">;
-    text: z.ZodString;
-}, z.core.$strip>;
-/**
- * URL button schema
- * Note: example field will be added later when we support variables
- */
-declare const templateUrlButtonSchema: z.ZodObject<{
-    type: z.ZodLiteral<"URL">;
-    text: z.ZodString;
-    url: z.ZodString;
-}, z.core.$strip>;
-/**
- * Phone number button schema
- */
-declare const templatePhoneNumberButtonSchema: z.ZodObject<{
-    type: z.ZodLiteral<"PHONE_NUMBER">;
-    text: z.ZodString;
-    phone_number: z.ZodString;
-}, z.core.$strip>;
-/**
- * Copy code button schema
- * Note: example field will be added later
- */
-declare const templateCopyCodeButtonSchema: z.ZodObject<{
-    type: z.ZodLiteral<"COPY_CODE">;
-}, z.core.$strip>;
-/**
- * Flow button schema (for authentication templates)
- * Note: Will be expanded later when we support flow templates
- */
-declare const templateFlowButtonSchema: z.ZodObject<{
-    type: z.ZodLiteral<"FLOW">;
-    text: z.ZodString;
-    flow_action: z.ZodOptional<z.ZodString>;
-    flow_id: z.ZodOptional<z.ZodString>;
-    navigate_screen: z.ZodOptional<z.ZodString>;
-}, z.core.$strip>;
-/**
- * Union of all button types
- */
-declare const templateButtonSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
-    type: z.ZodLiteral<"QUICK_REPLY">;
-    text: z.ZodString;
-}, z.core.$strip>, z.ZodObject<{
-    type: z.ZodLiteral<"URL">;
-    text: z.ZodString;
-    url: z.ZodString;
-}, z.core.$strip>, z.ZodObject<{
-    type: z.ZodLiteral<"PHONE_NUMBER">;
-    text: z.ZodString;
-    phone_number: z.ZodString;
-}, z.core.$strip>, z.ZodObject<{
-    type: z.ZodLiteral<"COPY_CODE">;
-}, z.core.$strip>, z.ZodObject<{
-    type: z.ZodLiteral<"FLOW">;
-    text: z.ZodString;
-    flow_action: z.ZodOptional<z.ZodString>;
-    flow_id: z.ZodOptional<z.ZodString>;
-    navigate_screen: z.ZodOptional<z.ZodString>;
-}, z.core.$strip>], "type">;
-/**
- * Header component schema
- *
- * Note:
- * - TEXT format requires text field
- * - IMAGE/VIDEO/DOCUMENT formats require example.header_handle (asset handle from Resumable Upload API)
- * - LOCATION format requires neither text nor example
- */
-declare const templateHeaderComponentSchema: z.ZodObject<{
-    type: z.ZodLiteral<"HEADER">;
-    format: z.ZodEnum<{
-        TEXT: "TEXT";
-        IMAGE: "IMAGE";
-        VIDEO: "VIDEO";
-        DOCUMENT: "DOCUMENT";
-        LOCATION: "LOCATION";
-    }>;
-    text: z.ZodOptional<z.ZodString>;
-    example: z.ZodOptional<z.ZodObject<{
-        header_handle: z.ZodArray<z.ZodString>;
-    }, z.core.$strip>>;
-}, z.core.$strip>;
-/**
- * Body component schema
- * Required component - no variables for now
- */
-declare const templateBodyComponentSchema: z.ZodObject<{
-    type: z.ZodLiteral<"BODY">;
-    text: z.ZodString;
-}, z.core.$strip>;
-/**
- * Footer component schema
- */
-declare const templateFooterComponentSchema: z.ZodObject<{
-    type: z.ZodLiteral<"FOOTER">;
-    text: z.ZodString;
-}, z.core.$strip>;
-/**
- * Buttons component schema
- */
-declare const templateButtonsComponentSchema: z.ZodObject<{
-    type: z.ZodLiteral<"BUTTONS">;
-    buttons: z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
-        type: z.ZodLiteral<"QUICK_REPLY">;
-        text: z.ZodString;
-    }, z.core.$strip>, z.ZodObject<{
-        type: z.ZodLiteral<"URL">;
-        text: z.ZodString;
-        url: z.ZodString;
-    }, z.core.$strip>, z.ZodObject<{
-        type: z.ZodLiteral<"PHONE_NUMBER">;
-        text: z.ZodString;
-        phone_number: z.ZodString;
-    }, z.core.$strip>, z.ZodObject<{
-        type: z.ZodLiteral<"COPY_CODE">;
-    }, z.core.$strip>, z.ZodObject<{
-        type: z.ZodLiteral<"FLOW">;
-        text: z.ZodString;
-        flow_action: z.ZodOptional<z.ZodString>;
-        flow_id: z.ZodOptional<z.ZodString>;
-        navigate_screen: z.ZodOptional<z.ZodString>;
-    }, z.core.$strip>], "type">>;
-}, z.core.$strip>;
-/**
- * Union of all component types
- */
-declare const templateComponentSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
-    type: z.ZodLiteral<"HEADER">;
-    format: z.ZodEnum<{
-        TEXT: "TEXT";
-        IMAGE: "IMAGE";
-        VIDEO: "VIDEO";
-        DOCUMENT: "DOCUMENT";
-        LOCATION: "LOCATION";
-    }>;
-    text: z.ZodOptional<z.ZodString>;
-    example: z.ZodOptional<z.ZodObject<{
-        header_handle: z.ZodArray<z.ZodString>;
-    }, z.core.$strip>>;
-}, z.core.$strip>, z.ZodObject<{
-    type: z.ZodLiteral<"BODY">;
-    text: z.ZodString;
-}, z.core.$strip>, z.ZodObject<{
-    type: z.ZodLiteral<"FOOTER">;
-    text: z.ZodString;
-}, z.core.$strip>, z.ZodObject<{
-    type: z.ZodLiteral<"BUTTONS">;
-    buttons: z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
-        type: z.ZodLiteral<"QUICK_REPLY">;
-        text: z.ZodString;
-    }, z.core.$strip>, z.ZodObject<{
-        type: z.ZodLiteral<"URL">;
-        text: z.ZodString;
-        url: z.ZodString;
-    }, z.core.$strip>, z.ZodObject<{
-        type: z.ZodLiteral<"PHONE_NUMBER">;
-        text: z.ZodString;
-        phone_number: z.ZodString;
-    }, z.core.$strip>, z.ZodObject<{
-        type: z.ZodLiteral<"COPY_CODE">;
-    }, z.core.$strip>, z.ZodObject<{
-        type: z.ZodLiteral<"FLOW">;
-        text: z.ZodString;
-        flow_action: z.ZodOptional<z.ZodString>;
-        flow_id: z.ZodOptional<z.ZodString>;
-        navigate_screen: z.ZodOptional<z.ZodString>;
-    }, z.core.$strip>], "type">>;
-}, z.core.$strip>], "type">;
-
-/**
- * Supported WhatsApp template languages
- * Based on WhatsApp Cloud API supported language codes
- */
-declare const templateLanguageSchema: z.ZodEnum<{
-    te: "te";
-    id: "id";
-    af: "af";
-    sq: "sq";
-    ar: "ar";
-    ar_EG: "ar_EG";
-    ar_AE: "ar_AE";
-    ar_LB: "ar_LB";
-    ar_MA: "ar_MA";
-    ar_QA: "ar_QA";
-    az: "az";
-    be_BY: "be_BY";
-    bn: "bn";
-    bn_IN: "bn_IN";
-    bg: "bg";
-    ca: "ca";
-    zh_CN: "zh_CN";
-    zh_HK: "zh_HK";
-    zh_TW: "zh_TW";
-    hr: "hr";
-    cs: "cs";
-    da: "da";
-    prs_AF: "prs_AF";
-    nl: "nl";
-    nl_BE: "nl_BE";
-    en: "en";
-    en_GB: "en_GB";
-    en_US: "en_US";
-    en_AE: "en_AE";
-    en_AU: "en_AU";
-    en_CA: "en_CA";
-    en_GH: "en_GH";
-    en_IE: "en_IE";
-    en_IN: "en_IN";
-    en_JM: "en_JM";
-    en_MY: "en_MY";
-    en_NZ: "en_NZ";
-    en_QA: "en_QA";
-    en_SG: "en_SG";
-    en_UG: "en_UG";
-    en_ZA: "en_ZA";
-    et: "et";
-    fil: "fil";
-    fi: "fi";
-    fr: "fr";
-    fr_BE: "fr_BE";
-    fr_CA: "fr_CA";
-    fr_CH: "fr_CH";
-    fr_CI: "fr_CI";
-    fr_MA: "fr_MA";
-    ka: "ka";
-    de: "de";
-    de_AT: "de_AT";
-    de_CH: "de_CH";
-    el: "el";
-    gu: "gu";
-    ha: "ha";
-    he: "he";
-    hi: "hi";
-    hu: "hu";
-    ga: "ga";
-    it: "it";
-    ja: "ja";
-    kn: "kn";
-    kk: "kk";
-    rw_RW: "rw_RW";
-    ko: "ko";
-    ky_KG: "ky_KG";
-    lo: "lo";
-    lv: "lv";
-    lt: "lt";
-    mk: "mk";
-    ms: "ms";
-    ml: "ml";
-    mr: "mr";
-    nb: "nb";
-    ps_AF: "ps_AF";
-    fa: "fa";
-    pl: "pl";
-    pt_BR: "pt_BR";
-    pt_PT: "pt_PT";
-    pa: "pa";
-    ro: "ro";
-    ru: "ru";
-    sr: "sr";
-    si_LK: "si_LK";
-    sk: "sk";
-    sl: "sl";
-    es: "es";
-    es_AR: "es_AR";
-    es_CL: "es_CL";
-    es_CO: "es_CO";
-    es_CR: "es_CR";
-    es_DO: "es_DO";
-    es_EC: "es_EC";
-    es_HN: "es_HN";
-    es_MX: "es_MX";
-    es_PA: "es_PA";
-    es_PE: "es_PE";
-    es_ES: "es_ES";
-    es_UY: "es_UY";
-    sw: "sw";
-    sv: "sv";
-    ta: "ta";
-    th: "th";
-    tr: "tr";
-    uk: "uk";
-    ur: "ur";
-    uz: "uz";
-    vi: "vi";
-    zu: "zu";
-}>;
-
-/**
- * Button types
- */
-type TemplateQuickReplyButton = z.infer<typeof templateQuickReplyButtonSchema>;
-type TemplateUrlButton = z.infer<typeof templateUrlButtonSchema>;
-type TemplatePhoneNumberButton = z.infer<typeof templatePhoneNumberButtonSchema>;
-type TemplateCopyCodeButton = z.infer<typeof templateCopyCodeButtonSchema>;
-type TemplateFlowButton = z.infer<typeof templateFlowButtonSchema>;
-type TemplateButton = z.infer<typeof templateButtonSchema>;
-/**
- * Component types
- */
-type TemplateHeaderComponent = z.infer<typeof templateHeaderComponentSchema>;
-type TemplateBodyComponent = z.infer<typeof templateBodyComponentSchema>;
-type TemplateFooterComponent = z.infer<typeof templateFooterComponentSchema>;
-type TemplateButtonsComponent = z.infer<typeof templateButtonsComponentSchema>;
-type TemplateComponent = z.infer<typeof templateComponentSchema>;
-
-/**
- * Type for WhatsApp template language codes
- */
-type TemplateLanguage = z.infer<typeof templateLanguageSchema>;
+type MediaMetadata = {
+    messaging_product: "whatsapp";
+    url: string;
+    mime_type: string;
+    sha256: string;
+    file_size: string;
+    id: string;
+};
 
 /**
  * Base error class for WhatsApp API errors
@@ -1843,4 +3202,25 @@ declare class WhatsAppRateLimitError extends WhatsAppAPIError {
     constructor(message: string, retryAfter?: number | undefined);
 }
 
-export { type BusinessAccountsListResponse, type ClientConfig, type DebugTokenResponse, type HandleOptions, type IncomingAudioMessage, type IncomingImageMessage, type IncomingMessage, type IncomingTextMessage, type MessageContext, type MessageHandlers, type MessageResponse, type OutgoingImageMessage, type OutgoingLocationMessage, type OutgoingMessage, type OutgoingReactionMessage, type OutgoingTextMessage, type PhoneNumberListResponse, type SendImageInput, type SendLocationInput, type SendReactionInput, type SendTextInput, type Status, type Template, type TemplateBodyComponent, type TemplateButton, type TemplateButtonsComponent, type TemplateComponent, type TemplateCopyCodeButton, type TemplateCreate, type TemplateCreateResponse, type TemplateDelete, type TemplateDeleteResponse, type TemplateFlowButton, type TemplateFooterComponent, type TemplateHeaderComponent, type TemplateLanguage, type TemplateList, type TemplateListResponse, type TemplatePhoneNumberButton, type TemplateQuickReplyButton, type TemplateUpdate, type TemplateUpdateResponse, type TemplateUrlButton, type WebhookContext, type WebhookPayload, WhatsAppAPIError, WhatsAppClient, WhatsAppError, WhatsAppRateLimitError, WhatsAppValidationError, businessAccountResponseSchema, businessAccountsListResponseSchema, clientConfigSchema, debugTokenResponseSchema, incomingAudioMessageSchema, incomingImageMessageSchema, incomingMessageSchema, incomingTextMessageSchema, messageResponseSchema, outgoingImageMessageSchema, outgoingLocationMessageSchema, outgoingMessageSchema, outgoingReactionMessageSchema, outgoingTextMessageSchema, phoneNumberListResponseSchema, phoneNumberResponseSchema, sendImageInputSchema, sendLocationInputSchema, sendReactionInputSchema, sendTextInputSchema, statusSchema, templateBodyComponentSchema, templateButtonSchema, templateButtonsComponentSchema, templateComponentSchema, templateCopyCodeButtonSchema, templateCreateResponseSchema, templateCreateSchema, templateDeleteResponseSchema, templateDeleteSchema, templateFlowButtonSchema, templateFooterComponentSchema, templateHeaderComponentSchema, templateLanguageSchema, templateListResponseSchema, templateListSchema, templatePhoneNumberButtonSchema, templateQuickReplyButtonSchema, templateSchema, templateUpdateResponseSchema, templateUpdateSchema, templateUrlButtonSchema, webhookPayloadSchema };
+/**
+ * Template utilities
+ */
+/**
+ * Converts an arbitrary string to a valid WhatsApp template name.
+ *
+ * WhatsApp template names must:
+ * - Contain only lowercase letters, numbers, and underscores
+ * - Be between 1 and 512 characters
+ *
+ * @example
+ * ```typescript
+ * import { toTemplateName } from 'whatsapp-cloud';
+ *
+ * toTemplateName("Order Confirmation");  // "order_confirmation"
+ * toTemplateName("Welcome! New User");   // "welcome_new_user"
+ * toTemplateName("2FA Code");            // "2fa_code"
+ * ```
+ */
+declare function toTemplateName(input: string): string;
+
+export { type BusinessAccountsListResponse, type ClientConfig, type DebugTokenResponse, type HandleOptions, type IncomingAudioMessage, type IncomingImageMessage, type IncomingMessage, type IncomingTextMessage, type MediaMetadata, type MessageContext, type MessageHandlers, type MessageResponse, type OutgoingImageMessage, type OutgoingLocationMessage, type OutgoingMessage, type OutgoingReactionMessage, type OutgoingTextMessage, type PhoneNumberListResponse, type SendImageInput, type SendLocationInput, type SendReactionInput, type SendTextInput, type Status, type Template, type TemplateBodyComponentInput, type TemplateBodyExample, type TemplateButton, type TemplateButtonInput, type TemplateButtonsComponentInput, type TemplateCategory, type TemplateComponent, type TemplateComponentInput, type TemplateCopyCodeButtonInput, type TemplateCreate, type TemplateCreateResponse, type TemplateDelete, type TemplateDeleteResponse, type TemplateFlowButtonInput, type TemplateFooterComponentInput, type TemplateHeaderComponentInput, type TemplateHeaderLocationInput, type TemplateHeaderMediaInput, type TemplateHeaderTextExample, type TemplateHeaderTextInput, type TemplateLanguage, type TemplateList, type TemplateListResponse, type TemplateNamedParamExample, type TemplatePaging, type TemplatePagingCursors, type TemplateParameterFormat, type TemplatePhoneNumberButtonInput, type TemplateQualityScore, type TemplateQuickReplyButtonInput, type TemplateStatus, type TemplateUpdate, type TemplateUpdateResponse, type TemplateUrlButtonInput, TemplatesResource, type WebhookContext, type WebhookPayload, WhatsAppAPIError, WhatsAppClient, WhatsAppError, WhatsAppRateLimitError, WhatsAppValidationError, businessAccountResponseSchema, businessAccountsListResponseSchema, clientConfigSchema, debugTokenResponseSchema, incomingAudioMessageSchema, incomingImageMessageSchema, incomingMessageSchema, incomingTextMessageSchema, messageResponseSchema, outgoingImageMessageSchema, outgoingLocationMessageSchema, outgoingMessageSchema, outgoingReactionMessageSchema, outgoingTextMessageSchema, phoneNumberListResponseSchema, phoneNumberResponseSchema, sendImageInputSchema, sendLocationInputSchema, sendReactionInputSchema, sendTextInputSchema, statusSchema, templateBodyComponentInputSchema, templateBodyExampleSchema, templateButtonInputSchema, templateButtonSchema, templateButtonsComponentInputSchema, templateCategorySchema, templateComponentInputSchema, templateComponentSchema, templateCopyCodeButtonInputSchema, templateCreateAuthenticationSchema, templateCreateMarketingSchema, templateCreateResponseSchema, templateCreateSchema, templateCreateUtilitySchema, templateDeleteResponseSchema, templateDeleteSchema, templateFlowButtonInputSchema, templateFooterComponentInputSchema, templateHeaderComponentInputSchema, templateHeaderLocationInputSchema, templateHeaderMediaInputSchema, templateHeaderTextExampleSchema, templateHeaderTextInputSchema, templateLanguageSchema, templateListResponseSchema, templateListSchema, templateNamedParamExampleSchema, templatePagingCursorsSchema, templatePagingSchema, templateParameterFormatSchema, templatePhoneNumberButtonInputSchema, templateQualityScoreSchema, templateQuickReplyButtonInputSchema, templateSchema, templateStatusSchema, templateUpdateResponseSchema, templateUpdateSchema, templateUrlButtonInputSchema, toTemplateName, webhookPayloadSchema };

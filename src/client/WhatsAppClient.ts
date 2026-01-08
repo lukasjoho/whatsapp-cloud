@@ -4,7 +4,7 @@ import { HttpClient } from "./HttpClient";
 import { MessagesService } from "../services/messages/index";
 import { AccountsService } from "../services/accounts/index";
 import { BusinessService } from "../services/business/index";
-import { TemplatesService } from "../services/templates/index";
+import { TemplatesResource } from "../resources/templates";
 import { WebhooksService } from "../services/webhooks/index";
 import { MediaService } from "../services/media/index";
 import { ZodError } from "zod";
@@ -18,7 +18,7 @@ export class WhatsAppClient {
   public readonly messages: MessagesService;
   public readonly accounts: AccountsService;
   public readonly business: BusinessService;
-  public readonly templates: TemplatesService;
+  public readonly templates: TemplatesResource;
   public readonly webhooks: WebhooksService;
   public readonly media: MediaService;
 
@@ -39,11 +39,11 @@ export class WhatsAppClient {
     // Initialize HTTP client
     this.httpClient = new HttpClient(validated);
 
-    // Initialize services (namespaces)
+    // Initialize resources
     this.messages = new MessagesService(this.httpClient);
     this.accounts = new AccountsService(this.httpClient);
     this.business = new BusinessService(this.httpClient);
-    this.templates = new TemplatesService(this.httpClient);
+    this.templates = new TemplatesResource(this.httpClient);
     this.webhooks = new WebhooksService(this.httpClient);
     this.media = new MediaService(this.httpClient);
   }

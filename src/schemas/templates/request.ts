@@ -1,61 +1,109 @@
 import { z } from "zod";
-import { templateComponentSchema } from "./component";
+import { templateComponentInputSchema } from "./component-input";
 import { templateLanguageSchema } from "./language";
 
 /**
- * Schema for creating a template
- * Simplified - no variables/examples for now
+ * Template category schema
  */
-export const templateCreateSchema = z.object({
-  name: z
-    .string()
-    .min(1)
-    .max(512, "Template name must be 512 characters or less"),
+export const templateCategorySchema = z.enum([
+  "AUTHENTICATION",
+  "MARKETING",
+  "UTILITY",
+]);
+
+/**
+ * Helper type for component array refinements
+ */
+type ComponentArray = z.infer<typeof templateComponentInputSchema>[];
+
+/**
+ * Validation helpers for component arrays
+ */
+const hasBody = (components: ComponentArray) =>
+  components.some((c) => c.type === "BODY");
+
+const hasMaxOneHeader = (components: ComponentArray) =>
+  components.filter((c) => c.type === "HEADER").length <= 1;
+
+const hasMaxOneFooter = (components: ComponentArray) =>
+  components.filter((c) => c.type === "FOOTER").length <= 1;
+
+const hasMaxOneButtons = (components: ComponentArray) =>
+  components.filter((c) => c.type === "BUTTONS").length <= 1;
+
+/**
+ * Base components schema with common refinements
+ */
+const baseComponentsSchema = z
+  .array(templateComponentInputSchema)
+  .min(1, "At least one component is required")
+  .refine(hasBody, { message: "BODY component is required" })
+  .refine(hasMaxOneHeader, { message: "Only one HEADER component is allowed" })
+  .refine(hasMaxOneFooter, { message: "Only one FOOTER component is allowed" })
+  .refine(hasMaxOneButtons, {
+    message: "Only one BUTTONS component is allowed",
+  });
+
+/**
+ * Template name schema
+ * Note: WhatsApp requires lowercase letters, numbers, and underscores only.
+ * Use the `toTemplateName()` utility to convert arbitrary strings.
+ */
+const templateNameSchema = z
+  .string()
+  .min(1, "Template name is required")
+  .max(512, "Template name must be 512 characters or less");
+
+/**
+ * Schema for creating a MARKETING template
+ */
+export const templateCreateMarketingSchema = z.object({
+  name: templateNameSchema,
   language: templateLanguageSchema,
-  category: z.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]),
-  components: z
-    .array(templateComponentSchema)
-    .min(1, "At least one component is required")
-    .refine(
-      (components) => {
-        // Body component is required
-        return components.some((c) => c.type === "BODY");
-      },
-      { message: "BODY component is required" }
-    )
-    .refine(
-      (components) => {
-        // Only one header allowed
-        const headers = components.filter((c) => c.type === "HEADER");
-        return headers.length <= 1;
-      },
-      { message: "Only one HEADER component is allowed" }
-    )
-    .refine(
-      (components) => {
-        // Only one footer allowed
-        const footers = components.filter((c) => c.type === "FOOTER");
-        return footers.length <= 1;
-      },
-      { message: "Only one FOOTER component is allowed" }
-    )
-    .refine(
-      (components) => {
-        // Only one buttons component allowed
-        const buttons = components.filter((c) => c.type === "BUTTONS");
-        return buttons.length <= 1;
-      },
-      { message: "Only one BUTTONS component is allowed" }
-    ),
+  category: z.literal("MARKETING"),
+  components: baseComponentsSchema,
 });
+
+/**
+ * Schema for creating a UTILITY template
+ */
+export const templateCreateUtilitySchema = z.object({
+  name: templateNameSchema,
+  language: templateLanguageSchema,
+  category: z.literal("UTILITY"),
+  components: baseComponentsSchema,
+});
+
+/**
+ * Schema for creating an AUTHENTICATION template
+ * Note: Simplified validation - full auth template rules may be added later
+ */
+export const templateCreateAuthenticationSchema = z.object({
+  name: templateNameSchema,
+  language: templateLanguageSchema,
+  category: z.literal("AUTHENTICATION"),
+  components: z
+    .array(templateComponentInputSchema)
+    .min(1, "At least one component is required")
+    .refine(hasBody, { message: "BODY component is required" }),
+});
+
+/**
+ * Union of all template create schemas (discriminated by category)
+ */
+export const templateCreateSchema = z.discriminatedUnion("category", [
+  templateCreateMarketingSchema,
+  templateCreateUtilitySchema,
+  templateCreateAuthenticationSchema,
+]);
 
 /**
  * Schema for updating a template
  * All fields optional - only update what's provided
  */
 export const templateUpdateSchema = z.object({
-  category: z.enum(["AUTHENTICATION", "MARKETING", "UTILITY"]).optional(),
-  components: z.array(templateComponentSchema).optional(),
+  category: templateCategorySchema.optional(),
+  components: z.array(templateComponentInputSchema).optional(),
   language: templateLanguageSchema.optional(),
   name: z.string().min(1).max(512).optional(),
 });
@@ -64,7 +112,10 @@ export const templateUpdateSchema = z.object({
  * Schema for listing templates
  */
 export const templateListSchema = z.object({
-  name: z.string().optional(), // Filter by template name
+  name: z.string().optional(),
+  limit: z.number().min(1).max(1000).optional(),
+  after: z.string().optional(),
+  before: z.string().optional(),
 });
 
 /**
