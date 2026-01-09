@@ -1,5 +1,11 @@
 # whatzapp
 
+## 0.1.5
+
+### Patch Changes
+
+- 32573ff: add media download namespace
+
 ## 0.1.4
 
 ### Patch Changes
