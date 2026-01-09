@@ -1,5 +1,11 @@
 # whatzapp
 
+## 1.0.0
+
+### Major Changes
+
+- d509579: refactor to colocated resources
+
 ## 0.1.5
 
 ### Patch Changes
