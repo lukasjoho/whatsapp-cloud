@@ -4,6 +4,8 @@ import type {
   WabaListResponse,
   WabaCreate,
   WabaCreateResponse,
+  WabaUpdate,
+  WabaUpdateResponse,
   WabaListOptions,
   // Subscribed Apps
   SubscribedAppsResponse,
@@ -182,6 +184,26 @@ export class WabasResource {
     const id = this.getWabaId(wabaId);
     const query = fields ? `?fields=${fields}` : "";
     return this.httpClient.get<Waba>(`/${id}${query}`);
+  }
+
+  /**
+   * Update a WhatsApp Business Account
+   *
+   * @param data - Fields to update (name, timezone_id)
+   * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @returns Success status
+   *
+   * @example
+   * ```typescript
+   * await client.wabas.update({ name: "New Name" });
+   *
+   * // Update timezone
+   * await client.wabas.update({ timezone_id: 1 });
+   * ```
+   */
+  async update(data: WabaUpdate, wabaId?: string): Promise<WabaUpdateResponse> {
+    const id = this.getWabaId(wabaId);
+    return this.httpClient.post<WabaUpdateResponse>(`/${id}`, data);
   }
 
   // ===========================================================================

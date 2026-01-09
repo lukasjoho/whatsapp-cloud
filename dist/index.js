@@ -428,6 +428,25 @@ var WabasResource = class {
     const query = fields ? `?fields=${fields}` : "";
     return this.httpClient.get(`/${id}${query}`);
   }
+  /**
+   * Update a WhatsApp Business Account
+   *
+   * @param data - Fields to update (name, timezone_id)
+   * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @returns Success status
+   *
+   * @example
+   * ```typescript
+   * await client.wabas.update({ name: "New Name" });
+   *
+   * // Update timezone
+   * await client.wabas.update({ timezone_id: 1 });
+   * ```
+   */
+  async update(data, wabaId) {
+    const id = this.getWabaId(wabaId);
+    return this.httpClient.post(`/${id}`, data);
+  }
   // ===========================================================================
   // Subscribed Apps
   // ===========================================================================
@@ -615,7 +634,8 @@ var accountReviewStatusSchema = z3.enum([
   "APPROVED",
   "PENDING",
   "REJECTED",
-  "RESTRICTED"
+  "RESTRICTED",
+  "LIMIT_REACHED"
 ]);
 var businessVerificationStatusSchema = z3.enum([
   "VERIFIED",
@@ -624,6 +644,10 @@ var businessVerificationStatusSchema = z3.enum([
   "REJECTED"
 ]);
 var wabaBusinessTypeSchema = z3.enum(["ENTERPRISE", "SMB"]);
+var ownershipTypeSchema = z3.enum([
+  "OWNED_BY_BUSINESS_PORTFOLIO",
+  "OWNED_BY_BUSINESS_ASSET_GROUP"
+]);
 var onBehalfOfBusinessInfoSchema = z3.object({
   id: z3.string().optional(),
   name: z3.string().optional()
@@ -645,6 +669,8 @@ var wabaSchema = z3.object({
   timezone_id: z3.string().optional(),
   business_verification_status: businessVerificationStatusSchema.optional(),
   country: z3.string().optional(),
+  ownership_type: ownershipTypeSchema.optional(),
+  primary_business_location: z3.string().optional(),
   on_behalf_of_business_info: onBehalfOfBusinessInfoSchema.optional(),
   is_enabled_for_insights: z3.boolean().optional(),
   message_template_namespace: z3.string().optional()
@@ -665,6 +691,13 @@ var wabaCreateSchema = z3.object({
 var wabaCreateResponseSchema = z3.object({
   id: z3.string(),
   payment_account_id: z3.string().optional()
+});
+var wabaUpdateSchema = z3.object({
+  name: z3.string().optional(),
+  timezone_id: z3.number().optional()
+});
+var wabaUpdateResponseSchema = z3.object({
+  success: z3.boolean()
 });
 var wabaListOptionsSchema = z3.object({
   fields: z3.string().optional(),
@@ -2738,6 +2771,7 @@ export {
   messagingLimitTierSchema,
   nameStatusSchema,
   onBehalfOfBusinessInfoSchema,
+  ownershipTypeSchema,
   permissionTaskSchema,
   phoneNumberCreateRequestSchema,
   phoneNumberCreateResponseSchema,
@@ -2804,6 +2838,8 @@ export {
   wabaListOptionsSchema,
   wabaListResponseSchema,
   wabaSchema,
+  wabaUpdateResponseSchema,
+  wabaUpdateSchema,
   webhookChangeSchema,
   webhookContactSchema,
   webhookConversationOriginSchema,

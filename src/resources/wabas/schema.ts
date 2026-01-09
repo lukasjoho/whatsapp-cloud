@@ -9,6 +9,7 @@ export const accountReviewStatusSchema = z.enum([
   "PENDING",
   "REJECTED",
   "RESTRICTED",
+  "LIMIT_REACHED",
 ]);
 
 export const businessVerificationStatusSchema = z.enum([
@@ -19,6 +20,11 @@ export const businessVerificationStatusSchema = z.enum([
 ]);
 
 export const wabaBusinessTypeSchema = z.enum(["ENTERPRISE", "SMB"]);
+
+export const ownershipTypeSchema = z.enum([
+  "OWNED_BY_BUSINESS_PORTFOLIO",
+  "OWNED_BY_BUSINESS_ASSET_GROUP",
+]);
 
 // =============================================================================
 // Common Components
@@ -53,6 +59,8 @@ export const wabaSchema = z.object({
   timezone_id: z.string().optional(),
   business_verification_status: businessVerificationStatusSchema.optional(),
   country: z.string().optional(),
+  ownership_type: ownershipTypeSchema.optional(),
+  primary_business_location: z.string().optional(),
   on_behalf_of_business_info: onBehalfOfBusinessInfoSchema.optional(),
   is_enabled_for_insights: z.boolean().optional(),
   message_template_namespace: z.string().optional(),
@@ -84,6 +92,19 @@ export const wabaCreateSchema = z.object({
 export const wabaCreateResponseSchema = z.object({
   id: z.string(),
   payment_account_id: z.string().optional(),
+});
+
+// =============================================================================
+// Update WABA
+// =============================================================================
+
+export const wabaUpdateSchema = z.object({
+  name: z.string().optional(),
+  timezone_id: z.number().optional(),
+});
+
+export const wabaUpdateResponseSchema = z.object({
+  success: z.boolean(),
 });
 
 // =============================================================================

@@ -84,6 +84,7 @@ __export(index_exports, {
   messagingLimitTierSchema: () => messagingLimitTierSchema,
   nameStatusSchema: () => nameStatusSchema,
   onBehalfOfBusinessInfoSchema: () => onBehalfOfBusinessInfoSchema,
+  ownershipTypeSchema: () => ownershipTypeSchema,
   permissionTaskSchema: () => permissionTaskSchema,
   phoneNumberCreateRequestSchema: () => phoneNumberCreateRequestSchema,
   phoneNumberCreateResponseSchema: () => phoneNumberCreateResponseSchema,
@@ -150,6 +151,8 @@ __export(index_exports, {
   wabaListOptionsSchema: () => wabaListOptionsSchema,
   wabaListResponseSchema: () => wabaListResponseSchema,
   wabaSchema: () => wabaSchema,
+  wabaUpdateResponseSchema: () => wabaUpdateResponseSchema,
+  wabaUpdateSchema: () => wabaUpdateSchema,
   webhookChangeSchema: () => webhookChangeSchema,
   webhookContactSchema: () => webhookContactSchema,
   webhookConversationOriginSchema: () => webhookConversationOriginSchema,
@@ -596,6 +599,25 @@ var WabasResource = class {
     const query = fields ? `?fields=${fields}` : "";
     return this.httpClient.get(`/${id}${query}`);
   }
+  /**
+   * Update a WhatsApp Business Account
+   *
+   * @param data - Fields to update (name, timezone_id)
+   * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @returns Success status
+   *
+   * @example
+   * ```typescript
+   * await client.wabas.update({ name: "New Name" });
+   *
+   * // Update timezone
+   * await client.wabas.update({ timezone_id: 1 });
+   * ```
+   */
+  async update(data, wabaId) {
+    const id = this.getWabaId(wabaId);
+    return this.httpClient.post(`/${id}`, data);
+  }
   // ===========================================================================
   // Subscribed Apps
   // ===========================================================================
@@ -783,7 +805,8 @@ var accountReviewStatusSchema = import_zod3.z.enum([
   "APPROVED",
   "PENDING",
   "REJECTED",
-  "RESTRICTED"
+  "RESTRICTED",
+  "LIMIT_REACHED"
 ]);
 var businessVerificationStatusSchema = import_zod3.z.enum([
   "VERIFIED",
@@ -792,6 +815,10 @@ var businessVerificationStatusSchema = import_zod3.z.enum([
   "REJECTED"
 ]);
 var wabaBusinessTypeSchema = import_zod3.z.enum(["ENTERPRISE", "SMB"]);
+var ownershipTypeSchema = import_zod3.z.enum([
+  "OWNED_BY_BUSINESS_PORTFOLIO",
+  "OWNED_BY_BUSINESS_ASSET_GROUP"
+]);
 var onBehalfOfBusinessInfoSchema = import_zod3.z.object({
   id: import_zod3.z.string().optional(),
   name: import_zod3.z.string().optional()
@@ -813,6 +840,8 @@ var wabaSchema = import_zod3.z.object({
   timezone_id: import_zod3.z.string().optional(),
   business_verification_status: businessVerificationStatusSchema.optional(),
   country: import_zod3.z.string().optional(),
+  ownership_type: ownershipTypeSchema.optional(),
+  primary_business_location: import_zod3.z.string().optional(),
   on_behalf_of_business_info: onBehalfOfBusinessInfoSchema.optional(),
   is_enabled_for_insights: import_zod3.z.boolean().optional(),
   message_template_namespace: import_zod3.z.string().optional()
@@ -833,6 +862,13 @@ var wabaCreateSchema = import_zod3.z.object({
 var wabaCreateResponseSchema = import_zod3.z.object({
   id: import_zod3.z.string(),
   payment_account_id: import_zod3.z.string().optional()
+});
+var wabaUpdateSchema = import_zod3.z.object({
+  name: import_zod3.z.string().optional(),
+  timezone_id: import_zod3.z.number().optional()
+});
+var wabaUpdateResponseSchema = import_zod3.z.object({
+  success: import_zod3.z.boolean()
 });
 var wabaListOptionsSchema = import_zod3.z.object({
   fields: import_zod3.z.string().optional(),
@@ -2907,6 +2943,7 @@ var WhatsAppClient = class {
   messagingLimitTierSchema,
   nameStatusSchema,
   onBehalfOfBusinessInfoSchema,
+  ownershipTypeSchema,
   permissionTaskSchema,
   phoneNumberCreateRequestSchema,
   phoneNumberCreateResponseSchema,
@@ -2973,6 +3010,8 @@ var WhatsAppClient = class {
   wabaListOptionsSchema,
   wabaListResponseSchema,
   wabaSchema,
+  wabaUpdateResponseSchema,
+  wabaUpdateSchema,
   webhookChangeSchema,
   webhookContactSchema,
   webhookConversationOriginSchema,

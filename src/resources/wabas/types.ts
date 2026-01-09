@@ -3,12 +3,15 @@ import type {
   accountReviewStatusSchema,
   businessVerificationStatusSchema,
   wabaBusinessTypeSchema,
+  ownershipTypeSchema,
   onBehalfOfBusinessInfoSchema,
   cursorPagingSchema,
   wabaSchema,
   wabaListResponseSchema,
   wabaCreateSchema,
   wabaCreateResponseSchema,
+  wabaUpdateSchema,
+  wabaUpdateResponseSchema,
   wabaListOptionsSchema,
   // Subscribed Apps
   whatsappBusinessApiDataSchema,
@@ -34,6 +37,7 @@ import type {
 export type AccountReviewStatus = z.infer<typeof accountReviewStatusSchema>;
 export type BusinessVerificationStatus = z.infer<typeof businessVerificationStatusSchema>;
 export type WabaBusinessType = z.infer<typeof wabaBusinessTypeSchema>;
+export type OwnershipType = z.infer<typeof ownershipTypeSchema>;
 
 // =============================================================================
 // Common Components
@@ -50,6 +54,8 @@ export type Waba = z.infer<typeof wabaSchema>;
 export type WabaListResponse = z.infer<typeof wabaListResponseSchema>;
 export type WabaCreate = z.infer<typeof wabaCreateSchema>;
 export type WabaCreateResponse = z.infer<typeof wabaCreateResponseSchema>;
+export type WabaUpdate = z.infer<typeof wabaUpdateSchema>;
+export type WabaUpdateResponse = z.infer<typeof wabaUpdateResponseSchema>;
 export type WabaListOptions = z.infer<typeof wabaListOptionsSchema>;
 
 // =============================================================================
