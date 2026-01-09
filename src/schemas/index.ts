@@ -1,5 +1,5 @@
 export * from "./client";
-export * from "./messages/index";
+// Messages moved to src/resources/messages/
 export * from "./accounts/index";
 export * from "./business/index";
 // Templates moved to src/resources/templates/

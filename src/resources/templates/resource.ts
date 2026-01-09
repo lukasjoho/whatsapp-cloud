@@ -1,5 +1,4 @@
 import type { HttpClient } from "../../client/HttpClient";
-import { WhatsAppValidationError } from "../../errors";
 import {
   templateCreateSchema,
   templateUpdateSchema,
@@ -68,9 +67,8 @@ export class TemplatesResource {
   private getBusinessAccountId(overrideId?: string): string {
     const id = overrideId || this.httpClient.businessAccountId;
     if (!id) {
-      throw new WhatsAppValidationError(
-        "businessAccountId (WABA ID) is required for templates. Provide it in WhatsAppClient config or as a parameter.",
-        "businessAccountId"
+      throw new Error(
+        "businessAccountId (WABA ID) is required for templates. Provide it in WhatsAppClient config or as a parameter."
       );
     }
     return id;
@@ -173,10 +171,7 @@ export class TemplatesResource {
    */
   async get(templateId: string): Promise<Template> {
     if (!templateId?.trim()) {
-      throw new WhatsAppValidationError(
-        "Template ID is required",
-        "templateId"
-      );
+      throw new Error("Template ID is required");
     }
 
     return this.httpClient.get<Template>(`/${templateId}`);
@@ -206,10 +201,7 @@ export class TemplatesResource {
     input: TemplateUpdate
   ): Promise<TemplateUpdateResponse> {
     if (!templateId?.trim()) {
-      throw new WhatsAppValidationError(
-        "Template ID is required",
-        "templateId"
-      );
+      throw new Error("Template ID is required");
     }
 
     const body = templateUpdateSchema.parse(input);

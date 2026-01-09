@@ -6,3 +6,6 @@ export type * from "./types";
 
 // Schemas (all template-related schemas)
 export * from "./schema";
+
+// Utils
+export { toTemplateName } from "./utils";

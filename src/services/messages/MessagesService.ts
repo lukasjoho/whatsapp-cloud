@@ -4,7 +4,7 @@ import { sendImage } from "./methods/send-image";
 import { sendLocation } from "./methods/send-location";
 import { sendReaction } from "./methods/send-reaction";
 import { MessagesClient } from "./MessagesClient";
-import { WhatsAppValidationError } from "../../errors";
+
 import type {
   SendTextInput,
   SendImageInput,
@@ -30,9 +30,8 @@ export class MessagesService {
   private getClient(overrideId?: string): MessagesClient {
     const id = overrideId || this.httpClient.phoneNumberId;
     if (!id) {
-      throw new WhatsAppValidationError(
-        "phoneNumberId is required. Provide it in WhatsAppClient config or as a parameter.",
-        "phoneNumberId"
+      throw new Error(
+        "phoneNumberId is required. Provide it in WhatsAppClient config or as a parameter."
       );
     }
 

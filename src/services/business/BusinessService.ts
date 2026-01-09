@@ -1,7 +1,7 @@
 import type { HttpClient } from "../../client/HttpClient";
 import { BusinessClient } from "./BusinessClient";
 import { listAccounts } from "./methods/list-accounts";
-import { WhatsAppValidationError } from "../../errors";
+
 import type { BusinessAccountsListResponse } from "../../types/business/account";
 
 /**
@@ -20,9 +20,8 @@ export class BusinessService {
   private getClient(overrideId?: string): BusinessClient {
     const id = overrideId || this.httpClient.businessId;
     if (!id) {
-      throw new WhatsAppValidationError(
-        "businessId (Business Portfolio ID) is required. Provide it in WhatsAppClient config or as a parameter.",
-        "businessId"
+      throw new Error(
+        "businessId (Business Portfolio ID) is required. Provide it in WhatsAppClient config or as a parameter."
       );
     }
 

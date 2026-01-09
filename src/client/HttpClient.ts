@@ -1,11 +1,5 @@
 import type { ClientConfig } from "../types/client";
-
-interface APIErrorResponse {
-  error?: {
-    message?: string;
-    code?: number;
-  };
-}
+import { GraphAPIError, type GraphAPIErrorResponse } from "../errors";
 
 /**
  * HTTP client for making requests to the WhatsApp Cloud API
@@ -34,6 +28,39 @@ export class HttpClient {
   }
 
   /**
+   * Handle error responses - preserves FULL API error for debugging
+   */
+  private async handleError(response: Response): Promise<never> {
+    let errorResponse: GraphAPIErrorResponse;
+
+    try {
+      errorResponse = (await response.json()) as GraphAPIErrorResponse;
+    } catch {
+      // If we can't parse JSON, create a minimal error structure
+      errorResponse = {
+        error: {
+          message: response.statusText || "Unknown error",
+          type: "HTTPError",
+          code: response.status,
+        },
+      };
+    }
+
+    // Ensure the error structure is valid
+    if (!errorResponse.error) {
+      errorResponse = {
+        error: {
+          message: JSON.stringify(errorResponse) || "Unknown error",
+          type: "UnknownError",
+          code: response.status,
+        },
+      };
+    }
+
+    throw new GraphAPIError(errorResponse, response.status);
+  }
+
+  /**
    * Make a POST request
    */
   async post<T>(path: string, body: unknown): Promise<T> {
@@ -49,17 +76,7 @@ export class HttpClient {
     });
 
     if (!response.ok) {
-      const error = (await response.json().catch(() => ({
-        error: {
-          message: response.statusText,
-          code: response.status,
-        },
-      }))) as APIErrorResponse;
-      throw new Error(
-        `API Error: ${error.error?.message || response.statusText} (${
-          error.error?.code || response.status
-        })`
-      );
+      await this.handleError(response);
     }
 
     return response.json() as Promise<T>;
@@ -79,17 +96,7 @@ export class HttpClient {
     });
 
     if (!response.ok) {
-      const error = (await response.json().catch(() => ({
-        error: {
-          message: response.statusText,
-          code: response.status,
-        },
-      }))) as APIErrorResponse;
-      throw new Error(
-        `API Error: ${error.error?.message || response.statusText} (${
-          error.error?.code || response.status
-        })`
-      );
+      await this.handleError(response);
     }
 
     return response.json() as Promise<T>;
@@ -110,17 +117,7 @@ export class HttpClient {
     });
 
     if (!response.ok) {
-      // Try to parse error response
-      let errorMessage = `API Error: ${response.statusText}`;
-      try {
-        const error = (await response.json()) as APIErrorResponse;
-        errorMessage = `API Error: ${
-          error.error?.message || response.statusText
-        } (${error.error?.code || response.status})`;
-      } catch {
-        // If JSON parsing fails, use default message
-      }
-      throw new Error(errorMessage);
+      await this.handleError(response);
     }
 
     return response.arrayBuffer();
@@ -142,17 +139,7 @@ export class HttpClient {
     });
 
     if (!response.ok) {
-      const error = (await response.json().catch(() => ({
-        error: {
-          message: response.statusText,
-          code: response.status,
-        },
-      }))) as APIErrorResponse;
-      throw new Error(
-        `API Error: ${error.error?.message || response.statusText} (${
-          error.error?.code || response.status
-        })`
-      );
+      await this.handleError(response);
     }
 
     return response.json() as Promise<T>;
@@ -172,17 +159,7 @@ export class HttpClient {
     });
 
     if (!response.ok) {
-      const error = (await response.json().catch(() => ({
-        error: {
-          message: response.statusText,
-          code: response.status,
-        },
-      }))) as APIErrorResponse;
-      throw new Error(
-        `API Error: ${error.error?.message || response.statusText} (${
-          error.error?.code || response.status
-        })`
-      );
+      await this.handleError(response);
     }
 
     return response.json() as Promise<T>;

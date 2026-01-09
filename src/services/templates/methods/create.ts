@@ -2,7 +2,7 @@ import type { TemplatesClient } from "../TemplatesClient";
 import { templateCreateSchema } from "../../../schemas/templates/request";
 import type { TemplateCreate } from "../../../types/templates/request";
 import type { TemplateCreateResponse } from "../../../types/templates/response";
-import { transformZodError } from "../../../utils/zod-error";
+
 
 /**
  * Create a message template
@@ -14,10 +14,10 @@ export async function createTemplate(
   templatesClient: TemplatesClient,
   request: TemplateCreate
 ): Promise<TemplateCreateResponse> {
-  // Validate request with schema - throws WhatsAppValidationError if invalid
+  // Validate request with schema - throws ZodError if invalid
   const result = templateCreateSchema.safeParse(request);
   if (!result.success) {
-    throw transformZodError(result.error);
+    throw result.error;
   }
   const data = result.data;
 

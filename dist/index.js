@@ -24,6 +24,16 @@ var clientConfigSchema = z.object({
   timeout: z.number().positive().optional()
 });
 
+// src/errors.ts
+var GraphAPIError = class extends Error {
+  constructor(response, statusCode) {
+    super(response.error.message);
+    this.response = response;
+    this.statusCode = statusCode;
+    this.name = "GraphAPIError";
+  }
+};
+
 // src/client/HttpClient.ts
 var HttpClient = class {
   baseURL;
@@ -47,6 +57,33 @@ var HttpClient = class {
     this.baseURL = config.baseURL ?? "https://graph.facebook.com";
   }
   /**
+   * Handle error responses - preserves FULL API error for debugging
+   */
+  async handleError(response) {
+    let errorResponse;
+    try {
+      errorResponse = await response.json();
+    } catch {
+      errorResponse = {
+        error: {
+          message: response.statusText || "Unknown error",
+          type: "HTTPError",
+          code: response.status
+        }
+      };
+    }
+    if (!errorResponse.error) {
+      errorResponse = {
+        error: {
+          message: JSON.stringify(errorResponse) || "Unknown error",
+          type: "UnknownError",
+          code: response.status
+        }
+      };
+    }
+    throw new GraphAPIError(errorResponse, response.status);
+  }
+  /**
    * Make a POST request
    */
   async post(path, body) {
@@ -60,15 +97,7 @@ var HttpClient = class {
       body: JSON.stringify(body)
     });
     if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        error: {
-          message: response.statusText,
-          code: response.status
-        }
-      }));
-      throw new Error(
-        `API Error: ${error.error?.message || response.statusText} (${error.error?.code || response.status})`
-      );
+      await this.handleError(response);
     }
     return response.json();
   }
@@ -84,15 +113,7 @@ var HttpClient = class {
       }
     });
     if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        error: {
-          message: response.statusText,
-          code: response.status
-        }
-      }));
-      throw new Error(
-        `API Error: ${error.error?.message || response.statusText} (${error.error?.code || response.status})`
-      );
+      await this.handleError(response);
     }
     return response.json();
   }
@@ -109,13 +130,7 @@ var HttpClient = class {
       }
     });
     if (!response.ok) {
-      let errorMessage = `API Error: ${response.statusText}`;
-      try {
-        const error = await response.json();
-        errorMessage = `API Error: ${error.error?.message || response.statusText} (${error.error?.code || response.status})`;
-      } catch {
-      }
-      throw new Error(errorMessage);
+      await this.handleError(response);
     }
     return response.arrayBuffer();
   }
@@ -133,15 +148,7 @@ var HttpClient = class {
       body: JSON.stringify(body)
     });
     if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        error: {
-          message: response.statusText,
-          code: response.status
-        }
-      }));
-      throw new Error(
-        `API Error: ${error.error?.message || response.statusText} (${error.error?.code || response.status})`
-      );
+      await this.handleError(response);
     }
     return response.json();
   }
@@ -157,76 +164,116 @@ var HttpClient = class {
       }
     });
     if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        error: {
-          message: response.statusText,
-          code: response.status
-        }
-      }));
-      throw new Error(
-        `API Error: ${error.error?.message || response.statusText} (${error.error?.code || response.status})`
-      );
+      await this.handleError(response);
     }
     return response.json();
   }
 };
 
-// src/schemas/messages/outgoing.ts
+// src/resources/messages/schema.ts
 import { z as z2 } from "zod";
-var baseOutgoingMessageSchema = z2.object({
-  to: z2.string().regex(/^\+[1-9]\d{1,14}$/, "Invalid phone number format")
-});
-var textContentSchema = z2.object({
+var phoneNumberSchema = z2.string().regex(/^\+[1-9]\d{1,14}$/, "Invalid phone number format (use E.164: +1234567890)");
+var messageTextContentSchema = z2.object({
   body: z2.string().min(1).max(4096),
   preview_url: z2.boolean().optional()
 });
-var imageContentSchema = z2.object({
+var messageImageContentSchema = z2.object({
   id: z2.string().optional(),
   link: z2.string().url().optional(),
   caption: z2.string().max(1024).optional()
 }).refine((data) => data.link || data.id, "Either link or id must be provided");
-var locationContentSchema = z2.object({
+var messageLocationContentSchema = z2.object({
   longitude: z2.number().min(-180).max(180),
   latitude: z2.number().min(-90).max(90),
   name: z2.string().optional(),
   address: z2.string().optional()
 });
-var reactionContentSchema = z2.object({
+var messageReactionContentSchema = z2.object({
   message_id: z2.string().min(1),
   emoji: z2.string().min(1).max(1)
 });
-var sendTextInputSchema = baseOutgoingMessageSchema.extend({
-  text: textContentSchema
+var messageSendTextSchema = z2.object({
+  to: phoneNumberSchema,
+  text: messageTextContentSchema
 });
-var sendImageInputSchema = baseOutgoingMessageSchema.extend({
-  image: imageContentSchema
+var messageSendImageSchema = z2.object({
+  to: phoneNumberSchema,
+  image: messageImageContentSchema
 });
-var sendLocationInputSchema = baseOutgoingMessageSchema.extend({
-  location: locationContentSchema
+var messageSendLocationSchema = z2.object({
+  to: phoneNumberSchema,
+  location: messageLocationContentSchema
 });
-var sendReactionInputSchema = baseOutgoingMessageSchema.extend({
-  reaction: reactionContentSchema
+var messageSendReactionSchema = z2.object({
+  to: phoneNumberSchema,
+  reaction: messageReactionContentSchema
 });
-var outgoingTextMessageSchema = sendTextInputSchema.extend({
+var messageTextSchema = messageSendTextSchema.extend({
   type: z2.literal("text")
 });
-var outgoingImageMessageSchema = sendImageInputSchema.extend({
+var messageImageSchema = messageSendImageSchema.extend({
   type: z2.literal("image")
 });
-var outgoingLocationMessageSchema = sendLocationInputSchema.extend({
+var messageLocationSchema = messageSendLocationSchema.extend({
   type: z2.literal("location")
 });
-var outgoingReactionMessageSchema = sendReactionInputSchema.extend({
+var messageReactionSchema = messageSendReactionSchema.extend({
   type: z2.literal("reaction")
 });
-var outgoingMessageSchema = z2.discriminatedUnion("type", [
-  outgoingTextMessageSchema,
-  outgoingImageMessageSchema,
-  outgoingLocationMessageSchema,
-  outgoingReactionMessageSchema
+var messageOutgoingSchema = z2.discriminatedUnion("type", [
+  messageTextSchema,
+  messageImageSchema,
+  messageLocationSchema,
+  messageReactionSchema
+]);
+var messageSendResponseSchema = z2.object({
+  messaging_product: z2.literal("whatsapp"),
+  contacts: z2.array(
+    z2.object({
+      input: z2.string(),
+      wa_id: z2.string()
+    })
+  ),
+  messages: z2.array(
+    z2.object({
+      id: z2.string(),
+      message_status: z2.string().optional()
+    })
+  )
+});
+var incomingMessageBaseSchema = z2.object({
+  from: z2.string(),
+  id: z2.string(),
+  timestamp: z2.string()
+});
+var messageIncomingTextSchema = incomingMessageBaseSchema.extend({
+  type: z2.literal("text"),
+  text: z2.object({
+    body: z2.string()
+  })
+});
+var messageIncomingImageSchema = incomingMessageBaseSchema.extend({
+  type: z2.literal("image"),
+  image: z2.object({
+    id: z2.string(),
+    mime_type: z2.string().optional(),
+    caption: z2.string().optional()
+  })
+});
+var messageIncomingAudioSchema = incomingMessageBaseSchema.extend({
+  type: z2.literal("audio"),
+  audio: z2.object({
+    id: z2.string(),
+    mime_type: z2.string().optional()
+  })
+});
+var messageIncomingSchema = z2.discriminatedUnion("type", [
+  messageIncomingTextSchema,
+  messageIncomingImageSchema,
+  messageIncomingAudioSchema
 ]);
 
-// src/services/messages/utils/build-message-payload.ts
+// src/resources/messages/utils.ts
 function buildMessagePayload(to, type, content) {
   return {
     messaging_product: "whatsapp",
@@ -237,206 +284,142 @@ function buildMessagePayload(to, type, content) {
   };
 }
 
-// src/utils/zod-error.ts
-import "zod";
-
-// src/errors.ts
-var WhatsAppError = class extends Error {
-  constructor(message) {
-    super(message);
-    this.name = this.constructor.name;
-    const captureStackTrace = Error.captureStackTrace;
-    if (typeof captureStackTrace === "function") {
-      captureStackTrace(this, this.constructor);
-    }
-  }
-};
-var WhatsAppValidationError = class extends WhatsAppError {
-  constructor(message, field, issues) {
-    super(message);
-    this.field = field;
-    this.issues = issues;
-    this.name = "WhatsAppValidationError";
-  }
-};
-var WhatsAppAPIError = class extends WhatsAppError {
-  constructor(code, type, message, statusCode, details) {
-    super(message);
-    this.code = code;
-    this.type = type;
-    this.statusCode = statusCode;
-    this.details = details;
-    this.name = "WhatsAppAPIError";
-  }
-};
-var WhatsAppRateLimitError = class extends WhatsAppAPIError {
-  constructor(message, retryAfter) {
-    super(131056, "rate_limit", message, 429, { retryAfter });
-    this.retryAfter = retryAfter;
-    this.name = "WhatsAppRateLimitError";
-  }
-};
-
-// src/utils/zod-error.ts
-function transformZodError(error) {
-  const issues = error.issues.map((err) => ({
-    path: err.path,
-    message: err.message
-  }));
-  const firstError = error.issues[0];
-  if (firstError) {
-    return new WhatsAppValidationError(
-      firstError.message,
-      typeof firstError.path[0] === "string" ? firstError.path[0] : void 0,
-      issues
-    );
-  }
-  return new WhatsAppValidationError("Validation failed", void 0, issues);
-}
-
-// src/services/messages/methods/send-text.ts
-async function sendText(messagesClient, input) {
-  const result = sendTextInputSchema.safeParse(input);
-  if (!result.success) {
-    throw transformZodError(result.error);
-  }
-  const data = result.data;
-  const payload = buildMessagePayload(data.to, "text", {
-    text: data.text
-  });
-  return messagesClient.post("/messages", payload);
-}
-
-// src/services/messages/methods/send-image.ts
-async function sendImage(messagesClient, input) {
-  const result = sendImageInputSchema.safeParse(input);
-  if (!result.success) {
-    throw transformZodError(result.error);
-  }
-  const data = result.data;
-  const payload = buildMessagePayload(data.to, "image", {
-    image: data.image
-  });
-  return messagesClient.post("/messages", payload);
-}
-
-// src/services/messages/methods/send-location.ts
-async function sendLocation(messagesClient, input) {
-  const result = sendLocationInputSchema.safeParse(input);
-  if (!result.success) {
-    throw transformZodError(result.error);
-  }
-  const data = result.data;
-  const payload = buildMessagePayload(data.to, "location", {
-    location: data.location
-  });
-  return messagesClient.post("/messages", payload);
-}
-
-// src/services/messages/methods/send-reaction.ts
-async function sendReaction(messagesClient, input) {
-  const result = sendReactionInputSchema.safeParse(input);
-  if (!result.success) {
-    throw transformZodError(result.error);
-  }
-  const data = result.data;
-  const payload = buildMessagePayload(data.to, "reaction", {
-    reaction: data.reaction
-  });
-  return messagesClient.post("/messages", payload);
-}
-
-// src/services/messages/MessagesClient.ts
-var MessagesClient = class {
-  constructor(httpClient, phoneNumberId) {
-    this.httpClient = httpClient;
-    this.phoneNumberId = phoneNumberId;
-  }
-  /**
-   * Make a POST request with phone number ID prefix
-   */
-  async post(path, body) {
-    return this.httpClient.post(`/${this.phoneNumberId}${path}`, body);
-  }
-  /**
-   * Make a GET request with phone number ID prefix
-   */
-  async get(path) {
-    return this.httpClient.get(`/${this.phoneNumberId}${path}`);
-  }
-  /**
-   * Make a PATCH request with phone number ID prefix
-   */
-  async patch(path, body) {
-    return this.httpClient.patch(`/${this.phoneNumberId}${path}`, body);
-  }
-};
-
-// src/services/messages/MessagesService.ts
-var MessagesService = class {
+// src/resources/messages/resource.ts
+var MessagesResource = class {
   constructor(httpClient) {
     this.httpClient = httpClient;
   }
   /**
-   * Helper to create a Scoped Client (prefer override, fallback to config)
+   * Get the phone number ID (with validation)
    */
-  getClient(overrideId) {
+  getPhoneNumberId(overrideId) {
     const id = overrideId || this.httpClient.phoneNumberId;
     if (!id) {
-      throw new WhatsAppValidationError(
-        "phoneNumberId is required. Provide it in WhatsAppClient config or as a parameter.",
-        "phoneNumberId"
+      throw new Error(
+        "phoneNumberId is required. Provide it in WhatsAppClient config or as a parameter."
       );
     }
-    return new MessagesClient(this.httpClient, id);
+    return id;
   }
   /**
    * Send a text message
    *
-   * @param input - Text message input (to, text)
+   * @param input - Text message input
    * @param phoneNumberId - Optional phone number ID (overrides client config)
+   * @throws {ZodError} If input validation fails
+   *
+   * @example
+   * ```typescript
+   * await client.messages.sendText({
+   *   to: "+1234567890",
+   *   text: { body: "Hello, world!" }
+   * });
+   * ```
    */
   async sendText(input, phoneNumberId) {
-    const client = this.getClient(phoneNumberId);
-    return sendText(client, input);
+    const id = this.getPhoneNumberId(phoneNumberId);
+    const data = messageSendTextSchema.parse(input);
+    const payload = buildMessagePayload(data.to, "text", { text: data.text });
+    return this.httpClient.post(`/${id}/messages`, payload);
   }
   /**
    * Send an image message
    *
-   * @param input - Image message input (to, image)
+   * @param input - Image message input
    * @param phoneNumberId - Optional phone number ID (overrides client config)
+   * @throws {ZodError} If input validation fails
+   *
+   * @example
+   * ```typescript
+   * // Using a URL
+   * await client.messages.sendImage({
+   *   to: "+1234567890",
+   *   image: { link: "https://example.com/photo.jpg", caption: "Check this out!" }
+   * });
+   *
+   * // Using a media ID
+   * await client.messages.sendImage({
+   *   to: "+1234567890",
+   *   image: { id: "media_id_from_upload" }
+   * });
+   * ```
    */
   async sendImage(input, phoneNumberId) {
-    const client = this.getClient(phoneNumberId);
-    return sendImage(client, input);
+    const id = this.getPhoneNumberId(phoneNumberId);
+    const data = messageSendImageSchema.parse(input);
+    const payload = buildMessagePayload(data.to, "image", { image: data.image });
+    return this.httpClient.post(`/${id}/messages`, payload);
   }
   /**
    * Send a location message
    *
-   * @param input - Location message input (to, location)
+   * @param input - Location message input
    * @param phoneNumberId - Optional phone number ID (overrides client config)
+   * @throws {ZodError} If input validation fails
+   *
+   * @example
+   * ```typescript
+   * await client.messages.sendLocation({
+   *   to: "+1234567890",
+   *   location: {
+   *     latitude: 37.7749,
+   *     longitude: -122.4194,
+   *     name: "San Francisco",
+   *     address: "California, USA"
+   *   }
+   * });
+   * ```
    */
   async sendLocation(input, phoneNumberId) {
-    const client = this.getClient(phoneNumberId);
-    return sendLocation(client, input);
+    const id = this.getPhoneNumberId(phoneNumberId);
+    const data = messageSendLocationSchema.parse(input);
+    const payload = buildMessagePayload(data.to, "location", {
+      location: data.location
+    });
+    return this.httpClient.post(`/${id}/messages`, payload);
   }
   /**
-   * Send a reaction message
+   * Send a reaction to a message
    *
-   * @param input - Reaction message input (to, reaction)
+   * @param input - Reaction input
    * @param phoneNumberId - Optional phone number ID (overrides client config)
+   * @throws {ZodError} If input validation fails
+   *
+   * @example
+   * ```typescript
+   * await client.messages.sendReaction({
+   *   to: "+1234567890",
+   *   reaction: {
+   *     message_id: "wamid.xxx",
+   *     emoji: "👍"
+   *   }
+   * });
+   * ```
    */
   async sendReaction(input, phoneNumberId) {
-    const client = this.getClient(phoneNumberId);
-    return sendReaction(client, input);
+    const id = this.getPhoneNumberId(phoneNumberId);
+    const data = messageSendReactionSchema.parse(input);
+    const payload = buildMessagePayload(data.to, "reaction", {
+      reaction: data.reaction
+    });
+    return this.httpClient.post(`/${id}/messages`, payload);
   }
   /**
    * Send any message type using the discriminated union
    *
    * @param message - Any outgoing message (text, image, location, reaction)
    * @param phoneNumberId - Optional phone number ID (overrides client config)
+   *
+   * @example
+   * ```typescript
+   * await client.messages.send({
+   *   type: "text",
+   *   to: "+1234567890",
+   *   text: { body: "Hello!" }
+   * });
+   * ```
    */
-  async sendMessage(message, phoneNumberId) {
+  async send(message, phoneNumberId) {
     switch (message.type) {
       case "text":
         return this.sendText(message, phoneNumberId);
@@ -447,130 +430,6 @@ var MessagesService = class {
       case "reaction":
         return this.sendReaction(message, phoneNumberId);
     }
-  }
-};
-
-// src/services/accounts/AccountsClient.ts
-var AccountsClient = class {
-  constructor(httpClient, businessAccountId) {
-    this.httpClient = httpClient;
-    this.businessAccountId = businessAccountId;
-  }
-  /**
-   * Make a GET request with WABA ID prefix
-   */
-  async get(path) {
-    return this.httpClient.get(`/${this.businessAccountId}${path}`);
-  }
-  /**
-   * Make a POST request with WABA ID prefix
-   */
-  async post(path, body) {
-    return this.httpClient.post(`/${this.businessAccountId}${path}`, body);
-  }
-  /**
-   * Make a PATCH request with WABA ID prefix
-   */
-  async patch(path, body) {
-    return this.httpClient.patch(`/${this.businessAccountId}${path}`, body);
-  }
-};
-
-// src/services/accounts/methods/list-phone-numbers.ts
-async function listPhoneNumbers(accountsClient) {
-  return accountsClient.get("/phone_numbers");
-}
-
-// src/services/accounts/AccountsService.ts
-var AccountsService = class {
-  constructor(httpClient) {
-    this.httpClient = httpClient;
-  }
-  /**
-   * Helper to create a Scoped Client (prefer override, fallback to config)
-   */
-  getClient(overrideId) {
-    const id = overrideId || this.httpClient.businessAccountId;
-    if (!id) {
-      throw new WhatsAppValidationError(
-        "businessAccountId (WABA ID) is required. Provide it in WhatsAppClient config or as a parameter.",
-        "businessAccountId"
-      );
-    }
-    return new AccountsClient(this.httpClient, id);
-  }
-  /**
-   * List phone numbers for a WhatsApp Business Account
-   *
-   * @param businessAccountId - Optional WABA ID (overrides client config)
-   * @returns List of phone numbers associated with the WABA
-   */
-  async listPhoneNumbers(businessAccountId) {
-    const client = this.getClient(businessAccountId);
-    return listPhoneNumbers(client);
-  }
-};
-
-// src/services/business/BusinessClient.ts
-var BusinessClient = class {
-  constructor(httpClient, businessId) {
-    this.httpClient = httpClient;
-    this.businessId = businessId;
-  }
-  /**
-   * Make a GET request with Business Portfolio ID prefix
-   */
-  async get(path) {
-    return this.httpClient.get(`/${this.businessId}${path}`);
-  }
-  /**
-   * Make a POST request with Business Portfolio ID prefix
-   */
-  async post(path, body) {
-    return this.httpClient.post(`/${this.businessId}${path}`, body);
-  }
-  /**
-   * Make a PATCH request with Business Portfolio ID prefix
-   */
-  async patch(path, body) {
-    return this.httpClient.patch(`/${this.businessId}${path}`, body);
-  }
-};
-
-// src/services/business/methods/list-accounts.ts
-async function listAccounts(businessClient) {
-  return businessClient.get(
-    "/whatsapp_business_accounts"
-  );
-}
-
-// src/services/business/BusinessService.ts
-var BusinessService = class {
-  constructor(httpClient) {
-    this.httpClient = httpClient;
-  }
-  /**
-   * Helper to create a Scoped Client (prefer override, fallback to config)
-   */
-  getClient(overrideId) {
-    const id = overrideId || this.httpClient.businessId;
-    if (!id) {
-      throw new WhatsAppValidationError(
-        "businessId (Business Portfolio ID) is required. Provide it in WhatsAppClient config or as a parameter.",
-        "businessId"
-      );
-    }
-    return new BusinessClient(this.httpClient, id);
-  }
-  /**
-   * List WhatsApp Business Accounts (WABAs) for a Business Portfolio
-   *
-   * @param businessId - Optional Business Portfolio ID (overrides client config)
-   * @returns List of WABAs associated with the Business Portfolio
-   */
-  async listAccounts(businessId) {
-    const client = this.getClient(businessId);
-    return listAccounts(client);
   }
 };
 
@@ -1037,9 +896,8 @@ var TemplatesResource = class {
   getBusinessAccountId(overrideId) {
     const id = overrideId || this.httpClient.businessAccountId;
     if (!id) {
-      throw new WhatsAppValidationError(
-        "businessAccountId (WABA ID) is required for templates. Provide it in WhatsAppClient config or as a parameter.",
-        "businessAccountId"
+      throw new Error(
+        "businessAccountId (WABA ID) is required for templates. Provide it in WhatsAppClient config or as a parameter."
       );
     }
     return id;
@@ -1126,10 +984,7 @@ var TemplatesResource = class {
    */
   async get(templateId) {
     if (!templateId?.trim()) {
-      throw new WhatsAppValidationError(
-        "Template ID is required",
-        "templateId"
-      );
+      throw new Error("Template ID is required");
     }
     return this.httpClient.get(`/${templateId}`);
   }
@@ -1154,10 +1009,7 @@ var TemplatesResource = class {
    */
   async update(templateId, input) {
     if (!templateId?.trim()) {
-      throw new WhatsAppValidationError(
-        "Template ID is required",
-        "templateId"
-      );
+      throw new Error("Template ID is required");
     }
     const body = templateUpdateSchema.parse(input);
     return this.httpClient.post(`/${templateId}`, body);
@@ -1188,6 +1040,336 @@ var TemplatesResource = class {
     return this.httpClient.delete(
       `/${wabaId}/message_templates?${params.toString()}`
     );
+  }
+};
+
+// src/resources/templates/utils.ts
+function toTemplateName(input) {
+  return input.toLowerCase().trim().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "").replace(/_+/g, "_").replace(/^_|_$/g, "");
+}
+
+// src/resources/media/schema.ts
+import { z as z4 } from "zod";
+var mediaTypeSchema = z4.enum([
+  "image",
+  "video",
+  "audio",
+  "document",
+  "sticker"
+]);
+var mediaMimeTypeSchema = z4.string();
+var mediaUploadSchema = z4.object({
+  /**
+   * The file to upload - can be Buffer, Blob, or File
+   */
+  file: z4.union([z4.instanceof(Blob), z4.instanceof(ArrayBuffer)]),
+  /**
+   * MIME type of the file (e.g., "image/jpeg", "video/mp4")
+   */
+  mimeType: z4.string().min(1),
+  /**
+   * Optional filename
+   */
+  filename: z4.string().optional()
+});
+var mediaUploadResponseSchema = z4.object({
+  id: z4.string()
+});
+var mediaMetadataSchema = z4.object({
+  messaging_product: z4.literal("whatsapp"),
+  url: z4.string(),
+  mime_type: z4.string(),
+  sha256: z4.string(),
+  file_size: z4.string(),
+  id: z4.string()
+});
+var mediaDeleteResponseSchema = z4.object({
+  success: z4.boolean()
+});
+
+// src/resources/media/resource.ts
+var MediaResource = class {
+  constructor(httpClient) {
+    this.httpClient = httpClient;
+  }
+  /**
+   * Get the phone number ID (with validation)
+   */
+  getPhoneNumberId(overrideId) {
+    const id = overrideId || this.httpClient.phoneNumberId;
+    if (!id) {
+      throw new Error(
+        "phoneNumberId is required. Provide it in WhatsAppClient config or as a parameter."
+      );
+    }
+    return id;
+  }
+  /**
+   * Upload media to WhatsApp
+   *
+   * Uploaded media persists for 30 days unless deleted.
+   * Returns a media ID that can be used in messages or templates.
+   *
+   * @param input - Upload input (file, mimeType, optional filename)
+   * @param phoneNumberId - Optional phone number ID (overrides client config)
+   * @returns Media ID
+   * @throws {ZodError} If input validation fails
+   *
+   * @example
+   * ```typescript
+   * // Upload an image
+   * const { id } = await client.media.upload({
+   *   file: imageBuffer,
+   *   mimeType: "image/jpeg",
+   *   filename: "photo.jpg"
+   * });
+   *
+   * // Use in a message
+   * await client.messages.sendImage({
+   *   to: "+1234567890",
+   *   image: { id }
+   * });
+   * ```
+   */
+  async upload(input, phoneNumberId) {
+    const id = this.getPhoneNumberId(phoneNumberId);
+    const data = mediaUploadSchema.parse(input);
+    const formData = new FormData();
+    formData.append("messaging_product", "whatsapp");
+    const blob = data.file instanceof Blob ? data.file : new Blob([data.file], { type: data.mimeType });
+    formData.append("file", blob, data.filename || "file");
+    formData.append("type", data.mimeType);
+    const url = `${this.httpClient.baseURL}/${this.httpClient.apiVersion}/${id}/media`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.httpClient.accessToken}`
+      },
+      body: formData
+    });
+    if (!response.ok) {
+      const errorResponse = await response.json().catch(() => ({
+        error: { message: response.statusText, type: "HTTPError", code: response.status }
+      }));
+      throw new GraphAPIError(errorResponse, response.status);
+    }
+    return response.json();
+  }
+  /**
+   * Get media metadata including download URL
+   *
+   * The returned URL is only valid for 5 minutes.
+   * If expired, call this method again to get a fresh URL.
+   *
+   * @param mediaId - Media ID from upload or webhook
+   * @param phoneNumberId - Optional phone number ID (validates ownership)
+   * @returns Media metadata including download URL
+   *
+   * @example
+   * ```typescript
+   * const metadata = await client.media.get(mediaId);
+   * console.log(metadata.mime_type);  // "image/jpeg"
+   * console.log(metadata.file_size);  // "12345"
+   * console.log(metadata.url);        // Download URL (5 min expiry)
+   * ```
+   */
+  async get(mediaId, phoneNumberId) {
+    if (!mediaId?.trim()) {
+      throw new Error("Media ID is required");
+    }
+    const params = new URLSearchParams();
+    if (phoneNumberId) {
+      params.append("phone_number_id", phoneNumberId);
+    }
+    const query = params.toString();
+    const path = query ? `/${mediaId}?${query}` : `/${mediaId}`;
+    return this.httpClient.get(path);
+  }
+  /**
+   * Download media binary data
+   *
+   * This is a convenience method that:
+   * 1. Gets the media URL (via `get()`)
+   * 2. Downloads the binary content
+   *
+   * @param mediaId - Media ID from upload or webhook
+   * @returns Binary data as ArrayBuffer
+   *
+   * @example
+   * ```typescript
+   * const buffer = await client.media.download(message.image.id);
+   *
+   * // Save to file (Node.js)
+   * fs.writeFileSync("image.jpg", Buffer.from(buffer));
+   *
+   * // Upload to S3
+   * await s3.upload({ Body: Buffer.from(buffer), Key: "image.jpg" });
+   * ```
+   */
+  async download(mediaId) {
+    if (!mediaId?.trim()) {
+      throw new Error("Media ID is required");
+    }
+    const metadata = await this.get(mediaId);
+    const response = await fetch(metadata.url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${this.httpClient.accessToken}`
+      }
+    });
+    if (!response.ok) {
+      const errorResponse = await response.json().catch(() => ({
+        error: { message: response.statusText, type: "HTTPError", code: response.status }
+      }));
+      throw new GraphAPIError(errorResponse, response.status);
+    }
+    return response.arrayBuffer();
+  }
+  /**
+   * Delete media
+   *
+   * @param mediaId - Media ID to delete
+   * @param phoneNumberId - Optional phone number ID (validates ownership)
+   * @returns Success status
+   *
+   * @example
+   * ```typescript
+   * await client.media.delete(mediaId);
+   * ```
+   */
+  async delete(mediaId, phoneNumberId) {
+    if (!mediaId?.trim()) {
+      throw new Error("Media ID is required");
+    }
+    const params = new URLSearchParams();
+    if (phoneNumberId) {
+      params.append("phone_number_id", phoneNumberId);
+    }
+    const query = params.toString();
+    const path = query ? `/${mediaId}?${query}` : `/${mediaId}`;
+    return this.httpClient.delete(path);
+  }
+};
+
+// src/services/accounts/AccountsClient.ts
+var AccountsClient = class {
+  constructor(httpClient, businessAccountId) {
+    this.httpClient = httpClient;
+    this.businessAccountId = businessAccountId;
+  }
+  /**
+   * Make a GET request with WABA ID prefix
+   */
+  async get(path) {
+    return this.httpClient.get(`/${this.businessAccountId}${path}`);
+  }
+  /**
+   * Make a POST request with WABA ID prefix
+   */
+  async post(path, body) {
+    return this.httpClient.post(`/${this.businessAccountId}${path}`, body);
+  }
+  /**
+   * Make a PATCH request with WABA ID prefix
+   */
+  async patch(path, body) {
+    return this.httpClient.patch(`/${this.businessAccountId}${path}`, body);
+  }
+};
+
+// src/services/accounts/methods/list-phone-numbers.ts
+async function listPhoneNumbers(accountsClient) {
+  return accountsClient.get("/phone_numbers");
+}
+
+// src/services/accounts/AccountsService.ts
+var AccountsService = class {
+  constructor(httpClient) {
+    this.httpClient = httpClient;
+  }
+  /**
+   * Helper to create a Scoped Client (prefer override, fallback to config)
+   */
+  getClient(overrideId) {
+    const id = overrideId || this.httpClient.businessAccountId;
+    if (!id) {
+      throw new Error(
+        "businessAccountId (WABA ID) is required. Provide it in WhatsAppClient config or as a parameter."
+      );
+    }
+    return new AccountsClient(this.httpClient, id);
+  }
+  /**
+   * List phone numbers for a WhatsApp Business Account
+   *
+   * @param businessAccountId - Optional WABA ID (overrides client config)
+   * @returns List of phone numbers associated with the WABA
+   */
+  async listPhoneNumbers(businessAccountId) {
+    const client = this.getClient(businessAccountId);
+    return listPhoneNumbers(client);
+  }
+};
+
+// src/services/business/BusinessClient.ts
+var BusinessClient = class {
+  constructor(httpClient, businessId) {
+    this.httpClient = httpClient;
+    this.businessId = businessId;
+  }
+  /**
+   * Make a GET request with Business Portfolio ID prefix
+   */
+  async get(path) {
+    return this.httpClient.get(`/${this.businessId}${path}`);
+  }
+  /**
+   * Make a POST request with Business Portfolio ID prefix
+   */
+  async post(path, body) {
+    return this.httpClient.post(`/${this.businessId}${path}`, body);
+  }
+  /**
+   * Make a PATCH request with Business Portfolio ID prefix
+   */
+  async patch(path, body) {
+    return this.httpClient.patch(`/${this.businessId}${path}`, body);
+  }
+};
+
+// src/services/business/methods/list-accounts.ts
+async function listAccounts(businessClient) {
+  return businessClient.get(
+    "/whatsapp_business_accounts"
+  );
+}
+
+// src/services/business/BusinessService.ts
+var BusinessService = class {
+  constructor(httpClient) {
+    this.httpClient = httpClient;
+  }
+  /**
+   * Helper to create a Scoped Client (prefer override, fallback to config)
+   */
+  getClient(overrideId) {
+    const id = overrideId || this.httpClient.businessId;
+    if (!id) {
+      throw new Error(
+        "businessId (Business Portfolio ID) is required. Provide it in WhatsAppClient config or as a parameter."
+      );
+    }
+    return new BusinessClient(this.httpClient, id);
+  }
+  /**
+   * List WhatsApp Business Accounts (WABAs) for a Business Portfolio
+   *
+   * @param businessId - Optional Business Portfolio ID (overrides client config)
+   * @returns List of WABAs associated with the Business Portfolio
+   */
+  async listAccounts(businessId) {
+    const client = this.getClient(businessId);
+    return listAccounts(client);
   }
 };
 
@@ -1229,68 +1411,68 @@ function verifyWebhook(query, verifyToken) {
 }
 
 // src/schemas/webhooks/payload.ts
-import { z as z5 } from "zod";
+import { z as z6 } from "zod";
 
 // src/schemas/messages/incoming.ts
-import { z as z4 } from "zod";
-var baseIncomingMessageSchema = z4.object({
-  from: z4.string(),
+import { z as z5 } from "zod";
+var baseIncomingMessageSchema = z5.object({
+  from: z5.string(),
   // WhatsApp ID (phone number without +)
-  id: z4.string(),
+  id: z5.string(),
   // Message ID (wamid.*)
-  timestamp: z4.string(),
+  timestamp: z5.string(),
   // Unix timestamp as string
-  type: z4.string()
+  type: z5.string()
   // Message type discriminator
 });
-var incomingTextContentSchema = z4.object({
-  body: z4.string()
+var incomingTextContentSchema = z5.object({
+  body: z5.string()
 });
-var incomingAudioContentSchema = z4.object({
-  id: z4.string(),
+var incomingAudioContentSchema = z5.object({
+  id: z5.string(),
   // Media ID for downloading
-  mime_type: z4.string().optional()
+  mime_type: z5.string().optional()
   // e.g., "audio/ogg; codecs=opus"
 });
-var incomingImageContentSchema = z4.object({
-  id: z4.string(),
+var incomingImageContentSchema = z5.object({
+  id: z5.string(),
   // Media ID for downloading
-  mime_type: z4.string().optional(),
+  mime_type: z5.string().optional(),
   // e.g., "image/jpeg"
-  caption: z4.string().optional()
+  caption: z5.string().optional()
   // Optional caption text
 });
 var incomingTextMessageSchema = baseIncomingMessageSchema.extend({
-  type: z4.literal("text"),
+  type: z5.literal("text"),
   text: incomingTextContentSchema
 });
 var incomingAudioMessageSchema = baseIncomingMessageSchema.extend({
-  type: z4.literal("audio"),
+  type: z5.literal("audio"),
   audio: incomingAudioContentSchema
 });
 var incomingImageMessageSchema = baseIncomingMessageSchema.extend({
-  type: z4.literal("image"),
+  type: z5.literal("image"),
   image: incomingImageContentSchema
 });
-var incomingMessageSchema = z4.discriminatedUnion("type", [
+var incomingMessageSchema = z5.discriminatedUnion("type", [
   incomingTextMessageSchema,
   incomingAudioMessageSchema,
   incomingImageMessageSchema
 ]);
 
 // src/schemas/webhooks/payload.ts
-var contactSchema = z5.object({
-  profile: z5.object({
-    name: z5.string()
+var contactSchema = z6.object({
+  profile: z6.object({
+    name: z6.string()
   }),
-  wa_id: z5.string()
+  wa_id: z6.string()
 });
-var webhookMetadataSchema = z5.object({
-  display_phone_number: z5.string(),
-  phone_number_id: z5.string()
+var webhookMetadataSchema = z6.object({
+  display_phone_number: z6.string(),
+  phone_number_id: z6.string()
 });
-var conversationOriginSchema = z5.object({
-  type: z5.enum([
+var conversationOriginSchema = z6.object({
+  type: z6.enum([
     "authentication",
     "authentication_international",
     "marketing",
@@ -1300,18 +1482,18 @@ var conversationOriginSchema = z5.object({
     "utility"
   ])
 });
-var conversationSchema = z5.object({
-  id: z5.string(),
-  expiration_timestamp: z5.string().optional(),
+var conversationSchema = z6.object({
+  id: z6.string(),
+  expiration_timestamp: z6.string().optional(),
   // Only for sent status
   origin: conversationOriginSchema
 });
-var pricingSchema = z5.object({
-  billable: z5.boolean(),
+var pricingSchema = z6.object({
+  billable: z6.boolean(),
   // Deprecated but still present
-  pricing_model: z5.enum(["CBP", "PMP"]),
-  type: z5.enum(["regular", "free_customer_service", "free_entry_point"]),
-  category: z5.enum([
+  pricing_model: z6.enum(["CBP", "PMP"]),
+  type: z6.enum(["regular", "free_customer_service", "free_entry_point"]),
+  category: z6.enum([
     "authentication",
     "authentication-international",
     "marketing",
@@ -1321,60 +1503,60 @@ var pricingSchema = z5.object({
     "utility"
   ])
 });
-var statusErrorSchema = z5.object({
-  code: z5.number(),
-  title: z5.string(),
-  message: z5.string(),
-  error_data: z5.object({
-    details: z5.string()
+var statusErrorSchema = z6.object({
+  code: z6.number(),
+  title: z6.string(),
+  message: z6.string(),
+  error_data: z6.object({
+    details: z6.string()
   }),
-  href: z5.string()
+  href: z6.string()
 });
-var statusSchema = z5.object({
-  id: z5.string(),
+var statusSchema = z6.object({
+  id: z6.string(),
   // WhatsApp message ID
-  status: z5.enum(["sent", "delivered", "read", "failed", "played"]),
-  timestamp: z5.string(),
+  status: z6.enum(["sent", "delivered", "read", "failed", "played"]),
+  timestamp: z6.string(),
   // Unix timestamp
-  recipient_id: z5.string(),
+  recipient_id: z6.string(),
   // User phone number or group ID
-  recipient_type: z5.literal("group").optional(),
+  recipient_type: z6.literal("group").optional(),
   // Only included if message sent to a group
-  recipient_participant_id: z5.string().optional(),
+  recipient_participant_id: z6.string().optional(),
   // Only included if message sent to a group
-  recipient_identity_key_hash: z5.string().optional(),
+  recipient_identity_key_hash: z6.string().optional(),
   // Only included if identity change check enabled
-  biz_opaque_callback_data: z5.string().optional(),
+  biz_opaque_callback_data: z6.string().optional(),
   // Only included if message sent with biz_opaque_callback_data
   conversation: conversationSchema.optional(),
   // Conditional inclusion (see conversationSchema docs)
   pricing: pricingSchema.optional(),
   // Conditional inclusion (see pricingSchema docs)
-  errors: z5.array(statusErrorSchema).optional()
+  errors: z6.array(statusErrorSchema).optional()
   // Only included if failure to send or deliver message
 });
-var webhookValueSchema = z5.object({
-  messaging_product: z5.literal("whatsapp"),
+var webhookValueSchema = z6.object({
+  messaging_product: z6.literal("whatsapp"),
   metadata: webhookMetadataSchema,
-  contacts: z5.array(contactSchema).optional(),
-  messages: z5.array(incomingMessageSchema).optional(),
+  contacts: z6.array(contactSchema).optional(),
+  messages: z6.array(incomingMessageSchema).optional(),
   // Incoming messages
-  statuses: z5.array(statusSchema).optional()
+  statuses: z6.array(statusSchema).optional()
   // Status updates
 });
-var webhookChangeSchema = z5.object({
+var webhookChangeSchema = z6.object({
   value: webhookValueSchema,
-  field: z5.literal("messages")
+  field: z6.literal("messages")
   // For now: only messages field
 });
-var webhookEntrySchema = z5.object({
-  id: z5.string(),
+var webhookEntrySchema = z6.object({
+  id: z6.string(),
   // WABA ID
-  changes: z5.array(webhookChangeSchema)
+  changes: z6.array(webhookChangeSchema)
 });
-var webhookPayloadSchema = z5.object({
-  object: z5.literal("whatsapp_business_account"),
-  entry: z5.array(webhookEntrySchema)
+var webhookPayloadSchema = z6.object({
+  object: z6.literal("whatsapp_business_account"),
+  entry: z6.array(webhookEntrySchema)
 });
 
 // src/services/webhooks/WebhooksService.ts
@@ -1533,59 +1715,7 @@ var WebhooksService = class {
   }
 };
 
-// src/services/media/MediaService.ts
-var MediaService = class {
-  constructor(httpClient) {
-    this.httpClient = httpClient;
-  }
-  /**
-   * Download media file by media ID
-   *
-   * Downloads media files (images, audio, video, documents) from WhatsApp servers.
-   * Uses the access token from the client configuration automatically.
-   *
-   * According to WhatsApp API docs, you cannot download directly from the media ID endpoint.
-   * The flow is:
-   * 1. GET /MEDIA_ID → returns JSON metadata with a URL
-   * 2. GET /MEDIA_URL → returns the actual binary data
-   *
-   * @param mediaId - Media ID from incoming message (e.g., message.image.id, message.audio.id)
-   * @returns Promise resolving to ArrayBuffer containing the media file
-   * @throws Error if download fails or media ID is invalid
-   *
-   * @example
-   * ```typescript
-   * const mediaData = await client.media.download(message.image.id);
-   * // Upload to S3, save to disk, etc.
-   * await s3.upload({ key: message.image.id, body: Buffer.from(mediaData) });
-   * ```
-   */
-  async download(mediaId) {
-    if (!mediaId || mediaId.trim().length === 0) {
-      throw new Error("Media ID is required");
-    }
-    const metadata = await this.httpClient.get(`/${mediaId}`);
-    const response = await fetch(metadata.url, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${this.httpClient.accessToken}`
-      }
-    });
-    if (!response.ok) {
-      let errorMessage = `API Error: ${response.statusText}`;
-      try {
-        const error = await response.json();
-        errorMessage = `API Error: ${error.error?.message || response.statusText} (${error.error?.code || response.status})`;
-      } catch {
-      }
-      throw new Error(errorMessage);
-    }
-    return response.arrayBuffer();
-  }
-};
-
 // src/client/WhatsAppClient.ts
-import { ZodError as ZodError2 } from "zod";
 var WhatsAppClient = class {
   messages;
   accounts;
@@ -1595,22 +1725,14 @@ var WhatsAppClient = class {
   media;
   httpClient;
   constructor(config) {
-    let validated;
-    try {
-      validated = clientConfigSchema.parse(config);
-    } catch (error) {
-      if (error instanceof ZodError2) {
-        throw transformZodError(error);
-      }
-      throw error;
-    }
+    const validated = clientConfigSchema.parse(config);
     this.httpClient = new HttpClient(validated);
-    this.messages = new MessagesService(this.httpClient);
+    this.messages = new MessagesResource(this.httpClient);
     this.accounts = new AccountsService(this.httpClient);
     this.business = new BusinessService(this.httpClient);
     this.templates = new TemplatesResource(this.httpClient);
     this.webhooks = new WebhooksService(this.httpClient);
-    this.media = new MediaService(this.httpClient);
+    this.media = new MediaResource(this.httpClient);
   }
   /**
    * Debug the current access token
@@ -1626,25 +1748,6 @@ var WhatsAppClient = class {
     );
   }
 };
-
-// src/schemas/messages/response.ts
-import { z as z6 } from "zod";
-var messageResponseSchema = z6.object({
-  messaging_product: z6.literal("whatsapp"),
-  contacts: z6.array(
-    z6.object({
-      input: z6.string(),
-      wa_id: z6.string()
-    })
-  ),
-  messages: z6.array(
-    z6.object({
-      id: z6.string(),
-      group_id: z6.string().optional(),
-      message_status: z6.string().optional()
-    })
-  )
-});
 
 // src/schemas/accounts/phone-number.ts
 import { z as z7 } from "zod";
@@ -1704,38 +1807,44 @@ var debugTokenResponseSchema = z9.object({
     user_id: z9.string().optional()
   })
 });
-
-// src/utils/templates.ts
-function toTemplateName(input) {
-  return input.toLowerCase().trim().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "").replace(/_+/g, "_").replace(/^_|_$/g, "");
-}
 export {
+  GraphAPIError,
+  MediaResource,
+  MessagesResource,
   TemplatesResource,
-  WhatsAppAPIError,
   WhatsAppClient,
-  WhatsAppError,
-  WhatsAppRateLimitError,
-  WhatsAppValidationError,
+  buildMessagePayload,
   businessAccountResponseSchema,
   businessAccountsListResponseSchema,
   clientConfigSchema,
   debugTokenResponseSchema,
-  incomingAudioMessageSchema,
-  incomingImageMessageSchema,
-  incomingMessageSchema,
-  incomingTextMessageSchema,
-  messageResponseSchema,
-  outgoingImageMessageSchema,
-  outgoingLocationMessageSchema,
-  outgoingMessageSchema,
-  outgoingReactionMessageSchema,
-  outgoingTextMessageSchema,
+  mediaDeleteResponseSchema,
+  mediaMetadataSchema,
+  mediaMimeTypeSchema,
+  mediaTypeSchema,
+  mediaUploadResponseSchema,
+  mediaUploadSchema,
+  messageImageContentSchema,
+  messageImageSchema,
+  messageIncomingAudioSchema,
+  messageIncomingImageSchema,
+  messageIncomingSchema,
+  messageIncomingTextSchema,
+  messageLocationContentSchema,
+  messageLocationSchema,
+  messageOutgoingSchema,
+  messageReactionContentSchema,
+  messageReactionSchema,
+  messageSendImageSchema,
+  messageSendLocationSchema,
+  messageSendReactionSchema,
+  messageSendResponseSchema,
+  messageSendTextSchema,
+  messageTextContentSchema,
+  messageTextSchema,
   phoneNumberListResponseSchema,
   phoneNumberResponseSchema,
-  sendImageInputSchema,
-  sendLocationInputSchema,
-  sendReactionInputSchema,
-  sendTextInputSchema,
+  phoneNumberSchema,
   statusSchema,
   templateBodyComponentInputSchema,
   templateBodyExampleSchema,

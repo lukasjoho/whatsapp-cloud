@@ -2,7 +2,7 @@ import type { TemplatesClient } from "../TemplatesClient";
 import { templateDeleteSchema } from "../../../schemas/templates/request";
 import type { TemplateDelete } from "../../../types/templates/request";
 import type { TemplateDeleteResponse } from "../../../types/templates/response";
-import { transformZodError } from "../../../utils/zod-error";
+
 
 /**
  * Delete a template
@@ -14,10 +14,10 @@ export async function deleteTemplate(
   templatesClient: TemplatesClient,
   options: TemplateDelete
 ): Promise<TemplateDeleteResponse> {
-  // Validate request with schema - throws WhatsAppValidationError if invalid
+  // Validate request with schema - throws ZodError if invalid
   const result = templateDeleteSchema.safeParse(options);
   if (!result.success) {
-    throw transformZodError(result.error);
+    throw result.error;
   }
   const data = result.data;
 

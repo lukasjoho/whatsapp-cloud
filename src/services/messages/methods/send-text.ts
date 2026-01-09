@@ -3,7 +3,7 @@ import { sendTextInputSchema } from "../../../schemas/messages/outgoing";
 import type { SendTextInput } from "../../../types/messages/outgoing";
 import type { MessageResponse } from "../../../types/messages/response";
 import { buildMessagePayload } from "../utils/build-message-payload";
-import { transformZodError } from "../../../utils/zod-error";
+
 
 /**
  * Send a text message
@@ -15,10 +15,10 @@ export async function sendText(
   messagesClient: MessagesClient,
   input: SendTextInput
 ): Promise<MessageResponse> {
-  // Validate input with schema - throws WhatsAppValidationError if invalid
+  // Validate input with schema - throws ZodError if invalid
   const result = sendTextInputSchema.safeParse(input);
   if (!result.success) {
-    throw transformZodError(result.error);
+    throw result.error;
   }
   const data = result.data;
 

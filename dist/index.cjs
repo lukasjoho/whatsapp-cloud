@@ -20,32 +20,43 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/index.ts
 var index_exports = {};
 __export(index_exports, {
+  GraphAPIError: () => GraphAPIError,
+  MediaResource: () => MediaResource,
+  MessagesResource: () => MessagesResource,
   TemplatesResource: () => TemplatesResource,
-  WhatsAppAPIError: () => WhatsAppAPIError,
   WhatsAppClient: () => WhatsAppClient,
-  WhatsAppError: () => WhatsAppError,
-  WhatsAppRateLimitError: () => WhatsAppRateLimitError,
-  WhatsAppValidationError: () => WhatsAppValidationError,
+  buildMessagePayload: () => buildMessagePayload,
   businessAccountResponseSchema: () => businessAccountResponseSchema,
   businessAccountsListResponseSchema: () => businessAccountsListResponseSchema,
   clientConfigSchema: () => clientConfigSchema,
   debugTokenResponseSchema: () => debugTokenResponseSchema,
-  incomingAudioMessageSchema: () => incomingAudioMessageSchema,
-  incomingImageMessageSchema: () => incomingImageMessageSchema,
-  incomingMessageSchema: () => incomingMessageSchema,
-  incomingTextMessageSchema: () => incomingTextMessageSchema,
-  messageResponseSchema: () => messageResponseSchema,
-  outgoingImageMessageSchema: () => outgoingImageMessageSchema,
-  outgoingLocationMessageSchema: () => outgoingLocationMessageSchema,
-  outgoingMessageSchema: () => outgoingMessageSchema,
-  outgoingReactionMessageSchema: () => outgoingReactionMessageSchema,
-  outgoingTextMessageSchema: () => outgoingTextMessageSchema,
+  mediaDeleteResponseSchema: () => mediaDeleteResponseSchema,
+  mediaMetadataSchema: () => mediaMetadataSchema,
+  mediaMimeTypeSchema: () => mediaMimeTypeSchema,
+  mediaTypeSchema: () => mediaTypeSchema,
+  mediaUploadResponseSchema: () => mediaUploadResponseSchema,
+  mediaUploadSchema: () => mediaUploadSchema,
+  messageImageContentSchema: () => messageImageContentSchema,
+  messageImageSchema: () => messageImageSchema,
+  messageIncomingAudioSchema: () => messageIncomingAudioSchema,
+  messageIncomingImageSchema: () => messageIncomingImageSchema,
+  messageIncomingSchema: () => messageIncomingSchema,
+  messageIncomingTextSchema: () => messageIncomingTextSchema,
+  messageLocationContentSchema: () => messageLocationContentSchema,
+  messageLocationSchema: () => messageLocationSchema,
+  messageOutgoingSchema: () => messageOutgoingSchema,
+  messageReactionContentSchema: () => messageReactionContentSchema,
+  messageReactionSchema: () => messageReactionSchema,
+  messageSendImageSchema: () => messageSendImageSchema,
+  messageSendLocationSchema: () => messageSendLocationSchema,
+  messageSendReactionSchema: () => messageSendReactionSchema,
+  messageSendResponseSchema: () => messageSendResponseSchema,
+  messageSendTextSchema: () => messageSendTextSchema,
+  messageTextContentSchema: () => messageTextContentSchema,
+  messageTextSchema: () => messageTextSchema,
   phoneNumberListResponseSchema: () => phoneNumberListResponseSchema,
   phoneNumberResponseSchema: () => phoneNumberResponseSchema,
-  sendImageInputSchema: () => sendImageInputSchema,
-  sendLocationInputSchema: () => sendLocationInputSchema,
-  sendReactionInputSchema: () => sendReactionInputSchema,
-  sendTextInputSchema: () => sendTextInputSchema,
+  phoneNumberSchema: () => phoneNumberSchema,
   statusSchema: () => statusSchema,
   templateBodyComponentInputSchema: () => templateBodyComponentInputSchema,
   templateBodyExampleSchema: () => templateBodyExampleSchema,
@@ -116,6 +127,16 @@ var clientConfigSchema = import_zod.z.object({
   timeout: import_zod.z.number().positive().optional()
 });
 
+// src/errors.ts
+var GraphAPIError = class extends Error {
+  constructor(response, statusCode) {
+    super(response.error.message);
+    this.response = response;
+    this.statusCode = statusCode;
+    this.name = "GraphAPIError";
+  }
+};
+
 // src/client/HttpClient.ts
 var HttpClient = class {
   baseURL;
@@ -139,6 +160,33 @@ var HttpClient = class {
     this.baseURL = config.baseURL ?? "https://graph.facebook.com";
   }
   /**
+   * Handle error responses - preserves FULL API error for debugging
+   */
+  async handleError(response) {
+    let errorResponse;
+    try {
+      errorResponse = await response.json();
+    } catch {
+      errorResponse = {
+        error: {
+          message: response.statusText || "Unknown error",
+          type: "HTTPError",
+          code: response.status
+        }
+      };
+    }
+    if (!errorResponse.error) {
+      errorResponse = {
+        error: {
+          message: JSON.stringify(errorResponse) || "Unknown error",
+          type: "UnknownError",
+          code: response.status
+        }
+      };
+    }
+    throw new GraphAPIError(errorResponse, response.status);
+  }
+  /**
    * Make a POST request
    */
   async post(path, body) {
@@ -152,15 +200,7 @@ var HttpClient = class {
       body: JSON.stringify(body)
     });
     if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        error: {
-          message: response.statusText,
-          code: response.status
-        }
-      }));
-      throw new Error(
-        `API Error: ${error.error?.message || response.statusText} (${error.error?.code || response.status})`
-      );
+      await this.handleError(response);
     }
     return response.json();
   }
@@ -176,15 +216,7 @@ var HttpClient = class {
       }
     });
     if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        error: {
-          message: response.statusText,
-          code: response.status
-        }
-      }));
-      throw new Error(
-        `API Error: ${error.error?.message || response.statusText} (${error.error?.code || response.status})`
-      );
+      await this.handleError(response);
     }
     return response.json();
   }
@@ -201,13 +233,7 @@ var HttpClient = class {
       }
     });
     if (!response.ok) {
-      let errorMessage = `API Error: ${response.statusText}`;
-      try {
-        const error = await response.json();
-        errorMessage = `API Error: ${error.error?.message || response.statusText} (${error.error?.code || response.status})`;
-      } catch {
-      }
-      throw new Error(errorMessage);
+      await this.handleError(response);
     }
     return response.arrayBuffer();
   }
@@ -225,15 +251,7 @@ var HttpClient = class {
       body: JSON.stringify(body)
     });
     if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        error: {
-          message: response.statusText,
-          code: response.status
-        }
-      }));
-      throw new Error(
-        `API Error: ${error.error?.message || response.statusText} (${error.error?.code || response.status})`
-      );
+      await this.handleError(response);
     }
     return response.json();
   }
@@ -249,76 +267,116 @@ var HttpClient = class {
       }
     });
     if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        error: {
-          message: response.statusText,
-          code: response.status
-        }
-      }));
-      throw new Error(
-        `API Error: ${error.error?.message || response.statusText} (${error.error?.code || response.status})`
-      );
+      await this.handleError(response);
     }
     return response.json();
   }
 };
 
-// src/schemas/messages/outgoing.ts
+// src/resources/messages/schema.ts
 var import_zod2 = require("zod");
-var baseOutgoingMessageSchema = import_zod2.z.object({
-  to: import_zod2.z.string().regex(/^\+[1-9]\d{1,14}$/, "Invalid phone number format")
-});
-var textContentSchema = import_zod2.z.object({
+var phoneNumberSchema = import_zod2.z.string().regex(/^\+[1-9]\d{1,14}$/, "Invalid phone number format (use E.164: +1234567890)");
+var messageTextContentSchema = import_zod2.z.object({
   body: import_zod2.z.string().min(1).max(4096),
   preview_url: import_zod2.z.boolean().optional()
 });
-var imageContentSchema = import_zod2.z.object({
+var messageImageContentSchema = import_zod2.z.object({
   id: import_zod2.z.string().optional(),
   link: import_zod2.z.string().url().optional(),
   caption: import_zod2.z.string().max(1024).optional()
 }).refine((data) => data.link || data.id, "Either link or id must be provided");
-var locationContentSchema = import_zod2.z.object({
+var messageLocationContentSchema = import_zod2.z.object({
   longitude: import_zod2.z.number().min(-180).max(180),
   latitude: import_zod2.z.number().min(-90).max(90),
   name: import_zod2.z.string().optional(),
   address: import_zod2.z.string().optional()
 });
-var reactionContentSchema = import_zod2.z.object({
+var messageReactionContentSchema = import_zod2.z.object({
   message_id: import_zod2.z.string().min(1),
   emoji: import_zod2.z.string().min(1).max(1)
 });
-var sendTextInputSchema = baseOutgoingMessageSchema.extend({
-  text: textContentSchema
+var messageSendTextSchema = import_zod2.z.object({
+  to: phoneNumberSchema,
+  text: messageTextContentSchema
 });
-var sendImageInputSchema = baseOutgoingMessageSchema.extend({
-  image: imageContentSchema
+var messageSendImageSchema = import_zod2.z.object({
+  to: phoneNumberSchema,
+  image: messageImageContentSchema
 });
-var sendLocationInputSchema = baseOutgoingMessageSchema.extend({
-  location: locationContentSchema
+var messageSendLocationSchema = import_zod2.z.object({
+  to: phoneNumberSchema,
+  location: messageLocationContentSchema
 });
-var sendReactionInputSchema = baseOutgoingMessageSchema.extend({
-  reaction: reactionContentSchema
+var messageSendReactionSchema = import_zod2.z.object({
+  to: phoneNumberSchema,
+  reaction: messageReactionContentSchema
 });
-var outgoingTextMessageSchema = sendTextInputSchema.extend({
+var messageTextSchema = messageSendTextSchema.extend({
   type: import_zod2.z.literal("text")
 });
-var outgoingImageMessageSchema = sendImageInputSchema.extend({
+var messageImageSchema = messageSendImageSchema.extend({
   type: import_zod2.z.literal("image")
 });
-var outgoingLocationMessageSchema = sendLocationInputSchema.extend({
+var messageLocationSchema = messageSendLocationSchema.extend({
   type: import_zod2.z.literal("location")
 });
-var outgoingReactionMessageSchema = sendReactionInputSchema.extend({
+var messageReactionSchema = messageSendReactionSchema.extend({
   type: import_zod2.z.literal("reaction")
 });
-var outgoingMessageSchema = import_zod2.z.discriminatedUnion("type", [
-  outgoingTextMessageSchema,
-  outgoingImageMessageSchema,
-  outgoingLocationMessageSchema,
-  outgoingReactionMessageSchema
+var messageOutgoingSchema = import_zod2.z.discriminatedUnion("type", [
+  messageTextSchema,
+  messageImageSchema,
+  messageLocationSchema,
+  messageReactionSchema
+]);
+var messageSendResponseSchema = import_zod2.z.object({
+  messaging_product: import_zod2.z.literal("whatsapp"),
+  contacts: import_zod2.z.array(
+    import_zod2.z.object({
+      input: import_zod2.z.string(),
+      wa_id: import_zod2.z.string()
+    })
+  ),
+  messages: import_zod2.z.array(
+    import_zod2.z.object({
+      id: import_zod2.z.string(),
+      message_status: import_zod2.z.string().optional()
+    })
+  )
+});
+var incomingMessageBaseSchema = import_zod2.z.object({
+  from: import_zod2.z.string(),
+  id: import_zod2.z.string(),
+  timestamp: import_zod2.z.string()
+});
+var messageIncomingTextSchema = incomingMessageBaseSchema.extend({
+  type: import_zod2.z.literal("text"),
+  text: import_zod2.z.object({
+    body: import_zod2.z.string()
+  })
+});
+var messageIncomingImageSchema = incomingMessageBaseSchema.extend({
+  type: import_zod2.z.literal("image"),
+  image: import_zod2.z.object({
+    id: import_zod2.z.string(),
+    mime_type: import_zod2.z.string().optional(),
+    caption: import_zod2.z.string().optional()
+  })
+});
+var messageIncomingAudioSchema = incomingMessageBaseSchema.extend({
+  type: import_zod2.z.literal("audio"),
+  audio: import_zod2.z.object({
+    id: import_zod2.z.string(),
+    mime_type: import_zod2.z.string().optional()
+  })
+});
+var messageIncomingSchema = import_zod2.z.discriminatedUnion("type", [
+  messageIncomingTextSchema,
+  messageIncomingImageSchema,
+  messageIncomingAudioSchema
 ]);
 
-// src/services/messages/utils/build-message-payload.ts
+// src/resources/messages/utils.ts
 function buildMessagePayload(to, type, content) {
   return {
     messaging_product: "whatsapp",
@@ -329,206 +387,142 @@ function buildMessagePayload(to, type, content) {
   };
 }
 
-// src/utils/zod-error.ts
-var import_zod3 = require("zod");
-
-// src/errors.ts
-var WhatsAppError = class extends Error {
-  constructor(message) {
-    super(message);
-    this.name = this.constructor.name;
-    const captureStackTrace = Error.captureStackTrace;
-    if (typeof captureStackTrace === "function") {
-      captureStackTrace(this, this.constructor);
-    }
-  }
-};
-var WhatsAppValidationError = class extends WhatsAppError {
-  constructor(message, field, issues) {
-    super(message);
-    this.field = field;
-    this.issues = issues;
-    this.name = "WhatsAppValidationError";
-  }
-};
-var WhatsAppAPIError = class extends WhatsAppError {
-  constructor(code, type, message, statusCode, details) {
-    super(message);
-    this.code = code;
-    this.type = type;
-    this.statusCode = statusCode;
-    this.details = details;
-    this.name = "WhatsAppAPIError";
-  }
-};
-var WhatsAppRateLimitError = class extends WhatsAppAPIError {
-  constructor(message, retryAfter) {
-    super(131056, "rate_limit", message, 429, { retryAfter });
-    this.retryAfter = retryAfter;
-    this.name = "WhatsAppRateLimitError";
-  }
-};
-
-// src/utils/zod-error.ts
-function transformZodError(error) {
-  const issues = error.issues.map((err) => ({
-    path: err.path,
-    message: err.message
-  }));
-  const firstError = error.issues[0];
-  if (firstError) {
-    return new WhatsAppValidationError(
-      firstError.message,
-      typeof firstError.path[0] === "string" ? firstError.path[0] : void 0,
-      issues
-    );
-  }
-  return new WhatsAppValidationError("Validation failed", void 0, issues);
-}
-
-// src/services/messages/methods/send-text.ts
-async function sendText(messagesClient, input) {
-  const result = sendTextInputSchema.safeParse(input);
-  if (!result.success) {
-    throw transformZodError(result.error);
-  }
-  const data = result.data;
-  const payload = buildMessagePayload(data.to, "text", {
-    text: data.text
-  });
-  return messagesClient.post("/messages", payload);
-}
-
-// src/services/messages/methods/send-image.ts
-async function sendImage(messagesClient, input) {
-  const result = sendImageInputSchema.safeParse(input);
-  if (!result.success) {
-    throw transformZodError(result.error);
-  }
-  const data = result.data;
-  const payload = buildMessagePayload(data.to, "image", {
-    image: data.image
-  });
-  return messagesClient.post("/messages", payload);
-}
-
-// src/services/messages/methods/send-location.ts
-async function sendLocation(messagesClient, input) {
-  const result = sendLocationInputSchema.safeParse(input);
-  if (!result.success) {
-    throw transformZodError(result.error);
-  }
-  const data = result.data;
-  const payload = buildMessagePayload(data.to, "location", {
-    location: data.location
-  });
-  return messagesClient.post("/messages", payload);
-}
-
-// src/services/messages/methods/send-reaction.ts
-async function sendReaction(messagesClient, input) {
-  const result = sendReactionInputSchema.safeParse(input);
-  if (!result.success) {
-    throw transformZodError(result.error);
-  }
-  const data = result.data;
-  const payload = buildMessagePayload(data.to, "reaction", {
-    reaction: data.reaction
-  });
-  return messagesClient.post("/messages", payload);
-}
-
-// src/services/messages/MessagesClient.ts
-var MessagesClient = class {
-  constructor(httpClient, phoneNumberId) {
-    this.httpClient = httpClient;
-    this.phoneNumberId = phoneNumberId;
-  }
-  /**
-   * Make a POST request with phone number ID prefix
-   */
-  async post(path, body) {
-    return this.httpClient.post(`/${this.phoneNumberId}${path}`, body);
-  }
-  /**
-   * Make a GET request with phone number ID prefix
-   */
-  async get(path) {
-    return this.httpClient.get(`/${this.phoneNumberId}${path}`);
-  }
-  /**
-   * Make a PATCH request with phone number ID prefix
-   */
-  async patch(path, body) {
-    return this.httpClient.patch(`/${this.phoneNumberId}${path}`, body);
-  }
-};
-
-// src/services/messages/MessagesService.ts
-var MessagesService = class {
+// src/resources/messages/resource.ts
+var MessagesResource = class {
   constructor(httpClient) {
     this.httpClient = httpClient;
   }
   /**
-   * Helper to create a Scoped Client (prefer override, fallback to config)
+   * Get the phone number ID (with validation)
    */
-  getClient(overrideId) {
+  getPhoneNumberId(overrideId) {
     const id = overrideId || this.httpClient.phoneNumberId;
     if (!id) {
-      throw new WhatsAppValidationError(
-        "phoneNumberId is required. Provide it in WhatsAppClient config or as a parameter.",
-        "phoneNumberId"
+      throw new Error(
+        "phoneNumberId is required. Provide it in WhatsAppClient config or as a parameter."
       );
     }
-    return new MessagesClient(this.httpClient, id);
+    return id;
   }
   /**
    * Send a text message
    *
-   * @param input - Text message input (to, text)
+   * @param input - Text message input
    * @param phoneNumberId - Optional phone number ID (overrides client config)
+   * @throws {ZodError} If input validation fails
+   *
+   * @example
+   * ```typescript
+   * await client.messages.sendText({
+   *   to: "+1234567890",
+   *   text: { body: "Hello, world!" }
+   * });
+   * ```
    */
   async sendText(input, phoneNumberId) {
-    const client = this.getClient(phoneNumberId);
-    return sendText(client, input);
+    const id = this.getPhoneNumberId(phoneNumberId);
+    const data = messageSendTextSchema.parse(input);
+    const payload = buildMessagePayload(data.to, "text", { text: data.text });
+    return this.httpClient.post(`/${id}/messages`, payload);
   }
   /**
    * Send an image message
    *
-   * @param input - Image message input (to, image)
+   * @param input - Image message input
    * @param phoneNumberId - Optional phone number ID (overrides client config)
+   * @throws {ZodError} If input validation fails
+   *
+   * @example
+   * ```typescript
+   * // Using a URL
+   * await client.messages.sendImage({
+   *   to: "+1234567890",
+   *   image: { link: "https://example.com/photo.jpg", caption: "Check this out!" }
+   * });
+   *
+   * // Using a media ID
+   * await client.messages.sendImage({
+   *   to: "+1234567890",
+   *   image: { id: "media_id_from_upload" }
+   * });
+   * ```
    */
   async sendImage(input, phoneNumberId) {
-    const client = this.getClient(phoneNumberId);
-    return sendImage(client, input);
+    const id = this.getPhoneNumberId(phoneNumberId);
+    const data = messageSendImageSchema.parse(input);
+    const payload = buildMessagePayload(data.to, "image", { image: data.image });
+    return this.httpClient.post(`/${id}/messages`, payload);
   }
   /**
    * Send a location message
    *
-   * @param input - Location message input (to, location)
+   * @param input - Location message input
    * @param phoneNumberId - Optional phone number ID (overrides client config)
+   * @throws {ZodError} If input validation fails
+   *
+   * @example
+   * ```typescript
+   * await client.messages.sendLocation({
+   *   to: "+1234567890",
+   *   location: {
+   *     latitude: 37.7749,
+   *     longitude: -122.4194,
+   *     name: "San Francisco",
+   *     address: "California, USA"
+   *   }
+   * });
+   * ```
    */
   async sendLocation(input, phoneNumberId) {
-    const client = this.getClient(phoneNumberId);
-    return sendLocation(client, input);
+    const id = this.getPhoneNumberId(phoneNumberId);
+    const data = messageSendLocationSchema.parse(input);
+    const payload = buildMessagePayload(data.to, "location", {
+      location: data.location
+    });
+    return this.httpClient.post(`/${id}/messages`, payload);
   }
   /**
-   * Send a reaction message
+   * Send a reaction to a message
    *
-   * @param input - Reaction message input (to, reaction)
+   * @param input - Reaction input
    * @param phoneNumberId - Optional phone number ID (overrides client config)
+   * @throws {ZodError} If input validation fails
+   *
+   * @example
+   * ```typescript
+   * await client.messages.sendReaction({
+   *   to: "+1234567890",
+   *   reaction: {
+   *     message_id: "wamid.xxx",
+   *     emoji: "👍"
+   *   }
+   * });
+   * ```
    */
   async sendReaction(input, phoneNumberId) {
-    const client = this.getClient(phoneNumberId);
-    return sendReaction(client, input);
+    const id = this.getPhoneNumberId(phoneNumberId);
+    const data = messageSendReactionSchema.parse(input);
+    const payload = buildMessagePayload(data.to, "reaction", {
+      reaction: data.reaction
+    });
+    return this.httpClient.post(`/${id}/messages`, payload);
   }
   /**
    * Send any message type using the discriminated union
    *
    * @param message - Any outgoing message (text, image, location, reaction)
    * @param phoneNumberId - Optional phone number ID (overrides client config)
+   *
+   * @example
+   * ```typescript
+   * await client.messages.send({
+   *   type: "text",
+   *   to: "+1234567890",
+   *   text: { body: "Hello!" }
+   * });
+   * ```
    */
-  async sendMessage(message, phoneNumberId) {
+  async send(message, phoneNumberId) {
     switch (message.type) {
       case "text":
         return this.sendText(message, phoneNumberId);
@@ -542,133 +536,9 @@ var MessagesService = class {
   }
 };
 
-// src/services/accounts/AccountsClient.ts
-var AccountsClient = class {
-  constructor(httpClient, businessAccountId) {
-    this.httpClient = httpClient;
-    this.businessAccountId = businessAccountId;
-  }
-  /**
-   * Make a GET request with WABA ID prefix
-   */
-  async get(path) {
-    return this.httpClient.get(`/${this.businessAccountId}${path}`);
-  }
-  /**
-   * Make a POST request with WABA ID prefix
-   */
-  async post(path, body) {
-    return this.httpClient.post(`/${this.businessAccountId}${path}`, body);
-  }
-  /**
-   * Make a PATCH request with WABA ID prefix
-   */
-  async patch(path, body) {
-    return this.httpClient.patch(`/${this.businessAccountId}${path}`, body);
-  }
-};
-
-// src/services/accounts/methods/list-phone-numbers.ts
-async function listPhoneNumbers(accountsClient) {
-  return accountsClient.get("/phone_numbers");
-}
-
-// src/services/accounts/AccountsService.ts
-var AccountsService = class {
-  constructor(httpClient) {
-    this.httpClient = httpClient;
-  }
-  /**
-   * Helper to create a Scoped Client (prefer override, fallback to config)
-   */
-  getClient(overrideId) {
-    const id = overrideId || this.httpClient.businessAccountId;
-    if (!id) {
-      throw new WhatsAppValidationError(
-        "businessAccountId (WABA ID) is required. Provide it in WhatsAppClient config or as a parameter.",
-        "businessAccountId"
-      );
-    }
-    return new AccountsClient(this.httpClient, id);
-  }
-  /**
-   * List phone numbers for a WhatsApp Business Account
-   *
-   * @param businessAccountId - Optional WABA ID (overrides client config)
-   * @returns List of phone numbers associated with the WABA
-   */
-  async listPhoneNumbers(businessAccountId) {
-    const client = this.getClient(businessAccountId);
-    return listPhoneNumbers(client);
-  }
-};
-
-// src/services/business/BusinessClient.ts
-var BusinessClient = class {
-  constructor(httpClient, businessId) {
-    this.httpClient = httpClient;
-    this.businessId = businessId;
-  }
-  /**
-   * Make a GET request with Business Portfolio ID prefix
-   */
-  async get(path) {
-    return this.httpClient.get(`/${this.businessId}${path}`);
-  }
-  /**
-   * Make a POST request with Business Portfolio ID prefix
-   */
-  async post(path, body) {
-    return this.httpClient.post(`/${this.businessId}${path}`, body);
-  }
-  /**
-   * Make a PATCH request with Business Portfolio ID prefix
-   */
-  async patch(path, body) {
-    return this.httpClient.patch(`/${this.businessId}${path}`, body);
-  }
-};
-
-// src/services/business/methods/list-accounts.ts
-async function listAccounts(businessClient) {
-  return businessClient.get(
-    "/whatsapp_business_accounts"
-  );
-}
-
-// src/services/business/BusinessService.ts
-var BusinessService = class {
-  constructor(httpClient) {
-    this.httpClient = httpClient;
-  }
-  /**
-   * Helper to create a Scoped Client (prefer override, fallback to config)
-   */
-  getClient(overrideId) {
-    const id = overrideId || this.httpClient.businessId;
-    if (!id) {
-      throw new WhatsAppValidationError(
-        "businessId (Business Portfolio ID) is required. Provide it in WhatsAppClient config or as a parameter.",
-        "businessId"
-      );
-    }
-    return new BusinessClient(this.httpClient, id);
-  }
-  /**
-   * List WhatsApp Business Accounts (WABAs) for a Business Portfolio
-   *
-   * @param businessId - Optional Business Portfolio ID (overrides client config)
-   * @returns List of WABAs associated with the Business Portfolio
-   */
-  async listAccounts(businessId) {
-    const client = this.getClient(businessId);
-    return listAccounts(client);
-  }
-};
-
 // src/resources/templates/schema.ts
-var import_zod4 = require("zod");
-var templateLanguageSchema = import_zod4.z.enum([
+var import_zod3 = require("zod");
+var templateLanguageSchema = import_zod3.z.enum([
   "af",
   // Afrikaans
   "sq",
@@ -892,13 +762,13 @@ var templateLanguageSchema = import_zod4.z.enum([
   "zu"
   // Zulu
 ]);
-var templateCategorySchema = import_zod4.z.enum([
+var templateCategorySchema = import_zod3.z.enum([
   "AUTHENTICATION",
   "MARKETING",
   "UTILITY"
 ]);
-var templateParameterFormatSchema = import_zod4.z.enum(["positional", "named"]);
-var templateStatusSchema = import_zod4.z.enum([
+var templateParameterFormatSchema = import_zod3.z.enum(["positional", "named"]);
+var templateStatusSchema = import_zod3.z.enum([
   "APPROVED",
   "PENDING",
   "REJECTED",
@@ -909,71 +779,71 @@ var templateStatusSchema = import_zod4.z.enum([
   "DELETED",
   "LIMIT_EXCEEDED"
 ]);
-var templateQualityScoreSchema = import_zod4.z.object({
-  score: import_zod4.z.enum(["GREEN", "YELLOW", "RED", "UNKNOWN"]).optional(),
-  date: import_zod4.z.number().optional()
+var templateQualityScoreSchema = import_zod3.z.object({
+  score: import_zod3.z.enum(["GREEN", "YELLOW", "RED", "UNKNOWN"]).optional(),
+  date: import_zod3.z.number().optional()
 });
-var templateNamedParamExampleSchema = import_zod4.z.object({
-  param_name: import_zod4.z.string(),
-  example: import_zod4.z.string()
+var templateNamedParamExampleSchema = import_zod3.z.object({
+  param_name: import_zod3.z.string(),
+  example: import_zod3.z.string()
 });
-var templateQuickReplyButtonInputSchema = import_zod4.z.object({
-  type: import_zod4.z.literal("QUICK_REPLY"),
-  text: import_zod4.z.string().min(1).max(25, "Button text must be 25 characters or less")
+var templateQuickReplyButtonInputSchema = import_zod3.z.object({
+  type: import_zod3.z.literal("QUICK_REPLY"),
+  text: import_zod3.z.string().min(1).max(25, "Button text must be 25 characters or less")
 });
-var templateUrlButtonInputSchema = import_zod4.z.object({
-  type: import_zod4.z.literal("URL"),
-  text: import_zod4.z.string().min(1).max(25, "Button text must be 25 characters or less"),
-  url: import_zod4.z.string().url().max(2e3, "URL must be 2000 characters or less"),
-  example: import_zod4.z.array(import_zod4.z.string()).optional()
+var templateUrlButtonInputSchema = import_zod3.z.object({
+  type: import_zod3.z.literal("URL"),
+  text: import_zod3.z.string().min(1).max(25, "Button text must be 25 characters or less"),
+  url: import_zod3.z.string().url().max(2e3, "URL must be 2000 characters or less"),
+  example: import_zod3.z.array(import_zod3.z.string()).optional()
 });
-var templatePhoneNumberButtonInputSchema = import_zod4.z.object({
-  type: import_zod4.z.literal("PHONE_NUMBER"),
-  text: import_zod4.z.string().min(1).max(25, "Button text must be 25 characters or less"),
-  phone_number: import_zod4.z.string().min(1).max(20, "Phone number must be 20 characters or less")
+var templatePhoneNumberButtonInputSchema = import_zod3.z.object({
+  type: import_zod3.z.literal("PHONE_NUMBER"),
+  text: import_zod3.z.string().min(1).max(25, "Button text must be 25 characters or less"),
+  phone_number: import_zod3.z.string().min(1).max(20, "Phone number must be 20 characters or less")
 });
-var templateCopyCodeButtonInputSchema = import_zod4.z.object({
-  type: import_zod4.z.literal("COPY_CODE"),
-  example: import_zod4.z.string().max(15).optional()
+var templateCopyCodeButtonInputSchema = import_zod3.z.object({
+  type: import_zod3.z.literal("COPY_CODE"),
+  example: import_zod3.z.string().max(15).optional()
 });
-var templateFlowButtonInputSchema = import_zod4.z.object({
-  type: import_zod4.z.literal("FLOW"),
-  text: import_zod4.z.string().min(1).max(25, "Button text must be 25 characters or less"),
-  flow_id: import_zod4.z.string().optional(),
-  flow_action: import_zod4.z.enum(["navigate", "data_exchange"]).optional(),
-  navigate_screen: import_zod4.z.string().optional()
+var templateFlowButtonInputSchema = import_zod3.z.object({
+  type: import_zod3.z.literal("FLOW"),
+  text: import_zod3.z.string().min(1).max(25, "Button text must be 25 characters or less"),
+  flow_id: import_zod3.z.string().optional(),
+  flow_action: import_zod3.z.enum(["navigate", "data_exchange"]).optional(),
+  navigate_screen: import_zod3.z.string().optional()
 });
-var templateButtonInputSchema = import_zod4.z.discriminatedUnion("type", [
+var templateButtonInputSchema = import_zod3.z.discriminatedUnion("type", [
   templateQuickReplyButtonInputSchema,
   templateUrlButtonInputSchema,
   templatePhoneNumberButtonInputSchema,
   templateCopyCodeButtonInputSchema,
   templateFlowButtonInputSchema
 ]);
-var templateHeaderTextExampleSchema = import_zod4.z.object({
+var templateHeaderTextExampleSchema = import_zod3.z.object({
   // Positional: header_text: ["value1"]
-  header_text: import_zod4.z.array(import_zod4.z.string()).optional(),
+  header_text: import_zod3.z.array(import_zod3.z.string()).optional(),
   // Named: header_text_named_params: [{ param_name: "name", example: "value" }]
-  header_text_named_params: import_zod4.z.array(templateNamedParamExampleSchema).optional()
+  header_text_named_params: import_zod3.z.array(templateNamedParamExampleSchema).optional()
 });
-var templateHeaderTextInputSchema = import_zod4.z.object({
-  type: import_zod4.z.literal("HEADER"),
-  format: import_zod4.z.literal("TEXT"),
-  text: import_zod4.z.string().min(1).max(60, "Header text must be 60 characters or less"),
+var templateHeaderTextInputSchema = import_zod3.z.object({
+  type: import_zod3.z.literal("HEADER"),
+  format: import_zod3.z.literal("TEXT"),
+  text: import_zod3.z.string().min(1).max(60, "Header text must be 60 characters or less"),
   example: templateHeaderTextExampleSchema.optional()
 });
-var templateHeaderMediaInputSchema = import_zod4.z.object({
-  type: import_zod4.z.literal("HEADER"),
-  format: import_zod4.z.enum(["IMAGE", "VIDEO", "DOCUMENT"]),
-  example: import_zod4.z.object({
-    header_handle: import_zod4.z.array(import_zod4.z.string()).min(1, "At least one header_handle is required")
+var templateHeaderMediaInputSchema = import_zod3.z.object({
+  type: import_zod3.z.literal("HEADER"),
+  format: import_zod3.z.enum(["IMAGE", "VIDEO", "DOCUMENT"]),
+  example: import_zod3.z.object({
+    header_handle: import_zod3.z.array(import_zod3.z.string()).min(1, "At least one header_handle is required")
   })
 });
-var templateHeaderLocationInputSchema = import_zod4.z.object({
-  type: import_zod4.z.literal("HEADER"),
-  format: import_zod4.z.literal("LOCATION")
+var templateHeaderLocationInputSchema = import_zod3.z.object({
+  type: import_zod3.z.literal("HEADER"),
+  format: import_zod3.z.literal("LOCATION")
 });
-var templateHeaderComponentInputSchema = import_zod4.z.discriminatedUnion(
+var templateHeaderComponentInputSchema = import_zod3.z.discriminatedUnion(
   "format",
   [
     templateHeaderTextInputSchema,
@@ -981,141 +851,141 @@ var templateHeaderComponentInputSchema = import_zod4.z.discriminatedUnion(
     templateHeaderLocationInputSchema
   ]
 );
-var templateBodyExampleSchema = import_zod4.z.object({
+var templateBodyExampleSchema = import_zod3.z.object({
   // Positional: body_text: [["value1", "value2"]]
-  body_text: import_zod4.z.array(import_zod4.z.array(import_zod4.z.string())).optional(),
+  body_text: import_zod3.z.array(import_zod3.z.array(import_zod3.z.string())).optional(),
   // Named: body_text_named_params: [{ param_name: "name", example: "value" }]
-  body_text_named_params: import_zod4.z.array(templateNamedParamExampleSchema).optional()
+  body_text_named_params: import_zod3.z.array(templateNamedParamExampleSchema).optional()
 });
-var templateBodyComponentInputSchema = import_zod4.z.object({
-  type: import_zod4.z.literal("BODY"),
-  text: import_zod4.z.string().min(1).max(1024, "Body text must be 1024 characters or less"),
+var templateBodyComponentInputSchema = import_zod3.z.object({
+  type: import_zod3.z.literal("BODY"),
+  text: import_zod3.z.string().min(1).max(1024, "Body text must be 1024 characters or less"),
   example: templateBodyExampleSchema.optional()
 });
-var templateFooterComponentInputSchema = import_zod4.z.object({
-  type: import_zod4.z.literal("FOOTER"),
-  text: import_zod4.z.string().min(1).max(60, "Footer text must be 60 characters or less")
+var templateFooterComponentInputSchema = import_zod3.z.object({
+  type: import_zod3.z.literal("FOOTER"),
+  text: import_zod3.z.string().min(1).max(60, "Footer text must be 60 characters or less")
 });
-var templateButtonsComponentInputSchema = import_zod4.z.object({
-  type: import_zod4.z.literal("BUTTONS"),
-  buttons: import_zod4.z.array(templateButtonInputSchema).min(1).max(10, "Maximum 10 buttons allowed")
+var templateButtonsComponentInputSchema = import_zod3.z.object({
+  type: import_zod3.z.literal("BUTTONS"),
+  buttons: import_zod3.z.array(templateButtonInputSchema).min(1).max(10, "Maximum 10 buttons allowed")
 });
-var templateComponentInputSchema = import_zod4.z.union([
+var templateComponentInputSchema = import_zod3.z.union([
   templateHeaderComponentInputSchema,
   templateBodyComponentInputSchema,
   templateFooterComponentInputSchema,
   templateButtonsComponentInputSchema
 ]);
-var templateButtonSchema = import_zod4.z.object({
-  type: import_zod4.z.string(),
-  text: import_zod4.z.string().optional(),
-  url: import_zod4.z.string().optional(),
-  phone_number: import_zod4.z.string().optional(),
-  example: import_zod4.z.union([import_zod4.z.array(import_zod4.z.string()), import_zod4.z.string()]).optional(),
-  flow_id: import_zod4.z.string().optional(),
-  flow_action: import_zod4.z.string().optional(),
-  navigate_screen: import_zod4.z.string().optional()
+var templateButtonSchema = import_zod3.z.object({
+  type: import_zod3.z.string(),
+  text: import_zod3.z.string().optional(),
+  url: import_zod3.z.string().optional(),
+  phone_number: import_zod3.z.string().optional(),
+  example: import_zod3.z.union([import_zod3.z.array(import_zod3.z.string()), import_zod3.z.string()]).optional(),
+  flow_id: import_zod3.z.string().optional(),
+  flow_action: import_zod3.z.string().optional(),
+  navigate_screen: import_zod3.z.string().optional()
 });
-var templateComponentSchema = import_zod4.z.object({
-  type: import_zod4.z.enum(["HEADER", "BODY", "FOOTER", "BUTTONS"]),
-  format: import_zod4.z.string().optional(),
-  text: import_zod4.z.string().optional(),
-  buttons: import_zod4.z.array(templateButtonSchema).optional(),
-  example: import_zod4.z.object({
-    header_text: import_zod4.z.array(import_zod4.z.string()).optional(),
-    header_text_named_params: import_zod4.z.array(templateNamedParamExampleSchema).optional(),
-    header_handle: import_zod4.z.array(import_zod4.z.string()).optional(),
-    body_text: import_zod4.z.array(import_zod4.z.array(import_zod4.z.string())).optional(),
-    body_text_named_params: import_zod4.z.array(templateNamedParamExampleSchema).optional()
+var templateComponentSchema = import_zod3.z.object({
+  type: import_zod3.z.enum(["HEADER", "BODY", "FOOTER", "BUTTONS"]),
+  format: import_zod3.z.string().optional(),
+  text: import_zod3.z.string().optional(),
+  buttons: import_zod3.z.array(templateButtonSchema).optional(),
+  example: import_zod3.z.object({
+    header_text: import_zod3.z.array(import_zod3.z.string()).optional(),
+    header_text_named_params: import_zod3.z.array(templateNamedParamExampleSchema).optional(),
+    header_handle: import_zod3.z.array(import_zod3.z.string()).optional(),
+    body_text: import_zod3.z.array(import_zod3.z.array(import_zod3.z.string())).optional(),
+    body_text_named_params: import_zod3.z.array(templateNamedParamExampleSchema).optional()
   }).optional()
 });
 var hasBody = (components) => components.some((c) => c.type === "BODY");
 var hasMaxOneHeader = (components) => components.filter((c) => c.type === "HEADER").length <= 1;
 var hasMaxOneFooter = (components) => components.filter((c) => c.type === "FOOTER").length <= 1;
 var hasMaxOneButtons = (components) => components.filter((c) => c.type === "BUTTONS").length <= 1;
-var baseComponentsSchema = import_zod4.z.array(templateComponentInputSchema).min(1, "At least one component is required").refine(hasBody, { message: "BODY component is required" }).refine(hasMaxOneHeader, { message: "Only one HEADER component is allowed" }).refine(hasMaxOneFooter, { message: "Only one FOOTER component is allowed" }).refine(hasMaxOneButtons, {
+var baseComponentsSchema = import_zod3.z.array(templateComponentInputSchema).min(1, "At least one component is required").refine(hasBody, { message: "BODY component is required" }).refine(hasMaxOneHeader, { message: "Only one HEADER component is allowed" }).refine(hasMaxOneFooter, { message: "Only one FOOTER component is allowed" }).refine(hasMaxOneButtons, {
   message: "Only one BUTTONS component is allowed"
 });
-var templateNameSchema = import_zod4.z.string().min(1, "Template name is required").max(512, "Template name must be 512 characters or less");
-var templateCreateMarketingSchema = import_zod4.z.object({
+var templateNameSchema = import_zod3.z.string().min(1, "Template name is required").max(512, "Template name must be 512 characters or less");
+var templateCreateMarketingSchema = import_zod3.z.object({
   name: templateNameSchema,
   language: templateLanguageSchema,
-  category: import_zod4.z.literal("MARKETING"),
+  category: import_zod3.z.literal("MARKETING"),
   parameter_format: templateParameterFormatSchema.optional(),
   components: baseComponentsSchema
 });
-var templateCreateUtilitySchema = import_zod4.z.object({
+var templateCreateUtilitySchema = import_zod3.z.object({
   name: templateNameSchema,
   language: templateLanguageSchema,
-  category: import_zod4.z.literal("UTILITY"),
+  category: import_zod3.z.literal("UTILITY"),
   parameter_format: templateParameterFormatSchema.optional(),
   components: baseComponentsSchema
 });
-var templateCreateAuthenticationSchema = import_zod4.z.object({
+var templateCreateAuthenticationSchema = import_zod3.z.object({
   name: templateNameSchema,
   language: templateLanguageSchema,
-  category: import_zod4.z.literal("AUTHENTICATION"),
+  category: import_zod3.z.literal("AUTHENTICATION"),
   parameter_format: templateParameterFormatSchema.optional(),
-  components: import_zod4.z.array(templateComponentInputSchema).min(1, "At least one component is required").refine(hasBody, { message: "BODY component is required" })
+  components: import_zod3.z.array(templateComponentInputSchema).min(1, "At least one component is required").refine(hasBody, { message: "BODY component is required" })
 });
-var templateCreateSchema = import_zod4.z.discriminatedUnion("category", [
+var templateCreateSchema = import_zod3.z.discriminatedUnion("category", [
   templateCreateMarketingSchema,
   templateCreateUtilitySchema,
   templateCreateAuthenticationSchema
 ]);
-var templateUpdateSchema = import_zod4.z.object({
+var templateUpdateSchema = import_zod3.z.object({
   category: templateCategorySchema.optional(),
-  components: import_zod4.z.array(templateComponentInputSchema).optional(),
+  components: import_zod3.z.array(templateComponentInputSchema).optional(),
   language: templateLanguageSchema.optional(),
-  name: import_zod4.z.string().min(1).max(512).optional()
+  name: import_zod3.z.string().min(1).max(512).optional()
 });
-var templateListSchema = import_zod4.z.object({
-  name: import_zod4.z.string().optional(),
-  limit: import_zod4.z.number().min(1).max(1e3).optional(),
-  after: import_zod4.z.string().optional(),
-  before: import_zod4.z.string().optional()
+var templateListSchema = import_zod3.z.object({
+  name: import_zod3.z.string().optional(),
+  limit: import_zod3.z.number().min(1).max(1e3).optional(),
+  after: import_zod3.z.string().optional(),
+  before: import_zod3.z.string().optional()
 });
-var templateDeleteSchema = import_zod4.z.object({
-  name: import_zod4.z.string().optional(),
-  hsm_id: import_zod4.z.string().optional()
+var templateDeleteSchema = import_zod3.z.object({
+  name: import_zod3.z.string().optional(),
+  hsm_id: import_zod3.z.string().optional()
 }).refine((data) => data.name || data.hsm_id, {
   message: "Either name or hsm_id must be provided"
 });
-var templateSchema = import_zod4.z.object({
-  id: import_zod4.z.string(),
-  name: import_zod4.z.string(),
-  language: import_zod4.z.string(),
+var templateSchema = import_zod3.z.object({
+  id: import_zod3.z.string(),
+  name: import_zod3.z.string(),
+  language: import_zod3.z.string(),
   status: templateStatusSchema,
   category: templateCategorySchema,
-  components: import_zod4.z.array(templateComponentSchema),
+  components: import_zod3.z.array(templateComponentSchema),
   parameter_format: templateParameterFormatSchema.optional(),
   quality_score: templateQualityScoreSchema.optional(),
-  rejected_reason: import_zod4.z.string().optional(),
-  previous_category: import_zod4.z.string().optional()
+  rejected_reason: import_zod3.z.string().optional(),
+  previous_category: import_zod3.z.string().optional()
 });
-var templateCreateResponseSchema = import_zod4.z.object({
-  id: import_zod4.z.string(),
+var templateCreateResponseSchema = import_zod3.z.object({
+  id: import_zod3.z.string(),
   status: templateStatusSchema,
   category: templateCategorySchema
 });
-var templatePagingCursorsSchema = import_zod4.z.object({
-  before: import_zod4.z.string().optional(),
-  after: import_zod4.z.string().optional()
+var templatePagingCursorsSchema = import_zod3.z.object({
+  before: import_zod3.z.string().optional(),
+  after: import_zod3.z.string().optional()
 });
-var templatePagingSchema = import_zod4.z.object({
+var templatePagingSchema = import_zod3.z.object({
   cursors: templatePagingCursorsSchema.optional(),
-  next: import_zod4.z.string().optional(),
-  previous: import_zod4.z.string().optional()
+  next: import_zod3.z.string().optional(),
+  previous: import_zod3.z.string().optional()
 });
-var templateListResponseSchema = import_zod4.z.object({
-  data: import_zod4.z.array(templateSchema),
+var templateListResponseSchema = import_zod3.z.object({
+  data: import_zod3.z.array(templateSchema),
   paging: templatePagingSchema.optional()
 });
-var templateUpdateResponseSchema = import_zod4.z.object({
-  success: import_zod4.z.boolean()
+var templateUpdateResponseSchema = import_zod3.z.object({
+  success: import_zod3.z.boolean()
 });
-var templateDeleteResponseSchema = import_zod4.z.object({
-  success: import_zod4.z.boolean()
+var templateDeleteResponseSchema = import_zod3.z.object({
+  success: import_zod3.z.boolean()
 });
 
 // src/resources/templates/resource.ts
@@ -1129,9 +999,8 @@ var TemplatesResource = class {
   getBusinessAccountId(overrideId) {
     const id = overrideId || this.httpClient.businessAccountId;
     if (!id) {
-      throw new WhatsAppValidationError(
-        "businessAccountId (WABA ID) is required for templates. Provide it in WhatsAppClient config or as a parameter.",
-        "businessAccountId"
+      throw new Error(
+        "businessAccountId (WABA ID) is required for templates. Provide it in WhatsAppClient config or as a parameter."
       );
     }
     return id;
@@ -1218,10 +1087,7 @@ var TemplatesResource = class {
    */
   async get(templateId) {
     if (!templateId?.trim()) {
-      throw new WhatsAppValidationError(
-        "Template ID is required",
-        "templateId"
-      );
+      throw new Error("Template ID is required");
     }
     return this.httpClient.get(`/${templateId}`);
   }
@@ -1246,10 +1112,7 @@ var TemplatesResource = class {
    */
   async update(templateId, input) {
     if (!templateId?.trim()) {
-      throw new WhatsAppValidationError(
-        "Template ID is required",
-        "templateId"
-      );
+      throw new Error("Template ID is required");
     }
     const body = templateUpdateSchema.parse(input);
     return this.httpClient.post(`/${templateId}`, body);
@@ -1280,6 +1143,336 @@ var TemplatesResource = class {
     return this.httpClient.delete(
       `/${wabaId}/message_templates?${params.toString()}`
     );
+  }
+};
+
+// src/resources/templates/utils.ts
+function toTemplateName(input) {
+  return input.toLowerCase().trim().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "").replace(/_+/g, "_").replace(/^_|_$/g, "");
+}
+
+// src/resources/media/schema.ts
+var import_zod4 = require("zod");
+var mediaTypeSchema = import_zod4.z.enum([
+  "image",
+  "video",
+  "audio",
+  "document",
+  "sticker"
+]);
+var mediaMimeTypeSchema = import_zod4.z.string();
+var mediaUploadSchema = import_zod4.z.object({
+  /**
+   * The file to upload - can be Buffer, Blob, or File
+   */
+  file: import_zod4.z.union([import_zod4.z.instanceof(Blob), import_zod4.z.instanceof(ArrayBuffer)]),
+  /**
+   * MIME type of the file (e.g., "image/jpeg", "video/mp4")
+   */
+  mimeType: import_zod4.z.string().min(1),
+  /**
+   * Optional filename
+   */
+  filename: import_zod4.z.string().optional()
+});
+var mediaUploadResponseSchema = import_zod4.z.object({
+  id: import_zod4.z.string()
+});
+var mediaMetadataSchema = import_zod4.z.object({
+  messaging_product: import_zod4.z.literal("whatsapp"),
+  url: import_zod4.z.string(),
+  mime_type: import_zod4.z.string(),
+  sha256: import_zod4.z.string(),
+  file_size: import_zod4.z.string(),
+  id: import_zod4.z.string()
+});
+var mediaDeleteResponseSchema = import_zod4.z.object({
+  success: import_zod4.z.boolean()
+});
+
+// src/resources/media/resource.ts
+var MediaResource = class {
+  constructor(httpClient) {
+    this.httpClient = httpClient;
+  }
+  /**
+   * Get the phone number ID (with validation)
+   */
+  getPhoneNumberId(overrideId) {
+    const id = overrideId || this.httpClient.phoneNumberId;
+    if (!id) {
+      throw new Error(
+        "phoneNumberId is required. Provide it in WhatsAppClient config or as a parameter."
+      );
+    }
+    return id;
+  }
+  /**
+   * Upload media to WhatsApp
+   *
+   * Uploaded media persists for 30 days unless deleted.
+   * Returns a media ID that can be used in messages or templates.
+   *
+   * @param input - Upload input (file, mimeType, optional filename)
+   * @param phoneNumberId - Optional phone number ID (overrides client config)
+   * @returns Media ID
+   * @throws {ZodError} If input validation fails
+   *
+   * @example
+   * ```typescript
+   * // Upload an image
+   * const { id } = await client.media.upload({
+   *   file: imageBuffer,
+   *   mimeType: "image/jpeg",
+   *   filename: "photo.jpg"
+   * });
+   *
+   * // Use in a message
+   * await client.messages.sendImage({
+   *   to: "+1234567890",
+   *   image: { id }
+   * });
+   * ```
+   */
+  async upload(input, phoneNumberId) {
+    const id = this.getPhoneNumberId(phoneNumberId);
+    const data = mediaUploadSchema.parse(input);
+    const formData = new FormData();
+    formData.append("messaging_product", "whatsapp");
+    const blob = data.file instanceof Blob ? data.file : new Blob([data.file], { type: data.mimeType });
+    formData.append("file", blob, data.filename || "file");
+    formData.append("type", data.mimeType);
+    const url = `${this.httpClient.baseURL}/${this.httpClient.apiVersion}/${id}/media`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.httpClient.accessToken}`
+      },
+      body: formData
+    });
+    if (!response.ok) {
+      const errorResponse = await response.json().catch(() => ({
+        error: { message: response.statusText, type: "HTTPError", code: response.status }
+      }));
+      throw new GraphAPIError(errorResponse, response.status);
+    }
+    return response.json();
+  }
+  /**
+   * Get media metadata including download URL
+   *
+   * The returned URL is only valid for 5 minutes.
+   * If expired, call this method again to get a fresh URL.
+   *
+   * @param mediaId - Media ID from upload or webhook
+   * @param phoneNumberId - Optional phone number ID (validates ownership)
+   * @returns Media metadata including download URL
+   *
+   * @example
+   * ```typescript
+   * const metadata = await client.media.get(mediaId);
+   * console.log(metadata.mime_type);  // "image/jpeg"
+   * console.log(metadata.file_size);  // "12345"
+   * console.log(metadata.url);        // Download URL (5 min expiry)
+   * ```
+   */
+  async get(mediaId, phoneNumberId) {
+    if (!mediaId?.trim()) {
+      throw new Error("Media ID is required");
+    }
+    const params = new URLSearchParams();
+    if (phoneNumberId) {
+      params.append("phone_number_id", phoneNumberId);
+    }
+    const query = params.toString();
+    const path = query ? `/${mediaId}?${query}` : `/${mediaId}`;
+    return this.httpClient.get(path);
+  }
+  /**
+   * Download media binary data
+   *
+   * This is a convenience method that:
+   * 1. Gets the media URL (via `get()`)
+   * 2. Downloads the binary content
+   *
+   * @param mediaId - Media ID from upload or webhook
+   * @returns Binary data as ArrayBuffer
+   *
+   * @example
+   * ```typescript
+   * const buffer = await client.media.download(message.image.id);
+   *
+   * // Save to file (Node.js)
+   * fs.writeFileSync("image.jpg", Buffer.from(buffer));
+   *
+   * // Upload to S3
+   * await s3.upload({ Body: Buffer.from(buffer), Key: "image.jpg" });
+   * ```
+   */
+  async download(mediaId) {
+    if (!mediaId?.trim()) {
+      throw new Error("Media ID is required");
+    }
+    const metadata = await this.get(mediaId);
+    const response = await fetch(metadata.url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${this.httpClient.accessToken}`
+      }
+    });
+    if (!response.ok) {
+      const errorResponse = await response.json().catch(() => ({
+        error: { message: response.statusText, type: "HTTPError", code: response.status }
+      }));
+      throw new GraphAPIError(errorResponse, response.status);
+    }
+    return response.arrayBuffer();
+  }
+  /**
+   * Delete media
+   *
+   * @param mediaId - Media ID to delete
+   * @param phoneNumberId - Optional phone number ID (validates ownership)
+   * @returns Success status
+   *
+   * @example
+   * ```typescript
+   * await client.media.delete(mediaId);
+   * ```
+   */
+  async delete(mediaId, phoneNumberId) {
+    if (!mediaId?.trim()) {
+      throw new Error("Media ID is required");
+    }
+    const params = new URLSearchParams();
+    if (phoneNumberId) {
+      params.append("phone_number_id", phoneNumberId);
+    }
+    const query = params.toString();
+    const path = query ? `/${mediaId}?${query}` : `/${mediaId}`;
+    return this.httpClient.delete(path);
+  }
+};
+
+// src/services/accounts/AccountsClient.ts
+var AccountsClient = class {
+  constructor(httpClient, businessAccountId) {
+    this.httpClient = httpClient;
+    this.businessAccountId = businessAccountId;
+  }
+  /**
+   * Make a GET request with WABA ID prefix
+   */
+  async get(path) {
+    return this.httpClient.get(`/${this.businessAccountId}${path}`);
+  }
+  /**
+   * Make a POST request with WABA ID prefix
+   */
+  async post(path, body) {
+    return this.httpClient.post(`/${this.businessAccountId}${path}`, body);
+  }
+  /**
+   * Make a PATCH request with WABA ID prefix
+   */
+  async patch(path, body) {
+    return this.httpClient.patch(`/${this.businessAccountId}${path}`, body);
+  }
+};
+
+// src/services/accounts/methods/list-phone-numbers.ts
+async function listPhoneNumbers(accountsClient) {
+  return accountsClient.get("/phone_numbers");
+}
+
+// src/services/accounts/AccountsService.ts
+var AccountsService = class {
+  constructor(httpClient) {
+    this.httpClient = httpClient;
+  }
+  /**
+   * Helper to create a Scoped Client (prefer override, fallback to config)
+   */
+  getClient(overrideId) {
+    const id = overrideId || this.httpClient.businessAccountId;
+    if (!id) {
+      throw new Error(
+        "businessAccountId (WABA ID) is required. Provide it in WhatsAppClient config or as a parameter."
+      );
+    }
+    return new AccountsClient(this.httpClient, id);
+  }
+  /**
+   * List phone numbers for a WhatsApp Business Account
+   *
+   * @param businessAccountId - Optional WABA ID (overrides client config)
+   * @returns List of phone numbers associated with the WABA
+   */
+  async listPhoneNumbers(businessAccountId) {
+    const client = this.getClient(businessAccountId);
+    return listPhoneNumbers(client);
+  }
+};
+
+// src/services/business/BusinessClient.ts
+var BusinessClient = class {
+  constructor(httpClient, businessId) {
+    this.httpClient = httpClient;
+    this.businessId = businessId;
+  }
+  /**
+   * Make a GET request with Business Portfolio ID prefix
+   */
+  async get(path) {
+    return this.httpClient.get(`/${this.businessId}${path}`);
+  }
+  /**
+   * Make a POST request with Business Portfolio ID prefix
+   */
+  async post(path, body) {
+    return this.httpClient.post(`/${this.businessId}${path}`, body);
+  }
+  /**
+   * Make a PATCH request with Business Portfolio ID prefix
+   */
+  async patch(path, body) {
+    return this.httpClient.patch(`/${this.businessId}${path}`, body);
+  }
+};
+
+// src/services/business/methods/list-accounts.ts
+async function listAccounts(businessClient) {
+  return businessClient.get(
+    "/whatsapp_business_accounts"
+  );
+}
+
+// src/services/business/BusinessService.ts
+var BusinessService = class {
+  constructor(httpClient) {
+    this.httpClient = httpClient;
+  }
+  /**
+   * Helper to create a Scoped Client (prefer override, fallback to config)
+   */
+  getClient(overrideId) {
+    const id = overrideId || this.httpClient.businessId;
+    if (!id) {
+      throw new Error(
+        "businessId (Business Portfolio ID) is required. Provide it in WhatsAppClient config or as a parameter."
+      );
+    }
+    return new BusinessClient(this.httpClient, id);
+  }
+  /**
+   * List WhatsApp Business Accounts (WABAs) for a Business Portfolio
+   *
+   * @param businessId - Optional Business Portfolio ID (overrides client config)
+   * @returns List of WABAs associated with the Business Portfolio
+   */
+  async listAccounts(businessId) {
+    const client = this.getClient(businessId);
+    return listAccounts(client);
   }
 };
 
@@ -1625,59 +1818,7 @@ var WebhooksService = class {
   }
 };
 
-// src/services/media/MediaService.ts
-var MediaService = class {
-  constructor(httpClient) {
-    this.httpClient = httpClient;
-  }
-  /**
-   * Download media file by media ID
-   *
-   * Downloads media files (images, audio, video, documents) from WhatsApp servers.
-   * Uses the access token from the client configuration automatically.
-   *
-   * According to WhatsApp API docs, you cannot download directly from the media ID endpoint.
-   * The flow is:
-   * 1. GET /MEDIA_ID → returns JSON metadata with a URL
-   * 2. GET /MEDIA_URL → returns the actual binary data
-   *
-   * @param mediaId - Media ID from incoming message (e.g., message.image.id, message.audio.id)
-   * @returns Promise resolving to ArrayBuffer containing the media file
-   * @throws Error if download fails or media ID is invalid
-   *
-   * @example
-   * ```typescript
-   * const mediaData = await client.media.download(message.image.id);
-   * // Upload to S3, save to disk, etc.
-   * await s3.upload({ key: message.image.id, body: Buffer.from(mediaData) });
-   * ```
-   */
-  async download(mediaId) {
-    if (!mediaId || mediaId.trim().length === 0) {
-      throw new Error("Media ID is required");
-    }
-    const metadata = await this.httpClient.get(`/${mediaId}`);
-    const response = await fetch(metadata.url, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${this.httpClient.accessToken}`
-      }
-    });
-    if (!response.ok) {
-      let errorMessage = `API Error: ${response.statusText}`;
-      try {
-        const error = await response.json();
-        errorMessage = `API Error: ${error.error?.message || response.statusText} (${error.error?.code || response.status})`;
-      } catch {
-      }
-      throw new Error(errorMessage);
-    }
-    return response.arrayBuffer();
-  }
-};
-
 // src/client/WhatsAppClient.ts
-var import_zod7 = require("zod");
 var WhatsAppClient = class {
   messages;
   accounts;
@@ -1687,22 +1828,14 @@ var WhatsAppClient = class {
   media;
   httpClient;
   constructor(config) {
-    let validated;
-    try {
-      validated = clientConfigSchema.parse(config);
-    } catch (error) {
-      if (error instanceof import_zod7.ZodError) {
-        throw transformZodError(error);
-      }
-      throw error;
-    }
+    const validated = clientConfigSchema.parse(config);
     this.httpClient = new HttpClient(validated);
-    this.messages = new MessagesService(this.httpClient);
+    this.messages = new MessagesResource(this.httpClient);
     this.accounts = new AccountsService(this.httpClient);
     this.business = new BusinessService(this.httpClient);
     this.templates = new TemplatesResource(this.httpClient);
     this.webhooks = new WebhooksService(this.httpClient);
-    this.media = new MediaService(this.httpClient);
+    this.media = new MediaResource(this.httpClient);
   }
   /**
    * Debug the current access token
@@ -1719,116 +1852,103 @@ var WhatsAppClient = class {
   }
 };
 
-// src/schemas/messages/response.ts
-var import_zod8 = require("zod");
-var messageResponseSchema = import_zod8.z.object({
-  messaging_product: import_zod8.z.literal("whatsapp"),
-  contacts: import_zod8.z.array(
-    import_zod8.z.object({
-      input: import_zod8.z.string(),
-      wa_id: import_zod8.z.string()
-    })
-  ),
-  messages: import_zod8.z.array(
-    import_zod8.z.object({
-      id: import_zod8.z.string(),
-      group_id: import_zod8.z.string().optional(),
-      message_status: import_zod8.z.string().optional()
-    })
-  )
-});
-
 // src/schemas/accounts/phone-number.ts
-var import_zod9 = require("zod");
-var phoneNumberResponseSchema = import_zod9.z.object({
-  verified_name: import_zod9.z.string(),
-  display_phone_number: import_zod9.z.string(),
-  id: import_zod9.z.string(),
-  quality_rating: import_zod9.z.string()
+var import_zod7 = require("zod");
+var phoneNumberResponseSchema = import_zod7.z.object({
+  verified_name: import_zod7.z.string(),
+  display_phone_number: import_zod7.z.string(),
+  id: import_zod7.z.string(),
+  quality_rating: import_zod7.z.string()
 });
-var phoneNumberListResponseSchema = import_zod9.z.object({
-  data: import_zod9.z.array(phoneNumberResponseSchema)
+var phoneNumberListResponseSchema = import_zod7.z.object({
+  data: import_zod7.z.array(phoneNumberResponseSchema)
 });
 
 // src/schemas/business/account.ts
-var import_zod10 = require("zod");
-var businessAccountResponseSchema = import_zod10.z.object({
-  id: import_zod10.z.string(),
-  name: import_zod10.z.string().optional(),
-  account_review_status: import_zod10.z.string().optional(),
-  currency: import_zod10.z.string().optional(),
-  country: import_zod10.z.string().optional(),
-  timezone_id: import_zod10.z.string().optional(),
-  business_verification_status: import_zod10.z.string().optional(),
-  is_enabled_for_insights: import_zod10.z.boolean().optional(),
-  message_template_namespace: import_zod10.z.string().optional()
+var import_zod8 = require("zod");
+var businessAccountResponseSchema = import_zod8.z.object({
+  id: import_zod8.z.string(),
+  name: import_zod8.z.string().optional(),
+  account_review_status: import_zod8.z.string().optional(),
+  currency: import_zod8.z.string().optional(),
+  country: import_zod8.z.string().optional(),
+  timezone_id: import_zod8.z.string().optional(),
+  business_verification_status: import_zod8.z.string().optional(),
+  is_enabled_for_insights: import_zod8.z.boolean().optional(),
+  message_template_namespace: import_zod8.z.string().optional()
 });
-var businessAccountsListResponseSchema = import_zod10.z.object({
-  data: import_zod10.z.record(import_zod10.z.string(), businessAccountResponseSchema).or(
-    import_zod10.z.array(businessAccountResponseSchema)
+var businessAccountsListResponseSchema = import_zod8.z.object({
+  data: import_zod8.z.record(import_zod8.z.string(), businessAccountResponseSchema).or(
+    import_zod8.z.array(businessAccountResponseSchema)
   ),
-  paging: import_zod10.z.object({
-    cursors: import_zod10.z.object({
-      before: import_zod10.z.string().optional(),
-      after: import_zod10.z.string().optional()
+  paging: import_zod8.z.object({
+    cursors: import_zod8.z.object({
+      before: import_zod8.z.string().optional(),
+      after: import_zod8.z.string().optional()
     }).optional(),
-    next: import_zod10.z.string().url().optional(),
-    previous: import_zod10.z.string().url().optional()
+    next: import_zod8.z.string().url().optional(),
+    previous: import_zod8.z.string().url().optional()
   }).optional()
 });
 
 // src/schemas/debug.ts
-var import_zod11 = require("zod");
-var debugTokenResponseSchema = import_zod11.z.object({
-  data: import_zod11.z.object({
-    app_id: import_zod11.z.string().optional(),
-    type: import_zod11.z.string().optional(),
-    application: import_zod11.z.string().optional(),
-    data_access_expires_at: import_zod11.z.number().optional(),
-    expires_at: import_zod11.z.number().optional(),
-    is_valid: import_zod11.z.boolean().optional(),
-    issued_at: import_zod11.z.number().optional(),
-    metadata: import_zod11.z.object({
-      auth_type: import_zod11.z.string().optional(),
-      sso: import_zod11.z.string().optional()
+var import_zod9 = require("zod");
+var debugTokenResponseSchema = import_zod9.z.object({
+  data: import_zod9.z.object({
+    app_id: import_zod9.z.string().optional(),
+    type: import_zod9.z.string().optional(),
+    application: import_zod9.z.string().optional(),
+    data_access_expires_at: import_zod9.z.number().optional(),
+    expires_at: import_zod9.z.number().optional(),
+    is_valid: import_zod9.z.boolean().optional(),
+    issued_at: import_zod9.z.number().optional(),
+    metadata: import_zod9.z.object({
+      auth_type: import_zod9.z.string().optional(),
+      sso: import_zod9.z.string().optional()
     }).optional(),
-    scopes: import_zod11.z.array(import_zod11.z.string()).optional(),
-    user_id: import_zod11.z.string().optional()
+    scopes: import_zod9.z.array(import_zod9.z.string()).optional(),
+    user_id: import_zod9.z.string().optional()
   })
 });
-
-// src/utils/templates.ts
-function toTemplateName(input) {
-  return input.toLowerCase().trim().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "").replace(/_+/g, "_").replace(/^_|_$/g, "");
-}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  GraphAPIError,
+  MediaResource,
+  MessagesResource,
   TemplatesResource,
-  WhatsAppAPIError,
   WhatsAppClient,
-  WhatsAppError,
-  WhatsAppRateLimitError,
-  WhatsAppValidationError,
+  buildMessagePayload,
   businessAccountResponseSchema,
   businessAccountsListResponseSchema,
   clientConfigSchema,
   debugTokenResponseSchema,
-  incomingAudioMessageSchema,
-  incomingImageMessageSchema,
-  incomingMessageSchema,
-  incomingTextMessageSchema,
-  messageResponseSchema,
-  outgoingImageMessageSchema,
-  outgoingLocationMessageSchema,
-  outgoingMessageSchema,
-  outgoingReactionMessageSchema,
-  outgoingTextMessageSchema,
+  mediaDeleteResponseSchema,
+  mediaMetadataSchema,
+  mediaMimeTypeSchema,
+  mediaTypeSchema,
+  mediaUploadResponseSchema,
+  mediaUploadSchema,
+  messageImageContentSchema,
+  messageImageSchema,
+  messageIncomingAudioSchema,
+  messageIncomingImageSchema,
+  messageIncomingSchema,
+  messageIncomingTextSchema,
+  messageLocationContentSchema,
+  messageLocationSchema,
+  messageOutgoingSchema,
+  messageReactionContentSchema,
+  messageReactionSchema,
+  messageSendImageSchema,
+  messageSendLocationSchema,
+  messageSendReactionSchema,
+  messageSendResponseSchema,
+  messageSendTextSchema,
+  messageTextContentSchema,
+  messageTextSchema,
   phoneNumberListResponseSchema,
   phoneNumberResponseSchema,
-  sendImageInputSchema,
-  sendLocationInputSchema,
-  sendReactionInputSchema,
-  sendTextInputSchema,
+  phoneNumberSchema,
   statusSchema,
   templateBodyComponentInputSchema,
   templateBodyExampleSchema,

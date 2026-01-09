@@ -5,7 +5,7 @@ import { listTemplates } from "./methods/list";
 import { getTemplate } from "./methods/get";
 import { updateTemplate } from "./methods/update";
 import { deleteTemplate } from "./methods/delete";
-import { WhatsAppValidationError } from "../../errors";
+
 import type {
   TemplateCreate,
   TemplateUpdate,
@@ -38,9 +38,8 @@ export class TemplatesService {
   private getClient(overrideId?: string): TemplatesClient {
     const id = overrideId || this.httpClient.businessAccountId;
     if (!id) {
-      throw new WhatsAppValidationError(
-        "businessAccountId (WABA ID) is required for templates. Provide it in WhatsAppClient config or as a parameter.",
-        "businessAccountId"
+      throw new Error(
+        "businessAccountId (WABA ID) is required for templates. Provide it in WhatsAppClient config or as a parameter."
       );
     }
 

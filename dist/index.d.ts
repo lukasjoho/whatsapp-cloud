@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import * as node_buffer from 'node:buffer';
 
 /**
  * Client configuration schema
@@ -30,6 +31,10 @@ declare class HttpClient {
     readonly apiVersion: string;
     constructor(config: ClientConfig);
     /**
+     * Handle error responses - preserves FULL API error for debugging
+     */
+    private handleError;
+    /**
      * Make a POST request
      */
     post<T>(path: string, body: unknown): Promise<T>;
@@ -53,9 +58,44 @@ declare class HttpClient {
 }
 
 /**
- * Input schema for sendText() method
+ * E.164 phone number format
  */
-declare const sendTextInputSchema: z.ZodObject<{
+declare const phoneNumberSchema: z.ZodString;
+/**
+ * Text content for text messages
+ */
+declare const messageTextContentSchema: z.ZodObject<{
+    body: z.ZodString;
+    preview_url: z.ZodOptional<z.ZodBoolean>;
+}, z.core.$strip>;
+/**
+ * Image content for image messages
+ */
+declare const messageImageContentSchema: z.ZodObject<{
+    id: z.ZodOptional<z.ZodString>;
+    link: z.ZodOptional<z.ZodString>;
+    caption: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+/**
+ * Location content for location messages
+ */
+declare const messageLocationContentSchema: z.ZodObject<{
+    longitude: z.ZodNumber;
+    latitude: z.ZodNumber;
+    name: z.ZodOptional<z.ZodString>;
+    address: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+/**
+ * Reaction content for reaction messages
+ */
+declare const messageReactionContentSchema: z.ZodObject<{
+    message_id: z.ZodString;
+    emoji: z.ZodString;
+}, z.core.$strip>;
+/**
+ * Input for sending a text message
+ */
+declare const messageSendTextSchema: z.ZodObject<{
     to: z.ZodString;
     text: z.ZodObject<{
         body: z.ZodString;
@@ -63,9 +103,9 @@ declare const sendTextInputSchema: z.ZodObject<{
     }, z.core.$strip>;
 }, z.core.$strip>;
 /**
- * Input schema for sendImage() method
+ * Input for sending an image message
  */
-declare const sendImageInputSchema: z.ZodObject<{
+declare const messageSendImageSchema: z.ZodObject<{
     to: z.ZodString;
     image: z.ZodObject<{
         id: z.ZodOptional<z.ZodString>;
@@ -74,9 +114,9 @@ declare const sendImageInputSchema: z.ZodObject<{
     }, z.core.$strip>;
 }, z.core.$strip>;
 /**
- * Input schema for sendLocation() method
+ * Input for sending a location message
  */
-declare const sendLocationInputSchema: z.ZodObject<{
+declare const messageSendLocationSchema: z.ZodObject<{
     to: z.ZodString;
     location: z.ZodObject<{
         longitude: z.ZodNumber;
@@ -86,19 +126,16 @@ declare const sendLocationInputSchema: z.ZodObject<{
     }, z.core.$strip>;
 }, z.core.$strip>;
 /**
- * Input schema for sendReaction() method
+ * Input for sending a reaction
  */
-declare const sendReactionInputSchema: z.ZodObject<{
+declare const messageSendReactionSchema: z.ZodObject<{
     to: z.ZodString;
     reaction: z.ZodObject<{
         message_id: z.ZodString;
         emoji: z.ZodString;
     }, z.core.$strip>;
 }, z.core.$strip>;
-/**
- * Full outgoing text message schema (includes type discriminator)
- */
-declare const outgoingTextMessageSchema: z.ZodObject<{
+declare const messageTextSchema: z.ZodObject<{
     to: z.ZodString;
     text: z.ZodObject<{
         body: z.ZodString;
@@ -106,10 +143,7 @@ declare const outgoingTextMessageSchema: z.ZodObject<{
     }, z.core.$strip>;
     type: z.ZodLiteral<"text">;
 }, z.core.$strip>;
-/**
- * Full outgoing image message schema (includes type discriminator)
- */
-declare const outgoingImageMessageSchema: z.ZodObject<{
+declare const messageImageSchema: z.ZodObject<{
     to: z.ZodString;
     image: z.ZodObject<{
         id: z.ZodOptional<z.ZodString>;
@@ -118,10 +152,7 @@ declare const outgoingImageMessageSchema: z.ZodObject<{
     }, z.core.$strip>;
     type: z.ZodLiteral<"image">;
 }, z.core.$strip>;
-/**
- * Full outgoing location message schema (includes type discriminator)
- */
-declare const outgoingLocationMessageSchema: z.ZodObject<{
+declare const messageLocationSchema: z.ZodObject<{
     to: z.ZodString;
     location: z.ZodObject<{
         longitude: z.ZodNumber;
@@ -131,10 +162,7 @@ declare const outgoingLocationMessageSchema: z.ZodObject<{
     }, z.core.$strip>;
     type: z.ZodLiteral<"location">;
 }, z.core.$strip>;
-/**
- * Full outgoing reaction message schema (includes type discriminator)
- */
-declare const outgoingReactionMessageSchema: z.ZodObject<{
+declare const messageReactionSchema: z.ZodObject<{
     to: z.ZodString;
     reaction: z.ZodObject<{
         message_id: z.ZodString;
@@ -143,10 +171,9 @@ declare const outgoingReactionMessageSchema: z.ZodObject<{
     type: z.ZodLiteral<"reaction">;
 }, z.core.$strip>;
 /**
- * Union of all outgoing message types
- * Discriminated by the 'type' field
+ * Union of all outgoing message types (discriminated by 'type')
  */
-declare const outgoingMessageSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
+declare const messageOutgoingSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
     to: z.ZodString;
     text: z.ZodObject<{
         body: z.ZodString;
@@ -178,48 +205,10 @@ declare const outgoingMessageSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
     }, z.core.$strip>;
     type: z.ZodLiteral<"reaction">;
 }, z.core.$strip>], "type">;
-
 /**
- * Input type for sendText() method
+ * Response from sending a message
  */
-type SendTextInput = z.infer<typeof sendTextInputSchema>;
-/**
- * Input type for sendImage() method
- */
-type SendImageInput = z.infer<typeof sendImageInputSchema>;
-/**
- * Input type for sendLocation() method
- */
-type SendLocationInput = z.infer<typeof sendLocationInputSchema>;
-/**
- * Input type for sendReaction() method
- */
-type SendReactionInput = z.infer<typeof sendReactionInputSchema>;
-/**
- * Full outgoing text message type (includes type discriminator)
- */
-type OutgoingTextMessage = z.infer<typeof outgoingTextMessageSchema>;
-/**
- * Full outgoing image message type (includes type discriminator)
- */
-type OutgoingImageMessage = z.infer<typeof outgoingImageMessageSchema>;
-/**
- * Full outgoing location message type (includes type discriminator)
- */
-type OutgoingLocationMessage = z.infer<typeof outgoingLocationMessageSchema>;
-/**
- * Full outgoing reaction message type (includes type discriminator)
- */
-type OutgoingReactionMessage = z.infer<typeof outgoingReactionMessageSchema>;
-/**
- * Union type for all outgoing message types
- */
-type OutgoingMessage = z.infer<typeof outgoingMessageSchema>;
-
-/**
- * Schema for message response
- */
-declare const messageResponseSchema: z.ZodObject<{
+declare const messageSendResponseSchema: z.ZodObject<{
     messaging_product: z.ZodLiteral<"whatsapp">;
     contacts: z.ZodArray<z.ZodObject<{
         input: z.ZodString;
@@ -227,199 +216,267 @@ declare const messageResponseSchema: z.ZodObject<{
     }, z.core.$strip>>;
     messages: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
-        group_id: z.ZodOptional<z.ZodString>;
         message_status: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
-
 /**
- * Type for message response
+ * Incoming text message
  */
-type MessageResponse = z.infer<typeof messageResponseSchema>;
+declare const messageIncomingTextSchema: z.ZodObject<{
+    from: z.ZodString;
+    id: z.ZodString;
+    timestamp: z.ZodString;
+    type: z.ZodLiteral<"text">;
+    text: z.ZodObject<{
+        body: z.ZodString;
+    }, z.core.$strip>;
+}, z.core.$strip>;
+/**
+ * Incoming image message
+ */
+declare const messageIncomingImageSchema: z.ZodObject<{
+    from: z.ZodString;
+    id: z.ZodString;
+    timestamp: z.ZodString;
+    type: z.ZodLiteral<"image">;
+    image: z.ZodObject<{
+        id: z.ZodString;
+        mime_type: z.ZodOptional<z.ZodString>;
+        caption: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>;
+}, z.core.$strip>;
+/**
+ * Incoming audio message
+ */
+declare const messageIncomingAudioSchema: z.ZodObject<{
+    from: z.ZodString;
+    id: z.ZodString;
+    timestamp: z.ZodString;
+    type: z.ZodLiteral<"audio">;
+    audio: z.ZodObject<{
+        id: z.ZodString;
+        mime_type: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>;
+}, z.core.$strip>;
+/**
+ * Union of all incoming message types
+ */
+declare const messageIncomingSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
+    from: z.ZodString;
+    id: z.ZodString;
+    timestamp: z.ZodString;
+    type: z.ZodLiteral<"text">;
+    text: z.ZodObject<{
+        body: z.ZodString;
+    }, z.core.$strip>;
+}, z.core.$strip>, z.ZodObject<{
+    from: z.ZodString;
+    id: z.ZodString;
+    timestamp: z.ZodString;
+    type: z.ZodLiteral<"image">;
+    image: z.ZodObject<{
+        id: z.ZodString;
+        mime_type: z.ZodOptional<z.ZodString>;
+        caption: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>;
+}, z.core.$strip>, z.ZodObject<{
+    from: z.ZodString;
+    id: z.ZodString;
+    timestamp: z.ZodString;
+    type: z.ZodLiteral<"audio">;
+    audio: z.ZodObject<{
+        id: z.ZodString;
+        mime_type: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>;
+}, z.core.$strip>], "type">;
+
+type MessageTextContent = z.infer<typeof messageTextContentSchema>;
+type MessageImageContent = z.infer<typeof messageImageContentSchema>;
+type MessageLocationContent = z.infer<typeof messageLocationContentSchema>;
+type MessageReactionContent = z.infer<typeof messageReactionContentSchema>;
+/**
+ * Input for sending a text message
+ */
+type MessageSendText = z.infer<typeof messageSendTextSchema>;
+/**
+ * Input for sending an image message
+ */
+type MessageSendImage = z.infer<typeof messageSendImageSchema>;
+/**
+ * Input for sending a location message
+ */
+type MessageSendLocation = z.infer<typeof messageSendLocationSchema>;
+/**
+ * Input for sending a reaction
+ */
+type MessageSendReaction = z.infer<typeof messageSendReactionSchema>;
+type MessageText = z.infer<typeof messageTextSchema>;
+type MessageImage = z.infer<typeof messageImageSchema>;
+type MessageLocation = z.infer<typeof messageLocationSchema>;
+type MessageReaction = z.infer<typeof messageReactionSchema>;
+/**
+ * Union of all outgoing message types
+ */
+type MessageOutgoing = z.infer<typeof messageOutgoingSchema>;
+/**
+ * Response from sending a message
+ */
+type MessageSendResponse = z.infer<typeof messageSendResponseSchema>;
+type MessageIncomingText = z.infer<typeof messageIncomingTextSchema>;
+type MessageIncomingImage = z.infer<typeof messageIncomingImageSchema>;
+type MessageIncomingAudio = z.infer<typeof messageIncomingAudioSchema>;
+/**
+ * Union of all incoming message types
+ */
+type MessageIncoming = z.infer<typeof messageIncomingSchema>;
 
 /**
- * Messages service for sending WhatsApp messages
+ * Messages resource for sending WhatsApp messages
  *
- * This service handles message operations.
- * It supports both a globally configured phoneNumberId (in WhatsAppClient)
- * and per-request phoneNumberId overrides.
+ * @example
+ * ```typescript
+ * // Send a text message
+ * await client.messages.sendText({
+ *   to: "+1234567890",
+ *   text: { body: "Hello!" }
+ * });
+ *
+ * // Send an image
+ * await client.messages.sendImage({
+ *   to: "+1234567890",
+ *   image: { link: "https://example.com/image.jpg" }
+ * });
+ *
+ * // Send using the generic send method
+ * await client.messages.send({
+ *   type: "text",
+ *   to: "+1234567890",
+ *   text: { body: "Hello!" }
+ * });
+ * ```
  */
-declare class MessagesService {
+declare class MessagesResource {
     private readonly httpClient;
     constructor(httpClient: HttpClient);
     /**
-     * Helper to create a Scoped Client (prefer override, fallback to config)
+     * Get the phone number ID (with validation)
      */
-    private getClient;
+    private getPhoneNumberId;
     /**
      * Send a text message
      *
-     * @param input - Text message input (to, text)
+     * @param input - Text message input
      * @param phoneNumberId - Optional phone number ID (overrides client config)
+     * @throws {ZodError} If input validation fails
+     *
+     * @example
+     * ```typescript
+     * await client.messages.sendText({
+     *   to: "+1234567890",
+     *   text: { body: "Hello, world!" }
+     * });
+     * ```
      */
-    sendText(input: SendTextInput, phoneNumberId?: string): Promise<MessageResponse>;
+    sendText(input: MessageSendText, phoneNumberId?: string): Promise<MessageSendResponse>;
     /**
      * Send an image message
      *
-     * @param input - Image message input (to, image)
+     * @param input - Image message input
      * @param phoneNumberId - Optional phone number ID (overrides client config)
+     * @throws {ZodError} If input validation fails
+     *
+     * @example
+     * ```typescript
+     * // Using a URL
+     * await client.messages.sendImage({
+     *   to: "+1234567890",
+     *   image: { link: "https://example.com/photo.jpg", caption: "Check this out!" }
+     * });
+     *
+     * // Using a media ID
+     * await client.messages.sendImage({
+     *   to: "+1234567890",
+     *   image: { id: "media_id_from_upload" }
+     * });
+     * ```
      */
-    sendImage(input: SendImageInput, phoneNumberId?: string): Promise<MessageResponse>;
+    sendImage(input: MessageSendImage, phoneNumberId?: string): Promise<MessageSendResponse>;
     /**
      * Send a location message
      *
-     * @param input - Location message input (to, location)
+     * @param input - Location message input
      * @param phoneNumberId - Optional phone number ID (overrides client config)
-     */
-    sendLocation(input: SendLocationInput, phoneNumberId?: string): Promise<MessageResponse>;
-    /**
-     * Send a reaction message
+     * @throws {ZodError} If input validation fails
      *
-     * @param input - Reaction message input (to, reaction)
-     * @param phoneNumberId - Optional phone number ID (overrides client config)
+     * @example
+     * ```typescript
+     * await client.messages.sendLocation({
+     *   to: "+1234567890",
+     *   location: {
+     *     latitude: 37.7749,
+     *     longitude: -122.4194,
+     *     name: "San Francisco",
+     *     address: "California, USA"
+     *   }
+     * });
+     * ```
      */
-    sendReaction(input: SendReactionInput, phoneNumberId?: string): Promise<MessageResponse>;
+    sendLocation(input: MessageSendLocation, phoneNumberId?: string): Promise<MessageSendResponse>;
+    /**
+     * Send a reaction to a message
+     *
+     * @param input - Reaction input
+     * @param phoneNumberId - Optional phone number ID (overrides client config)
+     * @throws {ZodError} If input validation fails
+     *
+     * @example
+     * ```typescript
+     * await client.messages.sendReaction({
+     *   to: "+1234567890",
+     *   reaction: {
+     *     message_id: "wamid.xxx",
+     *     emoji: "👍"
+     *   }
+     * });
+     * ```
+     */
+    sendReaction(input: MessageSendReaction, phoneNumberId?: string): Promise<MessageSendResponse>;
     /**
      * Send any message type using the discriminated union
      *
      * @param message - Any outgoing message (text, image, location, reaction)
      * @param phoneNumberId - Optional phone number ID (overrides client config)
-     */
-    sendMessage(message: OutgoingMessage, phoneNumberId?: string): Promise<MessageResponse>;
-}
-
-/**
- * Schema for phone number response
- * Matches WhatsApp API structure for phone number objects
- */
-declare const phoneNumberResponseSchema: z.ZodObject<{
-    verified_name: z.ZodString;
-    display_phone_number: z.ZodString;
-    id: z.ZodString;
-    quality_rating: z.ZodString;
-}, z.core.$strip>;
-/**
- * Schema for phone number list response
- * Matches WhatsApp API structure for GET /phone_numbers endpoint
- */
-declare const phoneNumberListResponseSchema: z.ZodObject<{
-    data: z.ZodArray<z.ZodObject<{
-        verified_name: z.ZodString;
-        display_phone_number: z.ZodString;
-        id: z.ZodString;
-        quality_rating: z.ZodString;
-    }, z.core.$strip>>;
-}, z.core.$strip>;
-
-/**
- * Type for phone number list response
- */
-type PhoneNumberListResponse = z.infer<typeof phoneNumberListResponseSchema>;
-
-/**
- * Accounts service for managing WhatsApp Business Accounts
- *
- * This service handles WABA operations like listing phone numbers.
- * It supports both a globally configured businessAccountId (in WhatsAppClient)
- * and per-request businessAccountId overrides.
- */
-declare class AccountsService {
-    private readonly httpClient;
-    constructor(httpClient: HttpClient);
-    /**
-     * Helper to create a Scoped Client (prefer override, fallback to config)
-     */
-    private getClient;
-    /**
-     * List phone numbers for a WhatsApp Business Account
      *
-     * @param businessAccountId - Optional WABA ID (overrides client config)
-     * @returns List of phone numbers associated with the WABA
+     * @example
+     * ```typescript
+     * await client.messages.send({
+     *   type: "text",
+     *   to: "+1234567890",
+     *   text: { body: "Hello!" }
+     * });
+     * ```
      */
-    listPhoneNumbers(businessAccountId?: string): Promise<PhoneNumberListResponse>;
+    send(message: MessageOutgoing, phoneNumberId?: string): Promise<MessageSendResponse>;
 }
 
 /**
- * Schema for WhatsApp Business Account (WABA) response
- * Matches WhatsApp API structure for WABA objects
- */
-declare const businessAccountResponseSchema: z.ZodObject<{
-    id: z.ZodString;
-    name: z.ZodOptional<z.ZodString>;
-    account_review_status: z.ZodOptional<z.ZodString>;
-    currency: z.ZodOptional<z.ZodString>;
-    country: z.ZodOptional<z.ZodString>;
-    timezone_id: z.ZodOptional<z.ZodString>;
-    business_verification_status: z.ZodOptional<z.ZodString>;
-    is_enabled_for_insights: z.ZodOptional<z.ZodBoolean>;
-    message_template_namespace: z.ZodOptional<z.ZodString>;
-}, z.core.$strip>;
-/**
- * Schema for WhatsApp Business Accounts list response
- * Matches WhatsApp API structure for GET /whatsapp_business_accounts endpoint
+ * Builds the message payload structure for WhatsApp API
  *
- * Note: The API returns data as an object with numeric string keys (e.g., "0", "1")
- * or as an array, plus optional paging information
+ * All WhatsApp messages follow this structure:
+ * {
+ *   "messaging_product": "whatsapp",
+ *   "recipient_type": "individual",
+ *   "to": "<PHONE_NUMBER>",
+ *   "type": "<MESSAGE_TYPE>",
+ *   "<MESSAGE_TYPE>": {<CONTENT>}
+ * }
  */
-declare const businessAccountsListResponseSchema: z.ZodObject<{
-    data: z.ZodUnion<[z.ZodRecord<z.ZodString, z.ZodObject<{
-        id: z.ZodString;
-        name: z.ZodOptional<z.ZodString>;
-        account_review_status: z.ZodOptional<z.ZodString>;
-        currency: z.ZodOptional<z.ZodString>;
-        country: z.ZodOptional<z.ZodString>;
-        timezone_id: z.ZodOptional<z.ZodString>;
-        business_verification_status: z.ZodOptional<z.ZodString>;
-        is_enabled_for_insights: z.ZodOptional<z.ZodBoolean>;
-        message_template_namespace: z.ZodOptional<z.ZodString>;
-    }, z.core.$strip>>, z.ZodArray<z.ZodObject<{
-        id: z.ZodString;
-        name: z.ZodOptional<z.ZodString>;
-        account_review_status: z.ZodOptional<z.ZodString>;
-        currency: z.ZodOptional<z.ZodString>;
-        country: z.ZodOptional<z.ZodString>;
-        timezone_id: z.ZodOptional<z.ZodString>;
-        business_verification_status: z.ZodOptional<z.ZodString>;
-        is_enabled_for_insights: z.ZodOptional<z.ZodBoolean>;
-        message_template_namespace: z.ZodOptional<z.ZodString>;
-    }, z.core.$strip>>]>;
-    paging: z.ZodOptional<z.ZodObject<{
-        cursors: z.ZodOptional<z.ZodObject<{
-            before: z.ZodOptional<z.ZodString>;
-            after: z.ZodOptional<z.ZodString>;
-        }, z.core.$strip>>;
-        next: z.ZodOptional<z.ZodString>;
-        previous: z.ZodOptional<z.ZodString>;
-    }, z.core.$strip>>;
-}, z.core.$strip>;
-
-/**
- * Type for WhatsApp Business Accounts list response
- */
-type BusinessAccountsListResponse = z.infer<typeof businessAccountsListResponseSchema>;
-
-/**
- * Business service for managing Business Portfolios
- *
- * This service handles Business Portfolio operations like listing WABAs.
- * It supports both a globally configured businessId (in WhatsAppClient)
- * and per-request businessId overrides.
- */
-declare class BusinessService {
-    private readonly httpClient;
-    constructor(httpClient: HttpClient);
-    /**
-     * Helper to create a Scoped Client (prefer override, fallback to config)
-     */
-    private getClient;
-    /**
-     * List WhatsApp Business Accounts (WABAs) for a Business Portfolio
-     *
-     * @param businessId - Optional Business Portfolio ID (overrides client config)
-     * @returns List of WABAs associated with the Business Portfolio
-     */
-    listAccounts(businessId?: string): Promise<BusinessAccountsListResponse>;
-}
+declare function buildMessagePayload<T extends Record<string, unknown>>(to: string, type: string, content: T): {
+    messaging_product: "whatsapp";
+    recipient_type: "individual";
+    to: string;
+    type: string;
+} & T;
 
 /**
  * Supported WhatsApp template languages
@@ -2652,6 +2709,355 @@ declare class TemplatesResource {
 }
 
 /**
+ * Template utilities
+ */
+/**
+ * Converts an arbitrary string to a valid WhatsApp template name.
+ *
+ * WhatsApp template names must:
+ * - Contain only lowercase letters, numbers, and underscores
+ * - Be between 1 and 512 characters
+ *
+ * @example
+ * ```typescript
+ * import { toTemplateName } from 'whatsapp-cloud';
+ *
+ * toTemplateName("Order Confirmation");  // "order_confirmation"
+ * toTemplateName("Welcome! New User");   // "welcome_new_user"
+ * toTemplateName("2FA Code");            // "2fa_code"
+ * ```
+ */
+declare function toTemplateName(input: string): string;
+
+/**
+ * Supported media types for upload
+ */
+declare const mediaTypeSchema: z.ZodEnum<{
+    image: "image";
+    audio: "audio";
+    video: "video";
+    document: "document";
+    sticker: "sticker";
+}>;
+/**
+ * Supported MIME types
+ *
+ * Audio: audio/aac, audio/amr, audio/mpeg, audio/mp4, audio/ogg
+ * Image: image/jpeg, image/png
+ * Video: video/3gpp, video/mp4
+ * Document: text/plain, application/pdf, application/msword, etc.
+ * Sticker: image/webp
+ */
+declare const mediaMimeTypeSchema: z.ZodString;
+/**
+ * Input for uploading media
+ */
+declare const mediaUploadSchema: z.ZodObject<{
+    file: z.ZodUnion<readonly [z.ZodCustom<node_buffer.Blob, node_buffer.Blob>, z.ZodCustom<ArrayBuffer, ArrayBuffer>]>;
+    mimeType: z.ZodString;
+    filename: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+/**
+ * Response from uploading media
+ */
+declare const mediaUploadResponseSchema: z.ZodObject<{
+    id: z.ZodString;
+}, z.core.$strip>;
+/**
+ * Media metadata response (from GET /MEDIA_ID)
+ *
+ * The URL is only valid for 5 minutes.
+ */
+declare const mediaMetadataSchema: z.ZodObject<{
+    messaging_product: z.ZodLiteral<"whatsapp">;
+    url: z.ZodString;
+    mime_type: z.ZodString;
+    sha256: z.ZodString;
+    file_size: z.ZodString;
+    id: z.ZodString;
+}, z.core.$strip>;
+/**
+ * Response from deleting media
+ */
+declare const mediaDeleteResponseSchema: z.ZodObject<{
+    success: z.ZodBoolean;
+}, z.core.$strip>;
+
+/**
+ * Media type (image, video, audio, document, sticker)
+ */
+type MediaType = z.infer<typeof mediaTypeSchema>;
+/**
+ * Input for uploading media
+ */
+type MediaUpload = z.infer<typeof mediaUploadSchema>;
+/**
+ * Response from uploading media
+ */
+type MediaUploadResponse = z.infer<typeof mediaUploadResponseSchema>;
+/**
+ * Media metadata (from GET /MEDIA_ID)
+ *
+ * Contains the download URL (valid for 5 minutes), MIME type, file size, and hash.
+ */
+type MediaMetadata = z.infer<typeof mediaMetadataSchema>;
+/**
+ * Response from deleting media
+ */
+type MediaDeleteResponse = z.infer<typeof mediaDeleteResponseSchema>;
+
+/**
+ * Media resource for managing WhatsApp media files
+ *
+ * Media files are encrypted and persist for 30 days unless deleted.
+ * Media IDs from uploads expire after 30 days.
+ * Media IDs from webhooks expire after 7 days.
+ * Media URLs expire after 5 minutes.
+ *
+ * @example
+ * ```typescript
+ * // Upload media
+ * const { id } = await client.media.upload({
+ *   file: imageBuffer,
+ *   mimeType: "image/jpeg"
+ * });
+ *
+ * // Get media metadata (includes download URL)
+ * const metadata = await client.media.get(mediaId);
+ * console.log(metadata.url); // Valid for 5 minutes
+ *
+ * // Download media binary
+ * const buffer = await client.media.download(mediaId);
+ *
+ * // Delete media
+ * await client.media.delete(mediaId);
+ * ```
+ */
+declare class MediaResource {
+    private readonly httpClient;
+    constructor(httpClient: HttpClient);
+    /**
+     * Get the phone number ID (with validation)
+     */
+    private getPhoneNumberId;
+    /**
+     * Upload media to WhatsApp
+     *
+     * Uploaded media persists for 30 days unless deleted.
+     * Returns a media ID that can be used in messages or templates.
+     *
+     * @param input - Upload input (file, mimeType, optional filename)
+     * @param phoneNumberId - Optional phone number ID (overrides client config)
+     * @returns Media ID
+     * @throws {ZodError} If input validation fails
+     *
+     * @example
+     * ```typescript
+     * // Upload an image
+     * const { id } = await client.media.upload({
+     *   file: imageBuffer,
+     *   mimeType: "image/jpeg",
+     *   filename: "photo.jpg"
+     * });
+     *
+     * // Use in a message
+     * await client.messages.sendImage({
+     *   to: "+1234567890",
+     *   image: { id }
+     * });
+     * ```
+     */
+    upload(input: MediaUpload, phoneNumberId?: string): Promise<MediaUploadResponse>;
+    /**
+     * Get media metadata including download URL
+     *
+     * The returned URL is only valid for 5 minutes.
+     * If expired, call this method again to get a fresh URL.
+     *
+     * @param mediaId - Media ID from upload or webhook
+     * @param phoneNumberId - Optional phone number ID (validates ownership)
+     * @returns Media metadata including download URL
+     *
+     * @example
+     * ```typescript
+     * const metadata = await client.media.get(mediaId);
+     * console.log(metadata.mime_type);  // "image/jpeg"
+     * console.log(metadata.file_size);  // "12345"
+     * console.log(metadata.url);        // Download URL (5 min expiry)
+     * ```
+     */
+    get(mediaId: string, phoneNumberId?: string): Promise<MediaMetadata>;
+    /**
+     * Download media binary data
+     *
+     * This is a convenience method that:
+     * 1. Gets the media URL (via `get()`)
+     * 2. Downloads the binary content
+     *
+     * @param mediaId - Media ID from upload or webhook
+     * @returns Binary data as ArrayBuffer
+     *
+     * @example
+     * ```typescript
+     * const buffer = await client.media.download(message.image.id);
+     *
+     * // Save to file (Node.js)
+     * fs.writeFileSync("image.jpg", Buffer.from(buffer));
+     *
+     * // Upload to S3
+     * await s3.upload({ Body: Buffer.from(buffer), Key: "image.jpg" });
+     * ```
+     */
+    download(mediaId: string): Promise<ArrayBuffer>;
+    /**
+     * Delete media
+     *
+     * @param mediaId - Media ID to delete
+     * @param phoneNumberId - Optional phone number ID (validates ownership)
+     * @returns Success status
+     *
+     * @example
+     * ```typescript
+     * await client.media.delete(mediaId);
+     * ```
+     */
+    delete(mediaId: string, phoneNumberId?: string): Promise<MediaDeleteResponse>;
+}
+
+/**
+ * Schema for phone number response
+ * Matches WhatsApp API structure for phone number objects
+ */
+declare const phoneNumberResponseSchema: z.ZodObject<{
+    verified_name: z.ZodString;
+    display_phone_number: z.ZodString;
+    id: z.ZodString;
+    quality_rating: z.ZodString;
+}, z.core.$strip>;
+/**
+ * Schema for phone number list response
+ * Matches WhatsApp API structure for GET /phone_numbers endpoint
+ */
+declare const phoneNumberListResponseSchema: z.ZodObject<{
+    data: z.ZodArray<z.ZodObject<{
+        verified_name: z.ZodString;
+        display_phone_number: z.ZodString;
+        id: z.ZodString;
+        quality_rating: z.ZodString;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+
+/**
+ * Type for phone number list response
+ */
+type PhoneNumberListResponse = z.infer<typeof phoneNumberListResponseSchema>;
+
+/**
+ * Accounts service for managing WhatsApp Business Accounts
+ *
+ * This service handles WABA operations like listing phone numbers.
+ * It supports both a globally configured businessAccountId (in WhatsAppClient)
+ * and per-request businessAccountId overrides.
+ */
+declare class AccountsService {
+    private readonly httpClient;
+    constructor(httpClient: HttpClient);
+    /**
+     * Helper to create a Scoped Client (prefer override, fallback to config)
+     */
+    private getClient;
+    /**
+     * List phone numbers for a WhatsApp Business Account
+     *
+     * @param businessAccountId - Optional WABA ID (overrides client config)
+     * @returns List of phone numbers associated with the WABA
+     */
+    listPhoneNumbers(businessAccountId?: string): Promise<PhoneNumberListResponse>;
+}
+
+/**
+ * Schema for WhatsApp Business Account (WABA) response
+ * Matches WhatsApp API structure for WABA objects
+ */
+declare const businessAccountResponseSchema: z.ZodObject<{
+    id: z.ZodString;
+    name: z.ZodOptional<z.ZodString>;
+    account_review_status: z.ZodOptional<z.ZodString>;
+    currency: z.ZodOptional<z.ZodString>;
+    country: z.ZodOptional<z.ZodString>;
+    timezone_id: z.ZodOptional<z.ZodString>;
+    business_verification_status: z.ZodOptional<z.ZodString>;
+    is_enabled_for_insights: z.ZodOptional<z.ZodBoolean>;
+    message_template_namespace: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+/**
+ * Schema for WhatsApp Business Accounts list response
+ * Matches WhatsApp API structure for GET /whatsapp_business_accounts endpoint
+ *
+ * Note: The API returns data as an object with numeric string keys (e.g., "0", "1")
+ * or as an array, plus optional paging information
+ */
+declare const businessAccountsListResponseSchema: z.ZodObject<{
+    data: z.ZodUnion<[z.ZodRecord<z.ZodString, z.ZodObject<{
+        id: z.ZodString;
+        name: z.ZodOptional<z.ZodString>;
+        account_review_status: z.ZodOptional<z.ZodString>;
+        currency: z.ZodOptional<z.ZodString>;
+        country: z.ZodOptional<z.ZodString>;
+        timezone_id: z.ZodOptional<z.ZodString>;
+        business_verification_status: z.ZodOptional<z.ZodString>;
+        is_enabled_for_insights: z.ZodOptional<z.ZodBoolean>;
+        message_template_namespace: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>, z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        name: z.ZodOptional<z.ZodString>;
+        account_review_status: z.ZodOptional<z.ZodString>;
+        currency: z.ZodOptional<z.ZodString>;
+        country: z.ZodOptional<z.ZodString>;
+        timezone_id: z.ZodOptional<z.ZodString>;
+        business_verification_status: z.ZodOptional<z.ZodString>;
+        is_enabled_for_insights: z.ZodOptional<z.ZodBoolean>;
+        message_template_namespace: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>]>;
+    paging: z.ZodOptional<z.ZodObject<{
+        cursors: z.ZodOptional<z.ZodObject<{
+            before: z.ZodOptional<z.ZodString>;
+            after: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>;
+        next: z.ZodOptional<z.ZodString>;
+        previous: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+
+/**
+ * Type for WhatsApp Business Accounts list response
+ */
+type BusinessAccountsListResponse = z.infer<typeof businessAccountsListResponseSchema>;
+
+/**
+ * Business service for managing Business Portfolios
+ *
+ * This service handles Business Portfolio operations like listing WABAs.
+ * It supports both a globally configured businessId (in WhatsAppClient)
+ * and per-request businessId overrides.
+ */
+declare class BusinessService {
+    private readonly httpClient;
+    constructor(httpClient: HttpClient);
+    /**
+     * Helper to create a Scoped Client (prefer override, fallback to config)
+     */
+    private getClient;
+    /**
+     * List WhatsApp Business Accounts (WABAs) for a Business Portfolio
+     *
+     * @param businessId - Optional Business Portfolio ID (overrides client config)
+     * @returns List of WABAs associated with the Business Portfolio
+     */
+    listAccounts(businessId?: string): Promise<BusinessAccountsListResponse>;
+}
+
+/**
  * Status update schema for webhook payloads
  * Represents the status of a sent message (sent, delivered, read, failed, played)
  */
@@ -3069,39 +3475,6 @@ declare class WebhooksService {
 }
 
 /**
- * Media service for downloading WhatsApp media files
- *
- * This service handles downloading media files from WhatsApp servers.
- */
-declare class MediaService {
-    private readonly httpClient;
-    constructor(httpClient: HttpClient);
-    /**
-     * Download media file by media ID
-     *
-     * Downloads media files (images, audio, video, documents) from WhatsApp servers.
-     * Uses the access token from the client configuration automatically.
-     *
-     * According to WhatsApp API docs, you cannot download directly from the media ID endpoint.
-     * The flow is:
-     * 1. GET /MEDIA_ID → returns JSON metadata with a URL
-     * 2. GET /MEDIA_URL → returns the actual binary data
-     *
-     * @param mediaId - Media ID from incoming message (e.g., message.image.id, message.audio.id)
-     * @returns Promise resolving to ArrayBuffer containing the media file
-     * @throws Error if download fails or media ID is invalid
-     *
-     * @example
-     * ```typescript
-     * const mediaData = await client.media.download(message.image.id);
-     * // Upload to S3, save to disk, etc.
-     * await s3.upload({ key: message.image.id, body: Buffer.from(mediaData) });
-     * ```
-     */
-    download(mediaId: string): Promise<ArrayBuffer>;
-}
-
-/**
  * Schema for debug token response
  * Matches Graph API debug_token endpoint response structure
  */
@@ -3132,12 +3505,12 @@ type DebugTokenResponse = z.infer<typeof debugTokenResponseSchema>;
  * WhatsApp Cloud API client
  */
 declare class WhatsAppClient {
-    readonly messages: MessagesService;
+    readonly messages: MessagesResource;
     readonly accounts: AccountsService;
     readonly business: BusinessService;
     readonly templates: TemplatesResource;
     readonly webhooks: WebhooksService;
-    readonly media: MediaService;
+    readonly media: MediaResource;
     private readonly httpClient;
     constructor(config: ClientConfig);
     /**
@@ -3152,75 +3525,57 @@ declare class WhatsAppClient {
 }
 
 /**
- * Media metadata response (from GET /MEDIA_ID)
- */
-type MediaMetadata = {
-    messaging_product: "whatsapp";
-    url: string;
-    mime_type: string;
-    sha256: string;
-    file_size: string;
-    id: string;
-};
-
-/**
- * Base error class for WhatsApp API errors
- */
-declare class WhatsAppError extends Error {
-    constructor(message: string);
-}
-/**
- * Error thrown when validation fails (configuration, requests, etc.)
- * Can be used for any Zod validation error
- */
-declare class WhatsAppValidationError extends WhatsAppError {
-    readonly field?: string | undefined;
-    readonly issues?: Array<{
-        path: readonly (string | number)[];
-        message: string;
-    }> | undefined;
-    constructor(message: string, field?: string | undefined, issues?: Array<{
-        path: readonly (string | number)[];
-        message: string;
-    }> | undefined);
-}
-/**
- * Error thrown when an API request fails
- */
-declare class WhatsAppAPIError extends WhatsAppError {
-    readonly code: number;
-    readonly type: string;
-    readonly statusCode?: number | undefined;
-    readonly details?: unknown | undefined;
-    constructor(code: number, type: string, message: string, statusCode?: number | undefined, details?: unknown | undefined);
-}
-/**
- * Error thrown when rate limit is exceeded
- */
-declare class WhatsAppRateLimitError extends WhatsAppAPIError {
-    readonly retryAfter?: number | undefined;
-    constructor(message: string, retryAfter?: number | undefined);
-}
-
-/**
- * Template utilities
- */
-/**
- * Converts an arbitrary string to a valid WhatsApp template name.
+ * Graph API Error Response - the FULL structure from Meta's API
  *
- * WhatsApp template names must:
- * - Contain only lowercase letters, numbers, and underscores
- * - Be between 1 and 512 characters
+ * We preserve everything Meta returns, no fields stripped.
+ */
+interface GraphAPIErrorResponse {
+    error: {
+        message: string;
+        type: string;
+        code: number;
+        error_subcode?: number;
+        error_user_title?: string;
+        error_user_msg?: string;
+        fbtrace_id?: string;
+        is_transient?: boolean;
+        error_data?: {
+            messaging_product?: string;
+            details?: string;
+            [key: string]: unknown;
+        };
+        [key: string]: unknown;
+    };
+}
+/**
+ * Error thrown when the Graph API returns an error response.
+ *
+ * The FULL error response from Meta is stored in `response`.
+ * Nothing is stripped or transformed.
  *
  * @example
  * ```typescript
- * import { toTemplateName } from 'whatsapp-cloud';
- *
- * toTemplateName("Order Confirmation");  // "order_confirmation"
- * toTemplateName("Welcome! New User");   // "welcome_new_user"
- * toTemplateName("2FA Code");            // "2fa_code"
+ * try {
+ *   await client.templates.create(input);
+ * } catch (error) {
+ *   if (error instanceof GraphAPIError) {
+ *     console.log(error.response.error.fbtrace_id);    // For Meta support
+ *     console.log(error.response.error.error_user_msg); // User-friendly message
+ *     console.log(error.response.error.error_subcode);  // Programmatic handling
+ *   }
+ * }
  * ```
  */
-declare function toTemplateName(input: string): string;
+declare class GraphAPIError extends Error {
+    /** The FULL error response from the Graph API - unmodified */
+    readonly response: GraphAPIErrorResponse;
+    /** HTTP status code */
+    readonly statusCode: number;
+    constructor(
+    /** The FULL error response from the Graph API - unmodified */
+    response: GraphAPIErrorResponse, 
+    /** HTTP status code */
+    statusCode: number);
+}
 
-export { type BusinessAccountsListResponse, type ClientConfig, type DebugTokenResponse, type HandleOptions, type IncomingAudioMessage, type IncomingImageMessage, type IncomingMessage, type IncomingTextMessage, type MediaMetadata, type MessageContext, type MessageHandlers, type MessageResponse, type OutgoingImageMessage, type OutgoingLocationMessage, type OutgoingMessage, type OutgoingReactionMessage, type OutgoingTextMessage, type PhoneNumberListResponse, type SendImageInput, type SendLocationInput, type SendReactionInput, type SendTextInput, type Status, type Template, type TemplateBodyComponentInput, type TemplateBodyExample, type TemplateButton, type TemplateButtonInput, type TemplateButtonsComponentInput, type TemplateCategory, type TemplateComponent, type TemplateComponentInput, type TemplateCopyCodeButtonInput, type TemplateCreate, type TemplateCreateResponse, type TemplateDelete, type TemplateDeleteResponse, type TemplateFlowButtonInput, type TemplateFooterComponentInput, type TemplateHeaderComponentInput, type TemplateHeaderLocationInput, type TemplateHeaderMediaInput, type TemplateHeaderTextExample, type TemplateHeaderTextInput, type TemplateLanguage, type TemplateList, type TemplateListResponse, type TemplateNamedParamExample, type TemplatePaging, type TemplatePagingCursors, type TemplateParameterFormat, type TemplatePhoneNumberButtonInput, type TemplateQualityScore, type TemplateQuickReplyButtonInput, type TemplateStatus, type TemplateUpdate, type TemplateUpdateResponse, type TemplateUrlButtonInput, TemplatesResource, type WebhookContext, type WebhookPayload, WhatsAppAPIError, WhatsAppClient, WhatsAppError, WhatsAppRateLimitError, WhatsAppValidationError, businessAccountResponseSchema, businessAccountsListResponseSchema, clientConfigSchema, debugTokenResponseSchema, incomingAudioMessageSchema, incomingImageMessageSchema, incomingMessageSchema, incomingTextMessageSchema, messageResponseSchema, outgoingImageMessageSchema, outgoingLocationMessageSchema, outgoingMessageSchema, outgoingReactionMessageSchema, outgoingTextMessageSchema, phoneNumberListResponseSchema, phoneNumberResponseSchema, sendImageInputSchema, sendLocationInputSchema, sendReactionInputSchema, sendTextInputSchema, statusSchema, templateBodyComponentInputSchema, templateBodyExampleSchema, templateButtonInputSchema, templateButtonSchema, templateButtonsComponentInputSchema, templateCategorySchema, templateComponentInputSchema, templateComponentSchema, templateCopyCodeButtonInputSchema, templateCreateAuthenticationSchema, templateCreateMarketingSchema, templateCreateResponseSchema, templateCreateSchema, templateCreateUtilitySchema, templateDeleteResponseSchema, templateDeleteSchema, templateFlowButtonInputSchema, templateFooterComponentInputSchema, templateHeaderComponentInputSchema, templateHeaderLocationInputSchema, templateHeaderMediaInputSchema, templateHeaderTextExampleSchema, templateHeaderTextInputSchema, templateLanguageSchema, templateListResponseSchema, templateListSchema, templateNamedParamExampleSchema, templatePagingCursorsSchema, templatePagingSchema, templateParameterFormatSchema, templatePhoneNumberButtonInputSchema, templateQualityScoreSchema, templateQuickReplyButtonInputSchema, templateSchema, templateStatusSchema, templateUpdateResponseSchema, templateUpdateSchema, templateUrlButtonInputSchema, toTemplateName, webhookPayloadSchema };
+export { type BusinessAccountsListResponse, type ClientConfig, type DebugTokenResponse, GraphAPIError, type GraphAPIErrorResponse, type HandleOptions, type MediaDeleteResponse, type MediaMetadata, MediaResource, type MediaType, type MediaUpload, type MediaUploadResponse, type MessageContext, type MessageHandlers, type MessageImage, type MessageImageContent, type MessageIncoming, type MessageIncomingAudio, type MessageIncomingImage, type MessageIncomingText, type MessageLocation, type MessageLocationContent, type MessageOutgoing, type MessageReaction, type MessageReactionContent, type MessageSendImage, type MessageSendLocation, type MessageSendReaction, type MessageSendResponse, type MessageSendText, type MessageText, type MessageTextContent, MessagesResource, type PhoneNumberListResponse, type Status, type Template, type TemplateBodyComponentInput, type TemplateBodyExample, type TemplateButton, type TemplateButtonInput, type TemplateButtonsComponentInput, type TemplateCategory, type TemplateComponent, type TemplateComponentInput, type TemplateCopyCodeButtonInput, type TemplateCreate, type TemplateCreateResponse, type TemplateDelete, type TemplateDeleteResponse, type TemplateFlowButtonInput, type TemplateFooterComponentInput, type TemplateHeaderComponentInput, type TemplateHeaderLocationInput, type TemplateHeaderMediaInput, type TemplateHeaderTextExample, type TemplateHeaderTextInput, type TemplateLanguage, type TemplateList, type TemplateListResponse, type TemplateNamedParamExample, type TemplatePaging, type TemplatePagingCursors, type TemplateParameterFormat, type TemplatePhoneNumberButtonInput, type TemplateQualityScore, type TemplateQuickReplyButtonInput, type TemplateStatus, type TemplateUpdate, type TemplateUpdateResponse, type TemplateUrlButtonInput, TemplatesResource, type WebhookContext, type WebhookPayload, WhatsAppClient, buildMessagePayload, businessAccountResponseSchema, businessAccountsListResponseSchema, clientConfigSchema, debugTokenResponseSchema, mediaDeleteResponseSchema, mediaMetadataSchema, mediaMimeTypeSchema, mediaTypeSchema, mediaUploadResponseSchema, mediaUploadSchema, messageImageContentSchema, messageImageSchema, messageIncomingAudioSchema, messageIncomingImageSchema, messageIncomingSchema, messageIncomingTextSchema, messageLocationContentSchema, messageLocationSchema, messageOutgoingSchema, messageReactionContentSchema, messageReactionSchema, messageSendImageSchema, messageSendLocationSchema, messageSendReactionSchema, messageSendResponseSchema, messageSendTextSchema, messageTextContentSchema, messageTextSchema, phoneNumberListResponseSchema, phoneNumberResponseSchema, phoneNumberSchema, statusSchema, templateBodyComponentInputSchema, templateBodyExampleSchema, templateButtonInputSchema, templateButtonSchema, templateButtonsComponentInputSchema, templateCategorySchema, templateComponentInputSchema, templateComponentSchema, templateCopyCodeButtonInputSchema, templateCreateAuthenticationSchema, templateCreateMarketingSchema, templateCreateResponseSchema, templateCreateSchema, templateCreateUtilitySchema, templateDeleteResponseSchema, templateDeleteSchema, templateFlowButtonInputSchema, templateFooterComponentInputSchema, templateHeaderComponentInputSchema, templateHeaderLocationInputSchema, templateHeaderMediaInputSchema, templateHeaderTextExampleSchema, templateHeaderTextInputSchema, templateLanguageSchema, templateListResponseSchema, templateListSchema, templateNamedParamExampleSchema, templatePagingCursorsSchema, templatePagingSchema, templateParameterFormatSchema, templatePhoneNumberButtonInputSchema, templateQualityScoreSchema, templateQuickReplyButtonInputSchema, templateSchema, templateStatusSchema, templateUpdateResponseSchema, templateUpdateSchema, templateUrlButtonInputSchema, toTemplateName, webhookPayloadSchema };

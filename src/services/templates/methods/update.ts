@@ -2,7 +2,7 @@ import type { HttpClient } from "../../../client/HttpClient";
 import { templateUpdateSchema } from "../../../schemas/templates/request";
 import type { TemplateUpdate } from "../../../types/templates/request";
 import type { TemplateUpdateResponse } from "../../../types/templates/response";
-import { transformZodError } from "../../../utils/zod-error";
+
 
 /**
  * Update a template
@@ -22,10 +22,10 @@ export async function updateTemplate(
     throw new Error("Template ID is required");
   }
 
-  // Validate request with schema - throws WhatsAppValidationError if invalid
+  // Validate request with schema - throws ZodError if invalid
   const result = templateUpdateSchema.safeParse(request);
   if (!result.success) {
-    throw transformZodError(result.error);
+    throw result.error;
   }
   const data = result.data;
 

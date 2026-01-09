@@ -1,7 +1,7 @@
 import type { HttpClient } from "../../client/HttpClient";
 import { AccountsClient } from "./AccountsClient";
 import { listPhoneNumbers } from "./methods/list-phone-numbers";
-import { WhatsAppValidationError } from "../../errors";
+
 import type { PhoneNumberListResponse } from "../../types/accounts/phone-number";
 
 /**
@@ -20,9 +20,8 @@ export class AccountsService {
   private getClient(overrideId?: string): AccountsClient {
     const id = overrideId || this.httpClient.businessAccountId;
     if (!id) {
-      throw new WhatsAppValidationError(
-        "businessAccountId (WABA ID) is required. Provide it in WhatsAppClient config or as a parameter.",
-        "businessAccountId"
+      throw new Error(
+        "businessAccountId (WABA ID) is required. Provide it in WhatsAppClient config or as a parameter."
       );
     }
 

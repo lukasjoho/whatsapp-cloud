@@ -2,7 +2,7 @@ import type { TemplatesClient } from "../TemplatesClient";
 import { templateListSchema } from "../../../schemas/templates/request";
 import type { TemplateList } from "../../../types/templates/request";
 import type { TemplateListResponse } from "../../../types/templates/response";
-import { transformZodError } from "../../../utils/zod-error";
+
 
 /**
  * List message templates
@@ -18,7 +18,7 @@ export async function listTemplates(
   if (options) {
     const result = templateListSchema.safeParse(options);
     if (!result.success) {
-      throw transformZodError(result.error);
+      throw result.error;
     }
   }
 

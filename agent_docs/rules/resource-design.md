@@ -11,6 +11,7 @@ src/resources/{name}/
 ├── schema.ts    # All Zod schemas (single file)
 ├── types.ts     # All types inferred from schemas
 ├── resource.ts  # The resource class with methods
+├── utils.ts     # Resource-specific utilities (optional)
 └── index.ts     # Barrel export
 ```
 
@@ -90,10 +91,7 @@ Resources that require a business account ID:
 private getBusinessAccountId(overrideId?: string): string {
   const id = overrideId || this.httpClient.businessAccountId;
   if (!id) {
-    throw new WhatsAppValidationError(
-      "businessAccountId is required",
-      "businessAccountId"
-    );
+    throw new Error("businessAccountId is required");
   }
   return id;
 }
@@ -106,7 +104,24 @@ private getBusinessAccountId(overrideId?: string): string {
 export { TemplatesResource } from "./resource";
 export type * from "./types";
 export * from "./schema";
+export { toTemplateName } from "./utils"; // If utils exist
 ```
+
+## Utils Colocation
+
+Resource-specific utilities belong inside the resource folder:
+
+```typescript
+// src/resources/templates/utils.ts
+export function toTemplateName(input: string): string {
+  return input.toLowerCase().replace(/\s+/g, "_")...
+}
+```
+
+**Guidelines:**
+- Only create `utils.ts` if the resource needs helper functions
+- Export through `index.ts` for single import path
+- Shared utilities (used by multiple resources) stay in `src/utils/`
 
 ## JSDoc
 
@@ -136,3 +151,56 @@ Document methods with:
  * ```
  */
 ```
+
+## Error Handling
+
+**Principle: Errors flow through as-is. No remodeling.**
+
+### Error Sources
+
+| Source | Error Type | Notes |
+|--------|------------|-------|
+| Zod validation | `ZodError` | Flows through unchanged |
+| Graph API | `GraphAPIError` | Full response in `.response` |
+| SDK checks | `Error` | Simple missing config, etc. |
+
+### GraphAPIError
+
+One class that wraps the API response - nothing else:
+
+```typescript
+class GraphAPIError extends Error {
+  constructor(
+    public readonly response: GraphAPIErrorResponse,
+    public readonly statusCode: number
+  ) {
+    super(response.error.message);
+  }
+}
+```
+
+Usage:
+
+```typescript
+try {
+  await client.templates.create(input);
+} catch (error) {
+  if (error instanceof GraphAPIError) {
+    // Full response - nothing stripped
+    error.response.error.fbtrace_id;     // For Meta support
+    error.response.error.error_user_msg; // User-friendly message
+    error.response.error.error_subcode;  // Programmatic handling
+  }
+
+  if (error instanceof ZodError) {
+    error.issues; // Zod's native structure
+  }
+}
+```
+
+### Why This Approach?
+
+- Full API response preserved - nothing lost
+- `instanceof` for error type checking
+- Stack traces for debugging
+- Future API fields automatically available

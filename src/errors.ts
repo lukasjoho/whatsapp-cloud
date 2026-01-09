@@ -1,58 +1,54 @@
 /**
- * Base error class for WhatsApp API errors
+ * Graph API Error Response - the FULL structure from Meta's API
+ *
+ * We preserve everything Meta returns, no fields stripped.
  */
-export class WhatsAppError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = this.constructor.name;
-    // Maintains proper stack trace for where our error was thrown (only available on V8)
-    const captureStackTrace = (Error as any).captureStackTrace;
-    if (typeof captureStackTrace === "function") {
-      captureStackTrace(this, this.constructor);
-    }
-  }
+export interface GraphAPIErrorResponse {
+  error: {
+    message: string;
+    type: string;
+    code: number;
+    error_subcode?: number;
+    error_user_title?: string;
+    error_user_msg?: string;
+    fbtrace_id?: string;
+    is_transient?: boolean;
+    error_data?: {
+      messaging_product?: string;
+      details?: string;
+      [key: string]: unknown;
+    };
+    [key: string]: unknown; // Preserve any additional fields Meta adds
+  };
 }
 
 /**
- * Error thrown when validation fails (configuration, requests, etc.)
- * Can be used for any Zod validation error
+ * Error thrown when the Graph API returns an error response.
+ *
+ * The FULL error response from Meta is stored in `response`.
+ * Nothing is stripped or transformed.
+ *
+ * @example
+ * ```typescript
+ * try {
+ *   await client.templates.create(input);
+ * } catch (error) {
+ *   if (error instanceof GraphAPIError) {
+ *     console.log(error.response.error.fbtrace_id);    // For Meta support
+ *     console.log(error.response.error.error_user_msg); // User-friendly message
+ *     console.log(error.response.error.error_subcode);  // Programmatic handling
+ *   }
+ * }
+ * ```
  */
-export class WhatsAppValidationError extends WhatsAppError {
+export class GraphAPIError extends Error {
   constructor(
-    message: string,
-    public readonly field?: string,
-    public readonly issues?: Array<{
-      path: readonly (string | number)[];
-      message: string;
-    }>
+    /** The FULL error response from the Graph API - unmodified */
+    public readonly response: GraphAPIErrorResponse,
+    /** HTTP status code */
+    public readonly statusCode: number
   ) {
-    super(message);
-    this.name = "WhatsAppValidationError";
-  }
-}
-
-/**
- * Error thrown when an API request fails
- */
-export class WhatsAppAPIError extends WhatsAppError {
-  constructor(
-    public readonly code: number,
-    public readonly type: string,
-    message: string,
-    public readonly statusCode?: number,
-    public readonly details?: unknown
-  ) {
-    super(message);
-    this.name = "WhatsAppAPIError";
-  }
-}
-
-/**
- * Error thrown when rate limit is exceeded
- */
-export class WhatsAppRateLimitError extends WhatsAppAPIError {
-  constructor(message: string, public readonly retryAfter?: number) {
-    super(131056, "rate_limit", message, 429, { retryAfter });
-    this.name = "WhatsAppRateLimitError";
+    super(response.error.message);
+    this.name = "GraphAPIError";
   }
 }
