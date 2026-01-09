@@ -164,4 +164,62 @@ export class HttpClient {
 
     return response.json() as Promise<T>;
   }
+
+  /**
+   * Make a POST request with form-urlencoded body
+   * Used by some Graph API endpoints like assigned_users
+   */
+  async postForm<T>(path: string, body: Record<string, string | string[]>): Promise<T> {
+    const url = `${this.baseURL}/${this.apiVersion}${path}`;
+
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(body)) {
+      if (Array.isArray(value)) {
+        // For arrays, Graph API expects the format: tasks[0]=X&tasks[1]=Y
+        value.forEach((v, i) => params.append(`${key}[${i}]`, v));
+      } else {
+        params.append(key, value);
+      }
+    }
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Bearer ${this.accessToken}`,
+      },
+      body: params.toString(),
+    });
+
+    if (!response.ok) {
+      await this.handleError(response);
+    }
+
+    return response.json() as Promise<T>;
+  }
+
+  /**
+   * Make a DELETE request with form-urlencoded body
+   * Used by some Graph API endpoints like assigned_users
+   */
+  async deleteForm<T>(path: string, body: Record<string, string>): Promise<T> {
+    const url = `${this.baseURL}/${this.apiVersion}${path}`;
+
+    const params = new URLSearchParams(body);
+
+    const response = await fetch(url, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Bearer ${this.accessToken}`,
+      },
+      body: params.toString(),
+    });
+
+    if (!response.ok) {
+      await this.handleError(response);
+    }
+
+    return response.json() as Promise<T>;
+  }
 }

@@ -1,8 +1,62 @@
 // Resource
 export { PhoneNumbersResource } from "./resource";
 
-// Types
-export type * from "./types";
+// Types (excluding CursorPaging which is exported from wabas)
+export type {
+  PhoneNumberQualityRating,
+  PhoneNumberStatus,
+  CodeVerificationStatus,
+  UnifiedCertStatus,
+  AccountMode,
+  HostPlatform,
+  NameStatus,
+  MessagingLimitTier,
+  CodeMethod,
+  Vertical,
+  PhoneNumber,
+  PhoneNumberListResponse,
+  PhoneNumberListOptions,
+  AddPreverifiedRequest,
+  AddPreverifiedResponse,
+  PhoneNumberCreateRequest,
+  PhoneNumberCreateResponse,
+  PhoneNumberRegister,
+  PhoneNumberRegisterResponse,
+  RequestVerificationCode,
+  VerifyCode,
+  VerificationResponse,
+  BusinessProfile,
+  BusinessProfileResponse,
+  BusinessProfileUpdate,
+  BusinessProfileUpdateResponse,
+} from "./types";
 
-// Schemas
-export * from "./schema";
+// Schemas (excluding cursorPagingSchema which is exported from wabas)
+export {
+  phoneNumberQualityRatingSchema,
+  phoneNumberStatusSchema,
+  codeVerificationStatusSchema,
+  unifiedCertStatusSchema,
+  accountModeSchema,
+  hostPlatformSchema,
+  nameStatusSchema,
+  messagingLimitTierSchema,
+  codeMethodSchema,
+  verticalSchema,
+  phoneNumberResponseSchema,
+  phoneNumberListResponseSchema,
+  phoneNumberListOptionsSchema,
+  addPreverifiedRequestSchema,
+  addPreverifiedResponseSchema,
+  phoneNumberCreateRequestSchema,
+  phoneNumberCreateResponseSchema,
+  phoneNumberRegisterSchema,
+  phoneNumberRegisterResponseSchema,
+  requestVerificationCodeSchema,
+  verifyCodeSchema,
+  verificationResponseSchema,
+  businessProfileSchema,
+  businessProfileResponseSchema,
+  businessProfileUpdateSchema,
+  businessProfileUpdateResponseSchema,
+} from "./schema";

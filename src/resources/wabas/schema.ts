@@ -123,3 +123,89 @@ export const subscribeAppResponseSchema = z.object({
 export const unsubscribeAppResponseSchema = z.object({
   success: z.boolean(),
 });
+
+// =============================================================================
+// Assigned Users
+// =============================================================================
+
+/**
+ * Permission tasks for WhatsApp Business Account access
+ * @see POST /{WABA-ID}/assigned_users
+ */
+export const permissionTaskSchema = z.enum([
+  "MANAGE",
+  "DEVELOP",
+  "MANAGE_TEMPLATES",
+  "MANAGE_PHONE",
+  "VIEW_COST",
+  "MANAGE_EXTENSIONS",
+  "VIEW_PHONE_ASSETS",
+  "MANAGE_PHONE_ASSETS",
+  "VIEW_TEMPLATES",
+  "VIEW_INSIGHTS",
+  "RECEIVE_INCOMING_MESSAGES",
+  "MANAGE_BILLING",
+  "MANAGE_USERS",
+  "MESSAGING",
+  "FULL_CONTROL",
+]);
+
+/**
+ * Type of user assignment
+ */
+export const assignedUserTypeSchema = z.enum([
+  "BUSINESS_USER",
+  "SYSTEM_USER",
+  "PERSONAL_USER",
+]);
+
+/**
+ * Business entity associated with the user
+ */
+export const businessNodeSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().optional(),
+});
+
+/**
+ * User assigned to WhatsApp Business Account
+ */
+export const assignedUserSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  business: businessNodeSchema.optional(),
+  user_type: assignedUserTypeSchema.optional(),
+});
+
+/**
+ * Summary information about assigned users
+ */
+export const assignedUsersSummarySchema = z.object({
+  total_count: z.number().optional(),
+});
+
+/**
+ * Response from listing assigned users
+ */
+export const assignedUsersResponseSchema = z.object({
+  data: z.array(assignedUserSchema),
+  paging: cursorPagingSchema.optional(),
+  summary: assignedUsersSummarySchema.optional(),
+});
+
+/**
+ * Options for listing assigned users
+ */
+export const assignedUsersListOptionsSchema = z.object({
+  fields: z.string().optional(),
+  limit: z.number().min(1).max(100).optional(),
+  after: z.string().optional(),
+  before: z.string().optional(),
+});
+
+/**
+ * Response from adding/removing assigned user
+ */
+export const assignedUserMutationResponseSchema = z.object({
+  success: z.boolean(),
+});

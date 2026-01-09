@@ -3,8 +3,9 @@ import type {
   PhoneNumber,
   PhoneNumberListResponse,
   PhoneNumberListOptions,
-  PhoneNumberAdd,
-  PhoneNumberAddResponse,
+  AddPreverifiedResponse,
+  PhoneNumberCreateRequest,
+  PhoneNumberCreateResponse,
   PhoneNumberRegister,
   PhoneNumberRegisterResponse,
   RequestVerificationCode,
@@ -21,21 +22,35 @@ import type {
  * Manages WhatsApp phone numbers including registration, verification,
  * and business profile settings.
  *
+ * There are two ways to add phone numbers:
+ *
+ * 1. **Partner flow (addPreverified)**: Add a phone number to the Business Portfolio
+ *    pool. This creates a preverified entity that can later be assigned to a WABA.
+ *    Use this if you're a BSP managing phone numbers for multiple clients.
+ *
+ * 2. **Standard flow (create)**: Create a phone number directly in a WABA.
+ *    This initiates the verification and business name approval process.
+ *    You can optionally use a preverified_id from the Partner flow.
+ *
  * @example
  * ```typescript
  * // List phone numbers in a WABA
  * const numbers = await client.phoneNumbers.list();
  *
- * // Register a phone number
+ * // Partner flow: add to business portfolio pool
+ * const preverified = await client.phoneNumbers.addPreverified("+14155551234");
+ *
+ * // Standard flow: create in a WABA (optionally using preverified_id)
+ * const phone = await client.phoneNumbers.create({
+ *   phone_number: "14155551234",
+ *   verified_name: "Acme Corp",
+ *   preverified_id: preverified.id, // optional
+ * });
+ *
+ * // Register the phone number
  * await client.phoneNumbers.register({
  *   messaging_product: "whatsapp",
  *   pin: "123456"
- * });
- *
- * // Update business profile
- * await client.phoneNumbers.updateProfile({
- *   messaging_product: "whatsapp",
- *   about: "Welcome to our business!"
  * });
  * ```
  */
@@ -89,6 +104,8 @@ export class PhoneNumbersResource {
 
     const params = new URLSearchParams();
     if (options.fields) params.set("fields", options.fields);
+    if (options.filtering) params.set("filtering", options.filtering);
+    if (options.sort) params.set("sort", options.sort);
     if (options.limit) params.set("limit", options.limit.toString());
     if (options.after) params.set("after", options.after);
     if (options.before) params.set("before", options.before);
@@ -104,7 +121,9 @@ export class PhoneNumbersResource {
   /**
    * List phone numbers in a WhatsApp Business Account
    *
-   * @param options - Query options (fields, pagination)
+   * @see GET /{WABA-ID}/phone_numbers
+   *
+   * @param options - Query options (fields, filtering, sort, pagination)
    * @param wabaId - WABA ID (overrides config.businessAccountId)
    * @returns List of phone numbers
    *
@@ -114,7 +133,12 @@ export class PhoneNumbersResource {
    *
    * // With specific fields
    * const numbers = await client.phoneNumbers.list({
-   *   fields: "id,display_phone_number,verified_name,quality_rating"
+   *   fields: "id,display_phone_number,verified_name,quality_rating,status"
+   * });
+   *
+   * // With filtering
+   * const numbers = await client.phoneNumbers.list({
+   *   filtering: JSON.stringify([{ field: "account_mode", operator: "EQUAL", value: "LIVE" }])
    * });
    * ```
    */
@@ -132,9 +156,21 @@ export class PhoneNumbersResource {
   /**
    * Get details of a specific phone number
    *
+   * @see GET /{Phone-Number-ID}
+   *
    * @param phoneNumberId - Phone number ID (overrides config)
    * @param fields - Comma-separated list of fields to return
    * @returns Phone number details
+   *
+   * @example
+   * ```typescript
+   * const phone = await client.phoneNumbers.get("123456789");
+   *
+   * // With specific fields
+   * const phone = await client.phoneNumbers.get("123456789",
+   *   "id,display_phone_number,verified_name,quality_rating,status,name_status"
+   * );
+   * ```
    */
   async get(phoneNumberId?: string, fields?: string): Promise<PhoneNumber> {
     const id = this.getPhoneNumberId(phoneNumberId);
@@ -143,36 +179,100 @@ export class PhoneNumbersResource {
   }
 
   // ===========================================================================
-  // Add Phone Number
+  // Add Preverified (Partner flow)
   // ===========================================================================
 
   /**
-   * Add a phone number to a Business Portfolio
+   * Add a preverified phone number to the Business Portfolio pool
    *
-   * This adds a phone number and associates it with a specific WABA.
-   * After adding, you need to verify and register the number.
+   * This is the **Partner/BSP flow** for managing phone numbers. It adds a phone
+   * number to the Partner's inventory as a preverified entity. The number is NOT
+   * yet in any WABA - it's just reserved and ready to be assigned.
    *
-   * @param data - Phone number data (includes waba_id for assignment)
-   * @param businessId - Business Portfolio ID (overrides config)
-   * @returns Created phone number ID
+   * Use the returned `id` as `preverified_id` when calling `create()` to assign
+   * the number to a specific WABA.
+   *
+   * @see POST /{Business-ID}/add_phone_numbers
+   *
+   * @param phoneNumber - Phone number in E.164 format (e.g., "+14155551234")
+   * @param businessId - Business Portfolio ID (overrides config.businessId)
+   * @returns The preverified phone number entity ID
    *
    * @example
    * ```typescript
-   * const result = await client.phoneNumbers.add({
-   *   phone_number: "+14155551234",
-   *   waba_id: "WABA_ID",
-   *   verified_name: "My Business"
-   * });
-   * console.log(result.id); // New phone number ID
+   * // Step 1: Add to Partner's pool
+   * const preverified = await client.phoneNumbers.addPreverified("+14155551234");
+   * console.log(preverified.id); // "preverified_123"
+   *
+   * // Step 2: Assign to customer's WABA
+   * const phone = await client.phoneNumbers.create({
+   *   phone_number: "14155551234",
+   *   verified_name: "Customer Corp",
+   *   preverified_id: preverified.id,
+   * }, "customer_waba_id");
    * ```
    */
-  async add(
-    data: PhoneNumberAdd,
+  async addPreverified(
+    phoneNumber: string,
     businessId?: string
-  ): Promise<PhoneNumberAddResponse> {
+  ): Promise<AddPreverifiedResponse> {
     const id = this.getBusinessId(businessId);
-    return this.httpClient.post<PhoneNumberAddResponse>(
+    return this.httpClient.post<AddPreverifiedResponse>(
       `/${id}/add_phone_numbers`,
+      { phone_number: phoneNumber }
+    );
+  }
+
+  // ===========================================================================
+  // Create in WABA (Standard flow)
+  // ===========================================================================
+
+  /**
+   * Create a phone number in a WhatsApp Business Account
+   *
+   * This is the **standard flow** for adding phone numbers to a WABA. It initiates
+   * the phone number onboarding process including verification and business name
+   * approval.
+   *
+   * If you're a Partner/BSP and have a `preverified_id` from `addPreverified()`,
+   * you can use it here to skip the verification step.
+   *
+   * @see POST /{WABA-ID}/phone_numbers
+   *
+   * @param data - Phone number creation data
+   * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @returns The created phone number ID
+   *
+   * @example
+   * ```typescript
+   * // Standard flow: create and verify
+   * const phone = await client.phoneNumbers.create({
+   *   phone_number: "14155551234",  // E.164 without +
+   *   verified_name: "Acme Corp",
+   * });
+   *
+   * // With preverified_id from Partner flow
+   * const phone = await client.phoneNumbers.create({
+   *   phone_number: "14155551234",
+   *   verified_name: "Customer Corp",
+   *   preverified_id: "preverified_123",
+   * });
+   *
+   * // Migration from on-premises
+   * const phone = await client.phoneNumbers.create({
+   *   phone_number: "14155551234",
+   *   verified_name: "Acme Corp",
+   *   migrate_phone_number: true,
+   * });
+   * ```
+   */
+  async create(
+    data: PhoneNumberCreateRequest,
+    wabaId?: string
+  ): Promise<PhoneNumberCreateResponse> {
+    const id = this.getWabaId(wabaId);
+    return this.httpClient.post<PhoneNumberCreateResponse>(
+      `/${id}/phone_numbers`,
       data
     );
   }
@@ -186,6 +286,8 @@ export class PhoneNumbersResource {
    *
    * Meta will send a verification code via SMS or voice call.
    * Use verifyCode() to submit the received code.
+   *
+   * @see POST /{Phone-Number-ID}/request_code
    *
    * @param data - Verification method (SMS or VOICE) and optional language
    * @param phoneNumberId - Phone number ID (overrides config)
@@ -215,6 +317,8 @@ export class PhoneNumbersResource {
    *
    * Submit the code received via SMS or voice call.
    *
+   * @see POST /{Phone-Number-ID}/verify_code
+   *
    * @param data - The verification code
    * @param phoneNumberId - Phone number ID (overrides config)
    * @returns Success status
@@ -231,7 +335,10 @@ export class PhoneNumbersResource {
     phoneNumberId?: string
   ): Promise<VerificationResponse> {
     const id = this.getPhoneNumberId(phoneNumberId);
-    return this.httpClient.post<VerificationResponse>(`/${id}/verify_code`, data);
+    return this.httpClient.post<VerificationResponse>(
+      `/${id}/verify_code`,
+      data
+    );
   }
 
   // ===========================================================================
@@ -243,6 +350,8 @@ export class PhoneNumbersResource {
    *
    * This activates the phone number on WhatsApp's servers.
    * The number must be verified first.
+   *
+   * @see POST /{Phone-Number-ID}/register
    *
    * @param data - Registration data including 6-digit PIN
    * @param phoneNumberId - Phone number ID (overrides config)
@@ -273,6 +382,8 @@ export class PhoneNumbersResource {
    * This removes the phone number from WhatsApp's servers.
    * The number can be re-registered later.
    *
+   * @see POST /{Phone-Number-ID}/deregister
+   *
    * @param phoneNumberId - Phone number ID (overrides config)
    * @returns Success status
    */
@@ -292,6 +403,8 @@ export class PhoneNumbersResource {
 
   /**
    * Get the WhatsApp Business Profile for a phone number
+   *
+   * @see GET /{Phone-Number-ID}/whatsapp_business_profile
    *
    * @param phoneNumberId - Phone number ID (overrides config)
    * @param fields - Comma-separated list of fields
@@ -318,6 +431,8 @@ export class PhoneNumbersResource {
 
   /**
    * Update the WhatsApp Business Profile for a phone number
+   *
+   * @see POST /{Phone-Number-ID}/whatsapp_business_profile
    *
    * @param data - Profile data to update
    * @param phoneNumberId - Phone number ID (overrides config)

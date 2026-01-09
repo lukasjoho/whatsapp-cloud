@@ -1,27 +1,95 @@
 import { z } from "zod";
 
 // =============================================================================
-// Enums
+// Enums (aligned with official docs)
 // =============================================================================
 
+/**
+ * Quality rating for the phone number based on message delivery and user feedback
+ * @see GET /{WABA-ID}/phone_numbers
+ */
 export const phoneNumberQualityRatingSchema = z.enum([
   "GREEN",
   "YELLOW",
   "RED",
   "UNKNOWN",
+  "NA",
 ]);
 
+/**
+ * Current status of the phone number in the WhatsApp Business Account
+ * @see GET /{WABA-ID}/phone_numbers
+ */
 export const phoneNumberStatusSchema = z.enum([
   "PENDING",
+  "LINKED",
+  "UNLINKED",
   "DELETED",
   "MIGRATED",
   "BANNED",
   "RESTRICTED",
-  "RATE_LIMITED",
-  "FLAGGED",
   "CONNECTED",
   "DISCONNECTED",
-  "UNKNOWN",
+  "FLAGGED",
+  "RATE_LIMITED",
+]);
+
+/**
+ * Two-step verification status for the phone number
+ */
+export const codeVerificationStatusSchema = z.enum([
+  "VERIFIED",
+  "NOT_VERIFIED",
+  "EXPIRED",
+]);
+
+/**
+ * Unified certification status combining business and name verification
+ */
+export const unifiedCertStatusSchema = z.enum([
+  "APPROVED",
+  "NAME_PENDING_REVIEW",
+  "NAME_NOT_APPROVED",
+  "ACCOUNT_REVIEW_NOT_STARTED",
+  "LIMITED_ACCESS",
+]);
+
+/**
+ * Account mode indicating sandbox or live environment
+ */
+export const accountModeSchema = z.enum(["LIVE", "SANDBOX"]);
+
+/**
+ * Platform hosting the WhatsApp Business Account
+ */
+export const hostPlatformSchema = z.enum([
+  "CLOUD_API",
+  "ON_PREMISE",
+  "NOT_APPLICABLE",
+]);
+
+/**
+ * Display name status for the phone number
+ */
+export const nameStatusSchema = z.enum([
+  "APPROVED",
+  "AVAILABLE_WITHOUT_REVIEW",
+  "DECLINED",
+  "EXPIRED",
+  "PENDING_REVIEW",
+  "NONE",
+]);
+
+/**
+ * Messaging limit tier
+ */
+export const messagingLimitTierSchema = z.enum([
+  "TIER_50",
+  "TIER_250",
+  "TIER_1K",
+  "TIER_10K",
+  "TIER_100K",
+  "TIER_UNLIMITED",
 ]);
 
 export const codeMethodSchema = z.enum(["SMS", "VOICE"]);
@@ -49,58 +117,116 @@ export const verticalSchema = z.enum([
 ]);
 
 // =============================================================================
-// Phone Number Response
+// Phone Number Response (from GET /{WABA-ID}/phone_numbers)
 // =============================================================================
 
+/**
+ * Phone number details as returned from WABA-level list endpoint
+ * @see GET /{WABA-ID}/phone_numbers
+ */
 export const phoneNumberResponseSchema = z.object({
   id: z.string(),
   display_phone_number: z.string(),
-  verified_name: z.string(),
-  quality_rating: phoneNumberQualityRatingSchema.optional(),
-  code_verification_status: z.string().optional(),
-  is_official_business_account: z.boolean().optional(),
-  account_mode: z.string().optional(),
-  eligibility_for_api_business_global_search: z.string().optional(),
-  is_pin_enabled: z.boolean().optional(),
-  name_status: z.string().optional(),
-  new_name_status: z.string().optional(),
+  verified_name: z.string().optional(),
   status: phoneNumberStatusSchema.optional(),
+  quality_rating: phoneNumberQualityRatingSchema.optional(),
+  country_code: z.string().optional(),
+  country_dial_code: z.string().optional(),
+  code_verification_status: codeVerificationStatusSchema.optional(),
+  unified_cert_status: unifiedCertStatusSchema.optional(),
+  account_mode: accountModeSchema.optional(),
+  host_platform: hostPlatformSchema.optional(),
+  messaging_limit_tier: messagingLimitTierSchema.optional(),
+  is_official_business_account: z.boolean().optional(),
+  username: z.string().optional(),
+  name_status: nameStatusSchema.optional(),
+  certificate: z.string().optional(),
+  is_pin_enabled: z.boolean().optional(),
   search_visibility: z.string().optional(),
-  messaging_limit_tier: z.string().optional(),
 });
 
 // =============================================================================
-// List Phone Numbers Response
+// List Phone Numbers (GET /{WABA-ID}/phone_numbers)
 // =============================================================================
+
+export const cursorPagingSchema = z.object({
+  cursors: z
+    .object({
+      before: z.string().optional(),
+      after: z.string().optional(),
+    })
+    .optional(),
+  previous: z.string().optional(),
+  next: z.string().optional(),
+});
 
 export const phoneNumberListResponseSchema = z.object({
   data: z.array(phoneNumberResponseSchema),
-  paging: z
-    .object({
-      cursors: z
-        .object({
-          before: z.string().optional(),
-          after: z.string().optional(),
-        })
-        .optional(),
-      next: z.string().optional(),
-      previous: z.string().optional(),
-    })
+  paging: cursorPagingSchema.optional(),
+});
+
+export const phoneNumberListOptionsSchema = z.object({
+  fields: z.string().optional(),
+  filtering: z.string().optional(),
+  sort: z
+    .enum([
+      "creation_time.asc",
+      "creation_time.desc",
+      "last_onboarded_time.asc",
+      "last_onboarded_time.desc",
+    ])
     .optional(),
+  limit: z.number().min(1).max(100).optional(),
+  after: z.string().optional(),
+  before: z.string().optional(),
 });
 
 // =============================================================================
-// Add Phone Number
+// Add Preverified Phone Number (POST /{Business-ID}/add_phone_numbers)
+// Partner flow - adds to business portfolio pool
 // =============================================================================
 
-export const phoneNumberAddSchema = z.object({
+/**
+ * Request to add a preverified phone number to the business portfolio
+ * @see POST /{Business-ID}/add_phone_numbers
+ */
+export const addPreverifiedRequestSchema = z.object({
   phone_number: z.string(),
-  country_code: z.string().optional(),
-  verified_name: z.string().optional(),
-  waba_id: z.string(),
 });
 
-export const phoneNumberAddResponseSchema = z.object({
+/**
+ * Response containing the preverified phone number entity ID
+ */
+export const addPreverifiedResponseSchema = z.object({
+  id: z.string(),
+});
+
+// =============================================================================
+// Create Phone Number in WABA (POST /{WABA-ID}/phone_numbers)
+// Standard flow - creates phone number in a specific WABA
+// =============================================================================
+
+/**
+ * Request to create a phone number in a WABA
+ * @see POST /{WABA-ID}/phone_numbers
+ */
+export const phoneNumberCreateRequestSchema = z.object({
+  /** Phone number in E.164 format without the + prefix */
+  phone_number: z.string(),
+  /** Business name to be verified for this phone number */
+  verified_name: z.string(),
+  /** Country code for the phone number */
+  cc: z.string().optional(),
+  /** Whether this is a phone number migration from on-premises */
+  migrate_phone_number: z.boolean().optional(),
+  /** Pre-verified phone number ID for BSP scenarios (from addPreverified) */
+  preverified_id: z.string().optional(),
+});
+
+/**
+ * Response containing the created phone number ID
+ */
+export const phoneNumberCreateResponseSchema = z.object({
   id: z.string(),
 });
 
@@ -111,10 +237,6 @@ export const phoneNumberAddResponseSchema = z.object({
 export const phoneNumberRegisterSchema = z.object({
   messaging_product: z.literal("whatsapp"),
   pin: z.string().min(6).max(6),
-});
-
-export const phoneNumberDeregisterSchema = z.object({
-  messaging_product: z.literal("whatsapp").optional(),
 });
 
 export const phoneNumberRegisterResponseSchema = z.object({
@@ -163,15 +285,4 @@ export const businessProfileUpdateSchema = businessProfileSchema.extend({
 
 export const businessProfileUpdateResponseSchema = z.object({
   success: z.boolean(),
-});
-
-// =============================================================================
-// List Options
-// =============================================================================
-
-export const phoneNumberListOptionsSchema = z.object({
-  fields: z.string().optional(),
-  limit: z.number().min(1).max(100).optional(),
-  after: z.string().optional(),
-  before: z.string().optional(),
 });

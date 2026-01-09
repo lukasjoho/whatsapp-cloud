@@ -30,9 +30,19 @@ __export(index_exports, {
   WabasResource: () => WabasResource,
   WebhooksResource: () => WebhooksResource,
   WhatsAppClient: () => WhatsAppClient,
+  accountModeSchema: () => accountModeSchema,
   accountReviewStatusSchema: () => accountReviewStatusSchema,
+  addPreverifiedRequestSchema: () => addPreverifiedRequestSchema,
+  addPreverifiedResponseSchema: () => addPreverifiedResponseSchema,
+  assignedUserMutationResponseSchema: () => assignedUserMutationResponseSchema,
+  assignedUserSchema: () => assignedUserSchema,
+  assignedUserTypeSchema: () => assignedUserTypeSchema,
+  assignedUsersListOptionsSchema: () => assignedUsersListOptionsSchema,
+  assignedUsersResponseSchema: () => assignedUsersResponseSchema,
+  assignedUsersSummarySchema: () => assignedUsersSummarySchema,
   buildMessagePayload: () => buildMessagePayload,
   businessGetOptionsSchema: () => businessGetOptionsSchema,
+  businessNodeSchema: () => businessNodeSchema,
   businessProfileResponseSchema: () => businessProfileResponseSchema,
   businessProfileSchema: () => businessProfileSchema,
   businessProfileUpdateResponseSchema: () => businessProfileUpdateResponseSchema,
@@ -41,10 +51,12 @@ __export(index_exports, {
   businessVerificationStatusSchema: () => businessVerificationStatusSchema,
   clientConfigSchema: () => clientConfigSchema,
   codeMethodSchema: () => codeMethodSchema,
+  codeVerificationStatusSchema: () => codeVerificationStatusSchema,
   cursorPagingSchema: () => cursorPagingSchema,
   debugTokenResponseSchema: () => debugTokenResponseSchema,
   extractMessages: () => extractMessages,
   extractStatuses: () => extractStatuses,
+  hostPlatformSchema: () => hostPlatformSchema,
   mediaDeleteResponseSchema: () => mediaDeleteResponseSchema,
   mediaMetadataSchema: () => mediaMetadataSchema,
   mediaMimeTypeSchema: () => mediaMimeTypeSchema,
@@ -69,10 +81,12 @@ __export(index_exports, {
   messageSendTextSchema: () => messageSendTextSchema,
   messageTextContentSchema: () => messageTextContentSchema,
   messageTextSchema: () => messageTextSchema,
+  messagingLimitTierSchema: () => messagingLimitTierSchema,
+  nameStatusSchema: () => nameStatusSchema,
   onBehalfOfBusinessInfoSchema: () => onBehalfOfBusinessInfoSchema,
-  phoneNumberAddResponseSchema: () => phoneNumberAddResponseSchema,
-  phoneNumberAddSchema: () => phoneNumberAddSchema,
-  phoneNumberDeregisterSchema: () => phoneNumberDeregisterSchema,
+  permissionTaskSchema: () => permissionTaskSchema,
+  phoneNumberCreateRequestSchema: () => phoneNumberCreateRequestSchema,
+  phoneNumberCreateResponseSchema: () => phoneNumberCreateResponseSchema,
   phoneNumberListOptionsSchema: () => phoneNumberListOptionsSchema,
   phoneNumberListResponseSchema: () => phoneNumberListResponseSchema,
   phoneNumberQualityRatingSchema: () => phoneNumberQualityRatingSchema,
@@ -124,6 +138,7 @@ __export(index_exports, {
   templateUpdateSchema: () => templateUpdateSchema,
   templateUrlButtonInputSchema: () => templateUrlButtonInputSchema,
   toTemplateName: () => toTemplateName,
+  unifiedCertStatusSchema: () => unifiedCertStatusSchema,
   unsubscribeAppResponseSchema: () => unsubscribeAppResponseSchema,
   verificationResponseSchema: () => verificationResponseSchema,
   verifyCodeSchema: () => verifyCodeSchema,
@@ -338,6 +353,53 @@ var HttpClient = class {
       headers: {
         Authorization: `Bearer ${this.accessToken}`
       }
+    });
+    if (!response.ok) {
+      await this.handleError(response);
+    }
+    return response.json();
+  }
+  /**
+   * Make a POST request with form-urlencoded body
+   * Used by some Graph API endpoints like assigned_users
+   */
+  async postForm(path, body) {
+    const url = `${this.baseURL}/${this.apiVersion}${path}`;
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(body)) {
+      if (Array.isArray(value)) {
+        value.forEach((v, i) => params.append(`${key}[${i}]`, v));
+      } else {
+        params.append(key, value);
+      }
+    }
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Bearer ${this.accessToken}`
+      },
+      body: params.toString()
+    });
+    if (!response.ok) {
+      await this.handleError(response);
+    }
+    return response.json();
+  }
+  /**
+   * Make a DELETE request with form-urlencoded body
+   * Used by some Graph API endpoints like assigned_users
+   */
+  async deleteForm(path, body) {
+    const url = `${this.baseURL}/${this.apiVersion}${path}`;
+    const params = new URLSearchParams(body);
+    const response = await fetch(url, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Bearer ${this.accessToken}`
+      },
+      body: params.toString()
     });
     if (!response.ok) {
       await this.handleError(response);
@@ -584,6 +646,105 @@ var WabasResource = class {
       `/${id}/subscribed_apps`
     );
   }
+  // ===========================================================================
+  // Assigned Users
+  // ===========================================================================
+  /**
+   * Build query string for assigned users list
+   */
+  buildAssignedUsersQuery(businessId, options) {
+    const params = new URLSearchParams();
+    params.set("business", businessId);
+    if (options?.fields) params.set("fields", options.fields);
+    if (options?.limit) params.set("limit", options.limit.toString());
+    if (options?.after) params.set("after", options.after);
+    if (options?.before) params.set("before", options.before);
+    return `?${params.toString()}`;
+  }
+  /**
+   * List users assigned to this WhatsApp Business Account
+   *
+   * @see GET /{WABA-ID}/assigned_users
+   *
+   * @param options - Query options (fields, pagination)
+   * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @param businessId - Business Portfolio ID (overrides config.businessId) - required for this endpoint
+   * @returns List of assigned users with their permissions
+   *
+   * @example
+   * ```typescript
+   * // List all assigned users
+   * const users = await client.wabas.listAssignedUsers();
+   *
+   * // With specific fields
+   * const users = await client.wabas.listAssignedUsers({
+   *   fields: "id,name,user_type"
+   * });
+   * ```
+   */
+  async listAssignedUsers(options, wabaId, businessId) {
+    const wabaIdResolved = this.getWabaId(wabaId);
+    const businessIdResolved = this.getBusinessId(businessId);
+    const query = this.buildAssignedUsersQuery(businessIdResolved, options);
+    return this.httpClient.get(
+      `/${wabaIdResolved}/assigned_users${query}`
+    );
+  }
+  /**
+   * Add a user to this WhatsApp Business Account with specified permissions
+   *
+   * @see POST /{WABA-ID}/assigned_users
+   *
+   * @param userId - Facebook user ID to add
+   * @param tasks - Permission tasks to grant (e.g., MANAGE, DEVELOP, MESSAGING)
+   * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @returns Success status
+   *
+   * @example
+   * ```typescript
+   * // Add user with full control
+   * await client.wabas.addAssignedUser("user123", ["FULL_CONTROL"]);
+   *
+   * // Add user with specific permissions
+   * await client.wabas.addAssignedUser("user123", [
+   *   "MESSAGING",
+   *   "VIEW_TEMPLATES",
+   *   "VIEW_INSIGHTS"
+   * ]);
+   * ```
+   */
+  async addAssignedUser(userId, tasks, wabaId) {
+    const id = this.getWabaId(wabaId);
+    return this.httpClient.postForm(
+      `/${id}/assigned_users`,
+      { user: userId, tasks }
+    );
+  }
+  /**
+   * Remove a user from this WhatsApp Business Account
+   *
+   * This revokes ALL permissions for the user on this WABA.
+   * The action cannot be undone - the user must be re-added if access is needed again.
+   *
+   * @see DELETE /{WABA-ID}/assigned_users
+   *
+   * @param userId - Facebook user ID to remove
+   * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @returns Success status
+   *
+   * @example
+   * ```typescript
+   * // Remove user access
+   * await client.wabas.removeAssignedUser("user123");
+   * ```
+   */
+  async removeAssignedUser(userId, wabaId) {
+    const id = this.getWabaId(wabaId);
+    return this.httpClient.deleteForm(
+      `/${id}/assigned_users`,
+      { user: userId }
+    );
+  }
 };
 
 // src/resources/wabas/schema.ts
@@ -666,6 +827,55 @@ var subscribeAppResponseSchema = import_zod3.z.object({
 var unsubscribeAppResponseSchema = import_zod3.z.object({
   success: import_zod3.z.boolean()
 });
+var permissionTaskSchema = import_zod3.z.enum([
+  "MANAGE",
+  "DEVELOP",
+  "MANAGE_TEMPLATES",
+  "MANAGE_PHONE",
+  "VIEW_COST",
+  "MANAGE_EXTENSIONS",
+  "VIEW_PHONE_ASSETS",
+  "MANAGE_PHONE_ASSETS",
+  "VIEW_TEMPLATES",
+  "VIEW_INSIGHTS",
+  "RECEIVE_INCOMING_MESSAGES",
+  "MANAGE_BILLING",
+  "MANAGE_USERS",
+  "MESSAGING",
+  "FULL_CONTROL"
+]);
+var assignedUserTypeSchema = import_zod3.z.enum([
+  "BUSINESS_USER",
+  "SYSTEM_USER",
+  "PERSONAL_USER"
+]);
+var businessNodeSchema = import_zod3.z.object({
+  id: import_zod3.z.string().optional(),
+  name: import_zod3.z.string().optional()
+});
+var assignedUserSchema = import_zod3.z.object({
+  id: import_zod3.z.string(),
+  name: import_zod3.z.string(),
+  business: businessNodeSchema.optional(),
+  user_type: assignedUserTypeSchema.optional()
+});
+var assignedUsersSummarySchema = import_zod3.z.object({
+  total_count: import_zod3.z.number().optional()
+});
+var assignedUsersResponseSchema = import_zod3.z.object({
+  data: import_zod3.z.array(assignedUserSchema),
+  paging: cursorPagingSchema.optional(),
+  summary: assignedUsersSummarySchema.optional()
+});
+var assignedUsersListOptionsSchema = import_zod3.z.object({
+  fields: import_zod3.z.string().optional(),
+  limit: import_zod3.z.number().min(1).max(100).optional(),
+  after: import_zod3.z.string().optional(),
+  before: import_zod3.z.string().optional()
+});
+var assignedUserMutationResponseSchema = import_zod3.z.object({
+  success: import_zod3.z.boolean()
+});
 
 // src/resources/phoneNumbers/resource.ts
 var PhoneNumbersResource = class {
@@ -715,6 +925,8 @@ var PhoneNumbersResource = class {
     if (!options) return "";
     const params = new URLSearchParams();
     if (options.fields) params.set("fields", options.fields);
+    if (options.filtering) params.set("filtering", options.filtering);
+    if (options.sort) params.set("sort", options.sort);
     if (options.limit) params.set("limit", options.limit.toString());
     if (options.after) params.set("after", options.after);
     if (options.before) params.set("before", options.before);
@@ -727,7 +939,9 @@ var PhoneNumbersResource = class {
   /**
    * List phone numbers in a WhatsApp Business Account
    *
-   * @param options - Query options (fields, pagination)
+   * @see GET /{WABA-ID}/phone_numbers
+   *
+   * @param options - Query options (fields, filtering, sort, pagination)
    * @param wabaId - WABA ID (overrides config.businessAccountId)
    * @returns List of phone numbers
    *
@@ -737,7 +951,12 @@ var PhoneNumbersResource = class {
    *
    * // With specific fields
    * const numbers = await client.phoneNumbers.list({
-   *   fields: "id,display_phone_number,verified_name,quality_rating"
+   *   fields: "id,display_phone_number,verified_name,quality_rating,status"
+   * });
+   *
+   * // With filtering
+   * const numbers = await client.phoneNumbers.list({
+   *   filtering: JSON.stringify([{ field: "account_mode", operator: "EQUAL", value: "LIVE" }])
    * });
    * ```
    */
@@ -751,9 +970,21 @@ var PhoneNumbersResource = class {
   /**
    * Get details of a specific phone number
    *
+   * @see GET /{Phone-Number-ID}
+   *
    * @param phoneNumberId - Phone number ID (overrides config)
    * @param fields - Comma-separated list of fields to return
    * @returns Phone number details
+   *
+   * @example
+   * ```typescript
+   * const phone = await client.phoneNumbers.get("123456789");
+   *
+   * // With specific fields
+   * const phone = await client.phoneNumbers.get("123456789",
+   *   "id,display_phone_number,verified_name,quality_rating,status,name_status"
+   * );
+   * ```
    */
   async get(phoneNumberId, fields) {
     const id = this.getPhoneNumberId(phoneNumberId);
@@ -761,32 +992,91 @@ var PhoneNumbersResource = class {
     return this.httpClient.get(`/${id}${query}`);
   }
   // ===========================================================================
-  // Add Phone Number
+  // Add Preverified (Partner flow)
   // ===========================================================================
   /**
-   * Add a phone number to a Business Portfolio
+   * Add a preverified phone number to the Business Portfolio pool
    *
-   * This adds a phone number and associates it with a specific WABA.
-   * After adding, you need to verify and register the number.
+   * This is the **Partner/BSP flow** for managing phone numbers. It adds a phone
+   * number to the Partner's inventory as a preverified entity. The number is NOT
+   * yet in any WABA - it's just reserved and ready to be assigned.
    *
-   * @param data - Phone number data (includes waba_id for assignment)
-   * @param businessId - Business Portfolio ID (overrides config)
-   * @returns Created phone number ID
+   * Use the returned `id` as `preverified_id` when calling `create()` to assign
+   * the number to a specific WABA.
+   *
+   * @see POST /{Business-ID}/add_phone_numbers
+   *
+   * @param phoneNumber - Phone number in E.164 format (e.g., "+14155551234")
+   * @param businessId - Business Portfolio ID (overrides config.businessId)
+   * @returns The preverified phone number entity ID
    *
    * @example
    * ```typescript
-   * const result = await client.phoneNumbers.add({
-   *   phone_number: "+14155551234",
-   *   waba_id: "WABA_ID",
-   *   verified_name: "My Business"
-   * });
-   * console.log(result.id); // New phone number ID
+   * // Step 1: Add to Partner's pool
+   * const preverified = await client.phoneNumbers.addPreverified("+14155551234");
+   * console.log(preverified.id); // "preverified_123"
+   *
+   * // Step 2: Assign to customer's WABA
+   * const phone = await client.phoneNumbers.create({
+   *   phone_number: "14155551234",
+   *   verified_name: "Customer Corp",
+   *   preverified_id: preverified.id,
+   * }, "customer_waba_id");
    * ```
    */
-  async add(data, businessId) {
+  async addPreverified(phoneNumber, businessId) {
     const id = this.getBusinessId(businessId);
     return this.httpClient.post(
       `/${id}/add_phone_numbers`,
+      { phone_number: phoneNumber }
+    );
+  }
+  // ===========================================================================
+  // Create in WABA (Standard flow)
+  // ===========================================================================
+  /**
+   * Create a phone number in a WhatsApp Business Account
+   *
+   * This is the **standard flow** for adding phone numbers to a WABA. It initiates
+   * the phone number onboarding process including verification and business name
+   * approval.
+   *
+   * If you're a Partner/BSP and have a `preverified_id` from `addPreverified()`,
+   * you can use it here to skip the verification step.
+   *
+   * @see POST /{WABA-ID}/phone_numbers
+   *
+   * @param data - Phone number creation data
+   * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @returns The created phone number ID
+   *
+   * @example
+   * ```typescript
+   * // Standard flow: create and verify
+   * const phone = await client.phoneNumbers.create({
+   *   phone_number: "14155551234",  // E.164 without +
+   *   verified_name: "Acme Corp",
+   * });
+   *
+   * // With preverified_id from Partner flow
+   * const phone = await client.phoneNumbers.create({
+   *   phone_number: "14155551234",
+   *   verified_name: "Customer Corp",
+   *   preverified_id: "preverified_123",
+   * });
+   *
+   * // Migration from on-premises
+   * const phone = await client.phoneNumbers.create({
+   *   phone_number: "14155551234",
+   *   verified_name: "Acme Corp",
+   *   migrate_phone_number: true,
+   * });
+   * ```
+   */
+  async create(data, wabaId) {
+    const id = this.getWabaId(wabaId);
+    return this.httpClient.post(
+      `/${id}/phone_numbers`,
       data
     );
   }
@@ -798,6 +1088,8 @@ var PhoneNumbersResource = class {
    *
    * Meta will send a verification code via SMS or voice call.
    * Use verifyCode() to submit the received code.
+   *
+   * @see POST /{Phone-Number-ID}/request_code
    *
    * @param data - Verification method (SMS or VOICE) and optional language
    * @param phoneNumberId - Phone number ID (overrides config)
@@ -823,6 +1115,8 @@ var PhoneNumbersResource = class {
    *
    * Submit the code received via SMS or voice call.
    *
+   * @see POST /{Phone-Number-ID}/verify_code
+   *
    * @param data - The verification code
    * @param phoneNumberId - Phone number ID (overrides config)
    * @returns Success status
@@ -836,7 +1130,10 @@ var PhoneNumbersResource = class {
    */
   async verifyCode(data, phoneNumberId) {
     const id = this.getPhoneNumberId(phoneNumberId);
-    return this.httpClient.post(`/${id}/verify_code`, data);
+    return this.httpClient.post(
+      `/${id}/verify_code`,
+      data
+    );
   }
   // ===========================================================================
   // Registration
@@ -846,6 +1143,8 @@ var PhoneNumbersResource = class {
    *
    * This activates the phone number on WhatsApp's servers.
    * The number must be verified first.
+   *
+   * @see POST /{Phone-Number-ID}/register
    *
    * @param data - Registration data including 6-digit PIN
    * @param phoneNumberId - Phone number ID (overrides config)
@@ -872,6 +1171,8 @@ var PhoneNumbersResource = class {
    * This removes the phone number from WhatsApp's servers.
    * The number can be re-registered later.
    *
+   * @see POST /{Phone-Number-ID}/deregister
+   *
    * @param phoneNumberId - Phone number ID (overrides config)
    * @returns Success status
    */
@@ -887,6 +1188,8 @@ var PhoneNumbersResource = class {
   // ===========================================================================
   /**
    * Get the WhatsApp Business Profile for a phone number
+   *
+   * @see GET /{Phone-Number-ID}/whatsapp_business_profile
    *
    * @param phoneNumberId - Phone number ID (overrides config)
    * @param fields - Comma-separated list of fields
@@ -908,6 +1211,8 @@ var PhoneNumbersResource = class {
   }
   /**
    * Update the WhatsApp Business Profile for a phone number
+   *
+   * @see POST /{Phone-Number-ID}/whatsapp_business_profile
    *
    * @param data - Profile data to update
    * @param phoneNumberId - Phone number ID (overrides config)
@@ -938,19 +1243,55 @@ var phoneNumberQualityRatingSchema = import_zod4.z.enum([
   "GREEN",
   "YELLOW",
   "RED",
-  "UNKNOWN"
+  "UNKNOWN",
+  "NA"
 ]);
 var phoneNumberStatusSchema = import_zod4.z.enum([
   "PENDING",
+  "LINKED",
+  "UNLINKED",
   "DELETED",
   "MIGRATED",
   "BANNED",
   "RESTRICTED",
-  "RATE_LIMITED",
-  "FLAGGED",
   "CONNECTED",
   "DISCONNECTED",
-  "UNKNOWN"
+  "FLAGGED",
+  "RATE_LIMITED"
+]);
+var codeVerificationStatusSchema = import_zod4.z.enum([
+  "VERIFIED",
+  "NOT_VERIFIED",
+  "EXPIRED"
+]);
+var unifiedCertStatusSchema = import_zod4.z.enum([
+  "APPROVED",
+  "NAME_PENDING_REVIEW",
+  "NAME_NOT_APPROVED",
+  "ACCOUNT_REVIEW_NOT_STARTED",
+  "LIMITED_ACCESS"
+]);
+var accountModeSchema = import_zod4.z.enum(["LIVE", "SANDBOX"]);
+var hostPlatformSchema = import_zod4.z.enum([
+  "CLOUD_API",
+  "ON_PREMISE",
+  "NOT_APPLICABLE"
+]);
+var nameStatusSchema = import_zod4.z.enum([
+  "APPROVED",
+  "AVAILABLE_WITHOUT_REVIEW",
+  "DECLINED",
+  "EXPIRED",
+  "PENDING_REVIEW",
+  "NONE"
+]);
+var messagingLimitTierSchema = import_zod4.z.enum([
+  "TIER_50",
+  "TIER_250",
+  "TIER_1K",
+  "TIER_10K",
+  "TIER_100K",
+  "TIER_UNLIMITED"
 ]);
 var codeMethodSchema = import_zod4.z.enum(["SMS", "VOICE"]);
 var verticalSchema = import_zod4.z.enum([
@@ -977,45 +1318,72 @@ var verticalSchema = import_zod4.z.enum([
 var phoneNumberResponseSchema = import_zod4.z.object({
   id: import_zod4.z.string(),
   display_phone_number: import_zod4.z.string(),
-  verified_name: import_zod4.z.string(),
-  quality_rating: phoneNumberQualityRatingSchema.optional(),
-  code_verification_status: import_zod4.z.string().optional(),
-  is_official_business_account: import_zod4.z.boolean().optional(),
-  account_mode: import_zod4.z.string().optional(),
-  eligibility_for_api_business_global_search: import_zod4.z.string().optional(),
-  is_pin_enabled: import_zod4.z.boolean().optional(),
-  name_status: import_zod4.z.string().optional(),
-  new_name_status: import_zod4.z.string().optional(),
+  verified_name: import_zod4.z.string().optional(),
   status: phoneNumberStatusSchema.optional(),
-  search_visibility: import_zod4.z.string().optional(),
-  messaging_limit_tier: import_zod4.z.string().optional()
+  quality_rating: phoneNumberQualityRatingSchema.optional(),
+  country_code: import_zod4.z.string().optional(),
+  country_dial_code: import_zod4.z.string().optional(),
+  code_verification_status: codeVerificationStatusSchema.optional(),
+  unified_cert_status: unifiedCertStatusSchema.optional(),
+  account_mode: accountModeSchema.optional(),
+  host_platform: hostPlatformSchema.optional(),
+  messaging_limit_tier: messagingLimitTierSchema.optional(),
+  is_official_business_account: import_zod4.z.boolean().optional(),
+  username: import_zod4.z.string().optional(),
+  name_status: nameStatusSchema.optional(),
+  certificate: import_zod4.z.string().optional(),
+  is_pin_enabled: import_zod4.z.boolean().optional(),
+  search_visibility: import_zod4.z.string().optional()
+});
+var cursorPagingSchema2 = import_zod4.z.object({
+  cursors: import_zod4.z.object({
+    before: import_zod4.z.string().optional(),
+    after: import_zod4.z.string().optional()
+  }).optional(),
+  previous: import_zod4.z.string().optional(),
+  next: import_zod4.z.string().optional()
 });
 var phoneNumberListResponseSchema = import_zod4.z.object({
   data: import_zod4.z.array(phoneNumberResponseSchema),
-  paging: import_zod4.z.object({
-    cursors: import_zod4.z.object({
-      before: import_zod4.z.string().optional(),
-      after: import_zod4.z.string().optional()
-    }).optional(),
-    next: import_zod4.z.string().optional(),
-    previous: import_zod4.z.string().optional()
-  }).optional()
+  paging: cursorPagingSchema2.optional()
 });
-var phoneNumberAddSchema = import_zod4.z.object({
+var phoneNumberListOptionsSchema = import_zod4.z.object({
+  fields: import_zod4.z.string().optional(),
+  filtering: import_zod4.z.string().optional(),
+  sort: import_zod4.z.enum([
+    "creation_time.asc",
+    "creation_time.desc",
+    "last_onboarded_time.asc",
+    "last_onboarded_time.desc"
+  ]).optional(),
+  limit: import_zod4.z.number().min(1).max(100).optional(),
+  after: import_zod4.z.string().optional(),
+  before: import_zod4.z.string().optional()
+});
+var addPreverifiedRequestSchema = import_zod4.z.object({
+  phone_number: import_zod4.z.string()
+});
+var addPreverifiedResponseSchema = import_zod4.z.object({
+  id: import_zod4.z.string()
+});
+var phoneNumberCreateRequestSchema = import_zod4.z.object({
+  /** Phone number in E.164 format without the + prefix */
   phone_number: import_zod4.z.string(),
-  country_code: import_zod4.z.string().optional(),
-  verified_name: import_zod4.z.string().optional(),
-  waba_id: import_zod4.z.string()
+  /** Business name to be verified for this phone number */
+  verified_name: import_zod4.z.string(),
+  /** Country code for the phone number */
+  cc: import_zod4.z.string().optional(),
+  /** Whether this is a phone number migration from on-premises */
+  migrate_phone_number: import_zod4.z.boolean().optional(),
+  /** Pre-verified phone number ID for BSP scenarios (from addPreverified) */
+  preverified_id: import_zod4.z.string().optional()
 });
-var phoneNumberAddResponseSchema = import_zod4.z.object({
+var phoneNumberCreateResponseSchema = import_zod4.z.object({
   id: import_zod4.z.string()
 });
 var phoneNumberRegisterSchema = import_zod4.z.object({
   messaging_product: import_zod4.z.literal("whatsapp"),
   pin: import_zod4.z.string().min(6).max(6)
-});
-var phoneNumberDeregisterSchema = import_zod4.z.object({
-  messaging_product: import_zod4.z.literal("whatsapp").optional()
 });
 var phoneNumberRegisterResponseSchema = import_zod4.z.object({
   success: import_zod4.z.boolean()
@@ -1048,12 +1416,6 @@ var businessProfileUpdateSchema = businessProfileSchema.extend({
 });
 var businessProfileUpdateResponseSchema = import_zod4.z.object({
   success: import_zod4.z.boolean()
-});
-var phoneNumberListOptionsSchema = import_zod4.z.object({
-  fields: import_zod4.z.string().optional(),
-  limit: import_zod4.z.number().min(1).max(100).optional(),
-  after: import_zod4.z.string().optional(),
-  before: import_zod4.z.string().optional()
 });
 
 // src/resources/messages/schema.ts
@@ -2455,9 +2817,19 @@ var WhatsAppClient = class {
   WabasResource,
   WebhooksResource,
   WhatsAppClient,
+  accountModeSchema,
   accountReviewStatusSchema,
+  addPreverifiedRequestSchema,
+  addPreverifiedResponseSchema,
+  assignedUserMutationResponseSchema,
+  assignedUserSchema,
+  assignedUserTypeSchema,
+  assignedUsersListOptionsSchema,
+  assignedUsersResponseSchema,
+  assignedUsersSummarySchema,
   buildMessagePayload,
   businessGetOptionsSchema,
+  businessNodeSchema,
   businessProfileResponseSchema,
   businessProfileSchema,
   businessProfileUpdateResponseSchema,
@@ -2466,10 +2838,12 @@ var WhatsAppClient = class {
   businessVerificationStatusSchema,
   clientConfigSchema,
   codeMethodSchema,
+  codeVerificationStatusSchema,
   cursorPagingSchema,
   debugTokenResponseSchema,
   extractMessages,
   extractStatuses,
+  hostPlatformSchema,
   mediaDeleteResponseSchema,
   mediaMetadataSchema,
   mediaMimeTypeSchema,
@@ -2494,10 +2868,12 @@ var WhatsAppClient = class {
   messageSendTextSchema,
   messageTextContentSchema,
   messageTextSchema,
+  messagingLimitTierSchema,
+  nameStatusSchema,
   onBehalfOfBusinessInfoSchema,
-  phoneNumberAddResponseSchema,
-  phoneNumberAddSchema,
-  phoneNumberDeregisterSchema,
+  permissionTaskSchema,
+  phoneNumberCreateRequestSchema,
+  phoneNumberCreateResponseSchema,
   phoneNumberListOptionsSchema,
   phoneNumberListResponseSchema,
   phoneNumberQualityRatingSchema,
@@ -2549,6 +2925,7 @@ var WhatsAppClient = class {
   templateUpdateSchema,
   templateUrlButtonInputSchema,
   toTemplateName,
+  unifiedCertStatusSchema,
   unsubscribeAppResponseSchema,
   verificationResponseSchema,
   verifyCodeSchema,

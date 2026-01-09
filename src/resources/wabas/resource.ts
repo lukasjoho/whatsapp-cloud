@@ -8,6 +8,11 @@ import type {
   SubscribedAppsListResponse,
   SubscribeAppResponse,
   UnsubscribeAppResponse,
+  // Assigned Users
+  PermissionTask,
+  AssignedUsersResponse,
+  AssignedUsersListOptions,
+  AssignedUserMutationResponse,
 } from "./types";
 
 /**
@@ -230,6 +235,126 @@ export class WabasResource {
     const id = this.getWabaId(wabaId);
     return this.httpClient.delete<UnsubscribeAppResponse>(
       `/${id}/subscribed_apps`
+    );
+  }
+
+  // ===========================================================================
+  // Assigned Users
+  // ===========================================================================
+
+  /**
+   * Build query string for assigned users list
+   */
+  private buildAssignedUsersQuery(
+    businessId: string,
+    options?: AssignedUsersListOptions
+  ): string {
+    const params = new URLSearchParams();
+    params.set("business", businessId);
+
+    if (options?.fields) params.set("fields", options.fields);
+    if (options?.limit) params.set("limit", options.limit.toString());
+    if (options?.after) params.set("after", options.after);
+    if (options?.before) params.set("before", options.before);
+
+    return `?${params.toString()}`;
+  }
+
+  /**
+   * List users assigned to this WhatsApp Business Account
+   *
+   * @see GET /{WABA-ID}/assigned_users
+   *
+   * @param options - Query options (fields, pagination)
+   * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @param businessId - Business Portfolio ID (overrides config.businessId) - required for this endpoint
+   * @returns List of assigned users with their permissions
+   *
+   * @example
+   * ```typescript
+   * // List all assigned users
+   * const users = await client.wabas.listAssignedUsers();
+   *
+   * // With specific fields
+   * const users = await client.wabas.listAssignedUsers({
+   *   fields: "id,name,user_type"
+   * });
+   * ```
+   */
+  async listAssignedUsers(
+    options?: AssignedUsersListOptions,
+    wabaId?: string,
+    businessId?: string
+  ): Promise<AssignedUsersResponse> {
+    const wabaIdResolved = this.getWabaId(wabaId);
+    const businessIdResolved = this.getBusinessId(businessId);
+    const query = this.buildAssignedUsersQuery(businessIdResolved, options);
+    return this.httpClient.get<AssignedUsersResponse>(
+      `/${wabaIdResolved}/assigned_users${query}`
+    );
+  }
+
+  /**
+   * Add a user to this WhatsApp Business Account with specified permissions
+   *
+   * @see POST /{WABA-ID}/assigned_users
+   *
+   * @param userId - Facebook user ID to add
+   * @param tasks - Permission tasks to grant (e.g., MANAGE, DEVELOP, MESSAGING)
+   * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @returns Success status
+   *
+   * @example
+   * ```typescript
+   * // Add user with full control
+   * await client.wabas.addAssignedUser("user123", ["FULL_CONTROL"]);
+   *
+   * // Add user with specific permissions
+   * await client.wabas.addAssignedUser("user123", [
+   *   "MESSAGING",
+   *   "VIEW_TEMPLATES",
+   *   "VIEW_INSIGHTS"
+   * ]);
+   * ```
+   */
+  async addAssignedUser(
+    userId: string,
+    tasks: PermissionTask[],
+    wabaId?: string
+  ): Promise<AssignedUserMutationResponse> {
+    const id = this.getWabaId(wabaId);
+    return this.httpClient.postForm<AssignedUserMutationResponse>(
+      `/${id}/assigned_users`,
+      { user: userId, tasks }
+    );
+  }
+
+  /**
+   * Remove a user from this WhatsApp Business Account
+   *
+   * This revokes ALL permissions for the user on this WABA.
+   * The action cannot be undone - the user must be re-added if access is needed again.
+   *
+   * @see DELETE /{WABA-ID}/assigned_users
+   *
+   * @param userId - Facebook user ID to remove
+   * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @returns Success status
+   *
+   * @example
+   * ```typescript
+   * // Remove user access
+   * await client.wabas.removeAssignedUser("user123");
+   * ```
+   */
+  async removeAssignedUser(
+    userId: string,
+    wabaId?: string
+  ): Promise<AssignedUserMutationResponse> {
+    const id = this.getWabaId(wabaId);
+    return this.httpClient.deleteForm<AssignedUserMutationResponse>(
+      `/${id}/assigned_users`,
+      { user: userId }
     );
   }
 }

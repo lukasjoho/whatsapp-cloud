@@ -14,6 +14,15 @@ import type {
   subscribedAppsListResponseSchema,
   subscribeAppResponseSchema,
   unsubscribeAppResponseSchema,
+  // Assigned Users
+  permissionTaskSchema,
+  assignedUserTypeSchema,
+  businessNodeSchema,
+  assignedUserSchema,
+  assignedUsersSummarySchema,
+  assignedUsersResponseSchema,
+  assignedUsersListOptionsSchema,
+  assignedUserMutationResponseSchema,
 } from "./schema";
 
 // =============================================================================
@@ -49,3 +58,16 @@ export type SubscribedApp = z.infer<typeof subscribedAppSchema>;
 export type SubscribedAppsListResponse = z.infer<typeof subscribedAppsListResponseSchema>;
 export type SubscribeAppResponse = z.infer<typeof subscribeAppResponseSchema>;
 export type UnsubscribeAppResponse = z.infer<typeof unsubscribeAppResponseSchema>;
+
+// =============================================================================
+// Assigned Users
+// =============================================================================
+
+export type PermissionTask = z.infer<typeof permissionTaskSchema>;
+export type AssignedUserType = z.infer<typeof assignedUserTypeSchema>;
+export type BusinessNode = z.infer<typeof businessNodeSchema>;
+export type AssignedUser = z.infer<typeof assignedUserSchema>;
+export type AssignedUsersSummary = z.infer<typeof assignedUsersSummarySchema>;
+export type AssignedUsersResponse = z.infer<typeof assignedUsersResponseSchema>;
+export type AssignedUsersListOptions = z.infer<typeof assignedUsersListOptionsSchema>;
+export type AssignedUserMutationResponse = z.infer<typeof assignedUserMutationResponseSchema>;
