@@ -4378,9 +4378,55 @@ type WebhookHandlers<TBefore = Record<string, never>> = {
     image?: (message: MessageIncomingImage, ctx: WebhookContext, before: TBefore | undefined) => Promise<void> | void;
 };
 /**
+ * Filter configuration for webhook handling
+ *
+ * Use this to only process messages for specific phone numbers or WABAs.
+ * Messages that don't match the filter are silently ignored.
+ *
+ * @example
+ * ```typescript
+ * // Only process messages for a specific phone number
+ * client.webhooks.handle(payload, {
+ *   filter: {
+ *     phoneNumberIds: ["894206507114246"],
+ *   },
+ *   text: async (message, ctx) => { ... },
+ * });
+ *
+ * // Process messages for multiple phone numbers
+ * client.webhooks.handle(payload, {
+ *   filter: {
+ *     phoneNumberIds: ["894206507114246", "846514031886910"],
+ *   },
+ *   text: async (message, ctx) => { ... },
+ * });
+ * ```
+ */
+type WebhookFilter = {
+    /**
+     * Only process messages for these phone number IDs.
+     * If empty or undefined, all phone numbers are processed.
+     */
+    phoneNumberIds?: string[];
+    /**
+     * Only process messages for these WABA IDs.
+     * If empty or undefined, all WABAs are processed.
+     */
+    wabaIds?: string[];
+};
+/**
  * Options for the handle() method
  */
 type WebhookHandleOptions = {
+    /**
+     * Filter to only process messages matching certain criteria.
+     * Messages that don't match are silently ignored (no handlers called).
+     *
+     * This is useful for multi-tenant setups where one webhook receives
+     * messages for multiple phone numbers but each instance only cares
+     * about specific numbers.
+     */
+    filter?: WebhookFilter;
     /**
      * Called when a handler throws an error
      */
@@ -4460,6 +4506,15 @@ declare class WebhooksResource {
      *       await saveMessage(before.user.id, message.text.body);
      *     }
      *   },
+     * });
+     *
+     * // With filter for multi-tenant setups
+     * client.webhooks.handle(payload, {
+     *   text: async (message, ctx) => {
+     *     // Only called for messages to the specified phone number
+     *   },
+     * }, {
+     *   filter: { phoneNumberIds: ["894206507114246"] },
      * });
      * ```
      */
@@ -4587,4 +4642,4 @@ declare class GraphAPIError extends Error {
     statusCode: number);
 }
 
-export { type AccountReviewStatus, type Business, type BusinessGetOptions, type BusinessProfile, type BusinessProfileResponse, type BusinessProfileUpdate, type BusinessProfileUpdateResponse, BusinessResource, type BusinessVerificationStatus, type ClientConfig, type CodeMethod, type CursorPaging, type DebugTokenResponse, GraphAPIError, type GraphAPIErrorResponse, HttpClient, type MediaDeleteResponse, type MediaMetadata, MediaResource, type MediaType, type MediaUpload, type MediaUploadResponse, type MessageImage, type MessageImageContent, type MessageIncoming, type MessageIncomingAudio, type MessageIncomingImage, type MessageIncomingText, type MessageLocation, type MessageLocationContent, type MessageOutgoing, type MessageReaction, type MessageReactionContent, type MessageSendImage, type MessageSendLocation, type MessageSendReaction, type MessageSendResponse, type MessageSendText, type MessageText, type MessageTextContent, MessagesResource, type OnBehalfOfBusinessInfo, type PhoneNumber, type PhoneNumberAdd, type PhoneNumberAddResponse, type PhoneNumberDeregister, type PhoneNumberListOptions, type PhoneNumberListResponse, type PhoneNumberQualityRating, type PhoneNumberRegister, type PhoneNumberRegisterResponse, type PhoneNumberStatus, PhoneNumbersResource, type RequestVerificationCode, type SubscribeAppResponse, type SubscribedApp, type SubscribedAppsListResponse, type Template, type TemplateBodyComponentInput, type TemplateBodyExample, type TemplateButton, type TemplateButtonInput, type TemplateButtonsComponentInput, type TemplateCategory, type TemplateComponent, type TemplateComponentInput, type TemplateCopyCodeButtonInput, type TemplateCreate, type TemplateCreateResponse, type TemplateDelete, type TemplateDeleteResponse, type TemplateFlowButtonInput, type TemplateFooterComponentInput, type TemplateHeaderComponentInput, type TemplateHeaderLocationInput, type TemplateHeaderMediaInput, type TemplateHeaderTextExample, type TemplateHeaderTextInput, type TemplateLanguage, type TemplateList, type TemplateListResponse, type TemplateNamedParamExample, type TemplatePaging, type TemplatePagingCursors, type TemplateParameterFormat, type TemplatePhoneNumberButtonInput, type TemplateQualityScore, type TemplateQuickReplyButtonInput, type TemplateStatus, type TemplateUpdate, type TemplateUpdateResponse, type TemplateUrlButtonInput, TemplatesResource, type UnsubscribeAppResponse, type VerificationResponse, type VerifyCode, type Vertical, type Waba, type WabaBusinessType, type WabaCreate, type WabaCreateResponse, type WabaListOptions, type WabaListResponse, WabasResource, type WebhookContact, type WebhookContext, type WebhookConversation, type WebhookHandleOptions, type WebhookHandlers, type WebhookMetadata, type WebhookPayload, type WebhookPricing, type WebhookStatus, type WebhookStatusError, type WebhookVerifyQuery, WebhooksResource, WhatsAppClient, accountReviewStatusSchema, buildMessagePayload, businessGetOptionsSchema, businessProfileResponseSchema, businessProfileSchema, businessProfileUpdateResponseSchema, businessProfileUpdateSchema, businessSchema, businessVerificationStatusSchema, clientConfigSchema, codeMethodSchema, cursorPagingSchema, debugTokenResponseSchema, extractMessages, extractStatuses, mediaDeleteResponseSchema, mediaMetadataSchema, mediaMimeTypeSchema, mediaTypeSchema, mediaUploadResponseSchema, mediaUploadSchema, messageImageContentSchema, messageImageSchema, messageIncomingAudioSchema, messageIncomingImageSchema, messageIncomingSchema, messageIncomingTextSchema, messageLocationContentSchema, messageLocationSchema, messageOutgoingSchema, messageReactionContentSchema, messageReactionSchema, messageSendImageSchema, messageSendLocationSchema, messageSendReactionSchema, messageSendResponseSchema, messageSendTextSchema, messageTextContentSchema, messageTextSchema, onBehalfOfBusinessInfoSchema, phoneNumberAddResponseSchema, phoneNumberAddSchema, phoneNumberDeregisterSchema, phoneNumberListOptionsSchema, phoneNumberListResponseSchema, phoneNumberQualityRatingSchema, phoneNumberRegisterResponseSchema, phoneNumberRegisterSchema, phoneNumberResponseSchema, phoneNumberSchema, phoneNumberStatusSchema, requestVerificationCodeSchema, subscribeAppResponseSchema, subscribedAppSchema, subscribedAppsListResponseSchema, templateBodyComponentInputSchema, templateBodyExampleSchema, templateButtonInputSchema, templateButtonSchema, templateButtonsComponentInputSchema, templateCategorySchema, templateComponentInputSchema, templateComponentSchema, templateCopyCodeButtonInputSchema, templateCreateAuthenticationSchema, templateCreateMarketingSchema, templateCreateResponseSchema, templateCreateSchema, templateCreateUtilitySchema, templateDeleteResponseSchema, templateDeleteSchema, templateFlowButtonInputSchema, templateFooterComponentInputSchema, templateHeaderComponentInputSchema, templateHeaderLocationInputSchema, templateHeaderMediaInputSchema, templateHeaderTextExampleSchema, templateHeaderTextInputSchema, templateLanguageSchema, templateListResponseSchema, templateListSchema, templateNamedParamExampleSchema, templatePagingCursorsSchema, templatePagingSchema, templateParameterFormatSchema, templatePhoneNumberButtonInputSchema, templateQualityScoreSchema, templateQuickReplyButtonInputSchema, templateSchema, templateStatusSchema, templateUpdateResponseSchema, templateUpdateSchema, templateUrlButtonInputSchema, toTemplateName, unsubscribeAppResponseSchema, verificationResponseSchema, verifyCodeSchema, verifyWebhook, verticalSchema, wabaBusinessTypeSchema, wabaCreateResponseSchema, wabaCreateSchema, wabaListOptionsSchema, wabaListResponseSchema, wabaSchema, webhookChangeSchema, webhookContactSchema, webhookConversationOriginSchema, webhookConversationSchema, webhookEntrySchema, webhookMetadataSchema, webhookPayloadSchema, webhookPricingSchema, webhookStatusErrorSchema, webhookStatusSchema, webhookValueSchema, webhookVerifyQuerySchema };
+export { type AccountReviewStatus, type Business, type BusinessGetOptions, type BusinessProfile, type BusinessProfileResponse, type BusinessProfileUpdate, type BusinessProfileUpdateResponse, BusinessResource, type BusinessVerificationStatus, type ClientConfig, type CodeMethod, type CursorPaging, type DebugTokenResponse, GraphAPIError, type GraphAPIErrorResponse, HttpClient, type MediaDeleteResponse, type MediaMetadata, MediaResource, type MediaType, type MediaUpload, type MediaUploadResponse, type MessageImage, type MessageImageContent, type MessageIncoming, type MessageIncomingAudio, type MessageIncomingImage, type MessageIncomingText, type MessageLocation, type MessageLocationContent, type MessageOutgoing, type MessageReaction, type MessageReactionContent, type MessageSendImage, type MessageSendLocation, type MessageSendReaction, type MessageSendResponse, type MessageSendText, type MessageText, type MessageTextContent, MessagesResource, type OnBehalfOfBusinessInfo, type PhoneNumber, type PhoneNumberAdd, type PhoneNumberAddResponse, type PhoneNumberDeregister, type PhoneNumberListOptions, type PhoneNumberListResponse, type PhoneNumberQualityRating, type PhoneNumberRegister, type PhoneNumberRegisterResponse, type PhoneNumberStatus, PhoneNumbersResource, type RequestVerificationCode, type SubscribeAppResponse, type SubscribedApp, type SubscribedAppsListResponse, type Template, type TemplateBodyComponentInput, type TemplateBodyExample, type TemplateButton, type TemplateButtonInput, type TemplateButtonsComponentInput, type TemplateCategory, type TemplateComponent, type TemplateComponentInput, type TemplateCopyCodeButtonInput, type TemplateCreate, type TemplateCreateResponse, type TemplateDelete, type TemplateDeleteResponse, type TemplateFlowButtonInput, type TemplateFooterComponentInput, type TemplateHeaderComponentInput, type TemplateHeaderLocationInput, type TemplateHeaderMediaInput, type TemplateHeaderTextExample, type TemplateHeaderTextInput, type TemplateLanguage, type TemplateList, type TemplateListResponse, type TemplateNamedParamExample, type TemplatePaging, type TemplatePagingCursors, type TemplateParameterFormat, type TemplatePhoneNumberButtonInput, type TemplateQualityScore, type TemplateQuickReplyButtonInput, type TemplateStatus, type TemplateUpdate, type TemplateUpdateResponse, type TemplateUrlButtonInput, TemplatesResource, type UnsubscribeAppResponse, type VerificationResponse, type VerifyCode, type Vertical, type Waba, type WabaBusinessType, type WabaCreate, type WabaCreateResponse, type WabaListOptions, type WabaListResponse, WabasResource, type WebhookContact, type WebhookContext, type WebhookConversation, type WebhookFilter, type WebhookHandleOptions, type WebhookHandlers, type WebhookMetadata, type WebhookPayload, type WebhookPricing, type WebhookStatus, type WebhookStatusError, type WebhookVerifyQuery, WebhooksResource, WhatsAppClient, accountReviewStatusSchema, buildMessagePayload, businessGetOptionsSchema, businessProfileResponseSchema, businessProfileSchema, businessProfileUpdateResponseSchema, businessProfileUpdateSchema, businessSchema, businessVerificationStatusSchema, clientConfigSchema, codeMethodSchema, cursorPagingSchema, debugTokenResponseSchema, extractMessages, extractStatuses, mediaDeleteResponseSchema, mediaMetadataSchema, mediaMimeTypeSchema, mediaTypeSchema, mediaUploadResponseSchema, mediaUploadSchema, messageImageContentSchema, messageImageSchema, messageIncomingAudioSchema, messageIncomingImageSchema, messageIncomingSchema, messageIncomingTextSchema, messageLocationContentSchema, messageLocationSchema, messageOutgoingSchema, messageReactionContentSchema, messageReactionSchema, messageSendImageSchema, messageSendLocationSchema, messageSendReactionSchema, messageSendResponseSchema, messageSendTextSchema, messageTextContentSchema, messageTextSchema, onBehalfOfBusinessInfoSchema, phoneNumberAddResponseSchema, phoneNumberAddSchema, phoneNumberDeregisterSchema, phoneNumberListOptionsSchema, phoneNumberListResponseSchema, phoneNumberQualityRatingSchema, phoneNumberRegisterResponseSchema, phoneNumberRegisterSchema, phoneNumberResponseSchema, phoneNumberSchema, phoneNumberStatusSchema, requestVerificationCodeSchema, subscribeAppResponseSchema, subscribedAppSchema, subscribedAppsListResponseSchema, templateBodyComponentInputSchema, templateBodyExampleSchema, templateButtonInputSchema, templateButtonSchema, templateButtonsComponentInputSchema, templateCategorySchema, templateComponentInputSchema, templateComponentSchema, templateCopyCodeButtonInputSchema, templateCreateAuthenticationSchema, templateCreateMarketingSchema, templateCreateResponseSchema, templateCreateSchema, templateCreateUtilitySchema, templateDeleteResponseSchema, templateDeleteSchema, templateFlowButtonInputSchema, templateFooterComponentInputSchema, templateHeaderComponentInputSchema, templateHeaderLocationInputSchema, templateHeaderMediaInputSchema, templateHeaderTextExampleSchema, templateHeaderTextInputSchema, templateLanguageSchema, templateListResponseSchema, templateListSchema, templateNamedParamExampleSchema, templatePagingCursorsSchema, templatePagingSchema, templateParameterFormatSchema, templatePhoneNumberButtonInputSchema, templateQualityScoreSchema, templateQuickReplyButtonInputSchema, templateSchema, templateStatusSchema, templateUpdateResponseSchema, templateUpdateSchema, templateUrlButtonInputSchema, toTemplateName, unsubscribeAppResponseSchema, verificationResponseSchema, verifyCodeSchema, verifyWebhook, verticalSchema, wabaBusinessTypeSchema, wabaCreateResponseSchema, wabaCreateSchema, wabaListOptionsSchema, wabaListResponseSchema, wabaSchema, webhookChangeSchema, webhookContactSchema, webhookConversationOriginSchema, webhookConversationSchema, webhookEntrySchema, webhookMetadataSchema, webhookPayloadSchema, webhookPricingSchema, webhookStatusErrorSchema, webhookStatusSchema, webhookValueSchema, webhookVerifyQuerySchema };

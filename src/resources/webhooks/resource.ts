@@ -110,6 +110,15 @@ export class WebhooksResource {
    *     }
    *   },
    * });
+   *
+   * // With filter for multi-tenant setups
+   * client.webhooks.handle(payload, {
+   *   text: async (message, ctx) => {
+   *     // Only called for messages to the specified phone number
+   *   },
+   * }, {
+   *   filter: { phoneNumberIds: ["894206507114246"] },
+   * });
    * ```
    */
   handle<THandlers extends WebhookHandlers<any>>(
@@ -128,6 +137,19 @@ export class WebhooksResource {
           displayPhoneNumber: change.value.metadata.display_phone_number,
           wabaId: entry.id,
         };
+
+        // Apply filter - skip if doesn't match criteria
+        if (options?.filter) {
+          const { phoneNumberIds, wabaIds } = options.filter;
+
+          if (phoneNumberIds?.length && !phoneNumberIds.includes(metadata.phoneNumberId)) {
+            continue;
+          }
+
+          if (wabaIds?.length && !wabaIds.includes(metadata.wabaId)) {
+            continue;
+          }
+        }
 
         const contacts = change.value.contacts || [];
 

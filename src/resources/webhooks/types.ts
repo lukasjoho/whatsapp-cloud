@@ -95,9 +95,58 @@ export type WebhookHandlers<TBefore = Record<string, never>> = {
 };
 
 /**
+ * Filter configuration for webhook handling
+ *
+ * Use this to only process messages for specific phone numbers or WABAs.
+ * Messages that don't match the filter are silently ignored.
+ *
+ * @example
+ * ```typescript
+ * // Only process messages for a specific phone number
+ * client.webhooks.handle(payload, {
+ *   filter: {
+ *     phoneNumberIds: ["894206507114246"],
+ *   },
+ *   text: async (message, ctx) => { ... },
+ * });
+ *
+ * // Process messages for multiple phone numbers
+ * client.webhooks.handle(payload, {
+ *   filter: {
+ *     phoneNumberIds: ["894206507114246", "846514031886910"],
+ *   },
+ *   text: async (message, ctx) => { ... },
+ * });
+ * ```
+ */
+export type WebhookFilter = {
+  /**
+   * Only process messages for these phone number IDs.
+   * If empty or undefined, all phone numbers are processed.
+   */
+  phoneNumberIds?: string[];
+
+  /**
+   * Only process messages for these WABA IDs.
+   * If empty or undefined, all WABAs are processed.
+   */
+  wabaIds?: string[];
+};
+
+/**
  * Options for the handle() method
  */
 export type WebhookHandleOptions = {
+  /**
+   * Filter to only process messages matching certain criteria.
+   * Messages that don't match are silently ignored (no handlers called).
+   *
+   * This is useful for multi-tenant setups where one webhook receives
+   * messages for multiple phone numbers but each instance only cares
+   * about specific numbers.
+   */
+  filter?: WebhookFilter;
+
   /**
    * Called when a handler throws an error
    */
