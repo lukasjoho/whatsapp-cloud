@@ -10,10 +10,12 @@ import type {
   wabaCreateSchema,
   wabaCreateResponseSchema,
   wabaListOptionsSchema,
+  // Subscribed Apps
+  whatsappBusinessApiDataSchema,
   subscribedAppSchema,
-  subscribedAppsListResponseSchema,
-  subscribeAppResponseSchema,
-  unsubscribeAppResponseSchema,
+  subscribedAppsResponseSchema,
+  subscriptionRequestSchema,
+  subscriptionResponseSchema,
   // Assigned Users
   permissionTaskSchema,
   assignedUserTypeSchema,
@@ -54,10 +56,11 @@ export type WabaListOptions = z.infer<typeof wabaListOptionsSchema>;
 // Subscribed Apps
 // =============================================================================
 
+export type WhatsAppBusinessApiData = z.infer<typeof whatsappBusinessApiDataSchema>;
 export type SubscribedApp = z.infer<typeof subscribedAppSchema>;
-export type SubscribedAppsListResponse = z.infer<typeof subscribedAppsListResponseSchema>;
-export type SubscribeAppResponse = z.infer<typeof subscribeAppResponseSchema>;
-export type UnsubscribeAppResponse = z.infer<typeof unsubscribeAppResponseSchema>;
+export type SubscribedAppsResponse = z.infer<typeof subscribedAppsResponseSchema>;
+export type SubscriptionRequest = z.infer<typeof subscriptionRequestSchema>;
+export type SubscriptionResponse = z.infer<typeof subscriptionResponseSchema>;
 
 // =============================================================================
 // Assigned Users

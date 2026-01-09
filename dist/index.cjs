@@ -96,9 +96,10 @@ __export(index_exports, {
   phoneNumberSchema: () => phoneNumberSchema,
   phoneNumberStatusSchema: () => phoneNumberStatusSchema,
   requestVerificationCodeSchema: () => requestVerificationCodeSchema,
-  subscribeAppResponseSchema: () => subscribeAppResponseSchema,
   subscribedAppSchema: () => subscribedAppSchema,
-  subscribedAppsListResponseSchema: () => subscribedAppsListResponseSchema,
+  subscribedAppsResponseSchema: () => subscribedAppsResponseSchema,
+  subscriptionRequestSchema: () => subscriptionRequestSchema,
+  subscriptionResponseSchema: () => subscriptionResponseSchema,
   templateBodyComponentInputSchema: () => templateBodyComponentInputSchema,
   templateBodyExampleSchema: () => templateBodyExampleSchema,
   templateButtonInputSchema: () => templateButtonInputSchema,
@@ -139,7 +140,6 @@ __export(index_exports, {
   templateUrlButtonInputSchema: () => templateUrlButtonInputSchema,
   toTemplateName: () => toTemplateName,
   unifiedCertStatusSchema: () => unifiedCertStatusSchema,
-  unsubscribeAppResponseSchema: () => unsubscribeAppResponseSchema,
   verificationResponseSchema: () => verificationResponseSchema,
   verifyCodeSchema: () => verifyCodeSchema,
   verifyWebhook: () => verifyWebhook,
@@ -161,7 +161,8 @@ __export(index_exports, {
   webhookStatusErrorSchema: () => webhookStatusErrorSchema,
   webhookStatusSchema: () => webhookStatusSchema,
   webhookValueSchema: () => webhookValueSchema,
-  webhookVerifyQuerySchema: () => webhookVerifyQuerySchema
+  webhookVerifyQuerySchema: () => webhookVerifyQuerySchema,
+  whatsappBusinessApiDataSchema: () => whatsappBusinessApiDataSchema
 });
 module.exports = __toCommonJS(index_exports);
 
@@ -601,13 +602,25 @@ var WabasResource = class {
   /**
    * List apps subscribed to this WABA
    *
+   * @see GET /{WABA-ID}/subscribed_apps
+   *
    * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @param fields - Comma-separated list of fields to return (id, name, link)
    * @returns List of subscribed apps
+   *
+   * @example
+   * ```typescript
+   * const apps = await client.wabas.listSubscribedApps();
+   *
+   * // With specific fields
+   * const apps = await client.wabas.listSubscribedApps(undefined, "id,name,link");
+   * ```
    */
-  async listSubscribedApps(wabaId) {
+  async listSubscribedApps(wabaId, fields) {
     const id = this.getWabaId(wabaId);
+    const query = fields ? `?fields=${fields}` : "";
     return this.httpClient.get(
-      `/${id}/subscribed_apps`
+      `/${id}/subscribed_apps${query}`
     );
   }
   /**
@@ -616,29 +629,46 @@ var WabasResource = class {
    * This is required to receive webhooks (incoming messages, status updates).
    * Without subscribing, your app won't receive any webhook events.
    *
+   * @see POST /{WABA-ID}/subscribed_apps
+   *
    * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @param options - Optional webhook configuration (callback URI, verify token)
    * @returns Success status
    *
    * @example
    * ```typescript
-   * // Subscribe your app to receive webhooks
+   * // Subscribe using app's default webhook settings
    * await client.wabas.subscribeApp();
+   *
+   * // Subscribe with custom callback URL
+   * await client.wabas.subscribeApp(undefined, {
+   *   override_callback_uri: "https://example.com/webhook",
+   *   verify_token: "my_verify_token"
+   * });
    * ```
    */
-  async subscribeApp(wabaId) {
+  async subscribeApp(wabaId, options) {
     const id = this.getWabaId(wabaId);
     return this.httpClient.post(
       `/${id}/subscribed_apps`,
-      {}
+      options ?? {}
     );
   }
   /**
    * Unsubscribe an app from this WABA
    *
    * After unsubscribing, your app will no longer receive webhooks for this WABA.
+   * This action takes effect immediately.
+   *
+   * @see DELETE /{WABA-ID}/subscribed_apps
    *
    * @param wabaId - WABA ID (overrides config.businessAccountId)
    * @returns Success status
+   *
+   * @example
+   * ```typescript
+   * await client.wabas.unsubscribeApp();
+   * ```
    */
   async unsubscribeApp(wabaId) {
     const id = this.getWabaId(wabaId);
@@ -811,21 +841,27 @@ var wabaListOptionsSchema = import_zod3.z.object({
   after: import_zod3.z.string().optional(),
   before: import_zod3.z.string().optional()
 });
-var subscribedAppSchema = import_zod3.z.object({
-  whatsapp_business_api_data: import_zod3.z.object({
-    id: import_zod3.z.string().optional(),
-    link: import_zod3.z.string().optional(),
-    name: import_zod3.z.string().optional()
-  }).optional()
+var whatsappBusinessApiDataSchema = import_zod3.z.object({
+  id: import_zod3.z.string(),
+  name: import_zod3.z.string(),
+  link: import_zod3.z.string().optional()
 });
-var subscribedAppsListResponseSchema = import_zod3.z.object({
+var subscribedAppSchema = import_zod3.z.object({
+  whatsapp_business_api_data: whatsappBusinessApiDataSchema,
+  override_callback_uri: import_zod3.z.string().optional()
+});
+var subscribedAppsResponseSchema = import_zod3.z.object({
   data: import_zod3.z.array(subscribedAppSchema)
 });
-var subscribeAppResponseSchema = import_zod3.z.object({
-  success: import_zod3.z.boolean()
+var subscriptionRequestSchema = import_zod3.z.object({
+  /** Custom webhook callback URL to override app default */
+  override_callback_uri: import_zod3.z.string().optional(),
+  /** Verification token for webhook security */
+  verify_token: import_zod3.z.string().optional()
 });
-var unsubscribeAppResponseSchema = import_zod3.z.object({
-  success: import_zod3.z.boolean()
+var subscriptionResponseSchema = import_zod3.z.object({
+  success: import_zod3.z.boolean(),
+  data: import_zod3.z.array(subscribedAppSchema).optional()
 });
 var permissionTaskSchema = import_zod3.z.enum([
   "MANAGE",
@@ -2883,9 +2919,10 @@ var WhatsAppClient = class {
   phoneNumberSchema,
   phoneNumberStatusSchema,
   requestVerificationCodeSchema,
-  subscribeAppResponseSchema,
   subscribedAppSchema,
-  subscribedAppsListResponseSchema,
+  subscribedAppsResponseSchema,
+  subscriptionRequestSchema,
+  subscriptionResponseSchema,
   templateBodyComponentInputSchema,
   templateBodyExampleSchema,
   templateButtonInputSchema,
@@ -2926,7 +2963,6 @@ var WhatsAppClient = class {
   templateUrlButtonInputSchema,
   toTemplateName,
   unifiedCertStatusSchema,
-  unsubscribeAppResponseSchema,
   verificationResponseSchema,
   verifyCodeSchema,
   verifyWebhook,
@@ -2948,5 +2984,6 @@ var WhatsAppClient = class {
   webhookStatusErrorSchema,
   webhookStatusSchema,
   webhookValueSchema,
-  webhookVerifyQuerySchema
+  webhookVerifyQuerySchema,
+  whatsappBusinessApiDataSchema
 });

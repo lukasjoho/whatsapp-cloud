@@ -5,9 +5,10 @@ import type {
   WabaCreate,
   WabaCreateResponse,
   WabaListOptions,
-  SubscribedAppsListResponse,
-  SubscribeAppResponse,
-  UnsubscribeAppResponse,
+  // Subscribed Apps
+  SubscribedAppsResponse,
+  SubscriptionRequest,
+  SubscriptionResponse,
   // Assigned Users
   PermissionTask,
   AssignedUsersResponse,
@@ -190,13 +191,28 @@ export class WabasResource {
   /**
    * List apps subscribed to this WABA
    *
+   * @see GET /{WABA-ID}/subscribed_apps
+   *
    * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @param fields - Comma-separated list of fields to return (id, name, link)
    * @returns List of subscribed apps
+   *
+   * @example
+   * ```typescript
+   * const apps = await client.wabas.listSubscribedApps();
+   *
+   * // With specific fields
+   * const apps = await client.wabas.listSubscribedApps(undefined, "id,name,link");
+   * ```
    */
-  async listSubscribedApps(wabaId?: string): Promise<SubscribedAppsListResponse> {
+  async listSubscribedApps(
+    wabaId?: string,
+    fields?: string
+  ): Promise<SubscribedAppsResponse> {
     const id = this.getWabaId(wabaId);
-    return this.httpClient.get<SubscribedAppsListResponse>(
-      `/${id}/subscribed_apps`
+    const query = fields ? `?fields=${fields}` : "";
+    return this.httpClient.get<SubscribedAppsResponse>(
+      `/${id}/subscribed_apps${query}`
     );
   }
 
@@ -206,20 +222,32 @@ export class WabasResource {
    * This is required to receive webhooks (incoming messages, status updates).
    * Without subscribing, your app won't receive any webhook events.
    *
+   * @see POST /{WABA-ID}/subscribed_apps
+   *
    * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @param options - Optional webhook configuration (callback URI, verify token)
    * @returns Success status
    *
    * @example
    * ```typescript
-   * // Subscribe your app to receive webhooks
+   * // Subscribe using app's default webhook settings
    * await client.wabas.subscribeApp();
+   *
+   * // Subscribe with custom callback URL
+   * await client.wabas.subscribeApp(undefined, {
+   *   override_callback_uri: "https://example.com/webhook",
+   *   verify_token: "my_verify_token"
+   * });
    * ```
    */
-  async subscribeApp(wabaId?: string): Promise<SubscribeAppResponse> {
+  async subscribeApp(
+    wabaId?: string,
+    options?: SubscriptionRequest
+  ): Promise<SubscriptionResponse> {
     const id = this.getWabaId(wabaId);
-    return this.httpClient.post<SubscribeAppResponse>(
+    return this.httpClient.post<SubscriptionResponse>(
       `/${id}/subscribed_apps`,
-      {}
+      options ?? {}
     );
   }
 
@@ -227,13 +255,21 @@ export class WabasResource {
    * Unsubscribe an app from this WABA
    *
    * After unsubscribing, your app will no longer receive webhooks for this WABA.
+   * This action takes effect immediately.
+   *
+   * @see DELETE /{WABA-ID}/subscribed_apps
    *
    * @param wabaId - WABA ID (overrides config.businessAccountId)
    * @returns Success status
+   *
+   * @example
+   * ```typescript
+   * await client.wabas.unsubscribeApp();
+   * ```
    */
-  async unsubscribeApp(wabaId?: string): Promise<UnsubscribeAppResponse> {
+  async unsubscribeApp(wabaId?: string): Promise<SubscriptionResponse> {
     const id = this.getWabaId(wabaId);
-    return this.httpClient.delete<UnsubscribeAppResponse>(
+    return this.httpClient.delete<SubscriptionResponse>(
       `/${id}/subscribed_apps`
     );
   }

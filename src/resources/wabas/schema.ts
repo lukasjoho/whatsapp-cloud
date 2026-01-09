@@ -102,26 +102,48 @@ export const wabaListOptionsSchema = z.object({
 // Subscribed Apps
 // =============================================================================
 
-export const subscribedAppSchema = z.object({
-  whatsapp_business_api_data: z
-    .object({
-      id: z.string().optional(),
-      link: z.string().optional(),
-      name: z.string().optional(),
-    })
-    .optional(),
+/**
+ * Application subscription data for WhatsApp Business Account
+ */
+export const whatsappBusinessApiDataSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  link: z.string().optional(),
 });
 
-export const subscribedAppsListResponseSchema = z.object({
+/**
+ * Subscribed application details
+ * @see GET /{WABA-ID}/subscribed_apps
+ */
+export const subscribedAppSchema = z.object({
+  whatsapp_business_api_data: whatsappBusinessApiDataSchema,
+  override_callback_uri: z.string().optional(),
+});
+
+/**
+ * Response containing list of subscribed applications
+ */
+export const subscribedAppsResponseSchema = z.object({
   data: z.array(subscribedAppSchema),
 });
 
-export const subscribeAppResponseSchema = z.object({
-  success: z.boolean(),
+/**
+ * Request body for subscribing to WABA webhooks
+ * @see POST /{WABA-ID}/subscribed_apps
+ */
+export const subscriptionRequestSchema = z.object({
+  /** Custom webhook callback URL to override app default */
+  override_callback_uri: z.string().optional(),
+  /** Verification token for webhook security */
+  verify_token: z.string().optional(),
 });
 
-export const unsubscribeAppResponseSchema = z.object({
+/**
+ * Response after successful subscription operation
+ */
+export const subscriptionResponseSchema = z.object({
   success: z.boolean(),
+  data: z.array(subscribedAppSchema).optional(),
 });
 
 // =============================================================================

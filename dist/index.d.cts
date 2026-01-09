@@ -253,27 +253,60 @@ declare const wabaListOptionsSchema: z.ZodObject<{
     after: z.ZodOptional<z.ZodString>;
     before: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
+/**
+ * Application subscription data for WhatsApp Business Account
+ */
+declare const whatsappBusinessApiDataSchema: z.ZodObject<{
+    id: z.ZodString;
+    name: z.ZodString;
+    link: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+/**
+ * Subscribed application details
+ * @see GET /{WABA-ID}/subscribed_apps
+ */
 declare const subscribedAppSchema: z.ZodObject<{
-    whatsapp_business_api_data: z.ZodOptional<z.ZodObject<{
-        id: z.ZodOptional<z.ZodString>;
+    whatsapp_business_api_data: z.ZodObject<{
+        id: z.ZodString;
+        name: z.ZodString;
         link: z.ZodOptional<z.ZodString>;
-        name: z.ZodOptional<z.ZodString>;
-    }, z.core.$strip>>;
+    }, z.core.$strip>;
+    override_callback_uri: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
-declare const subscribedAppsListResponseSchema: z.ZodObject<{
+/**
+ * Response containing list of subscribed applications
+ */
+declare const subscribedAppsResponseSchema: z.ZodObject<{
     data: z.ZodArray<z.ZodObject<{
-        whatsapp_business_api_data: z.ZodOptional<z.ZodObject<{
-            id: z.ZodOptional<z.ZodString>;
+        whatsapp_business_api_data: z.ZodObject<{
+            id: z.ZodString;
+            name: z.ZodString;
             link: z.ZodOptional<z.ZodString>;
-            name: z.ZodOptional<z.ZodString>;
-        }, z.core.$strip>>;
+        }, z.core.$strip>;
+        override_callback_uri: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
-declare const subscribeAppResponseSchema: z.ZodObject<{
-    success: z.ZodBoolean;
+/**
+ * Request body for subscribing to WABA webhooks
+ * @see POST /{WABA-ID}/subscribed_apps
+ */
+declare const subscriptionRequestSchema: z.ZodObject<{
+    override_callback_uri: z.ZodOptional<z.ZodString>;
+    verify_token: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
-declare const unsubscribeAppResponseSchema: z.ZodObject<{
+/**
+ * Response after successful subscription operation
+ */
+declare const subscriptionResponseSchema: z.ZodObject<{
     success: z.ZodBoolean;
+    data: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        whatsapp_business_api_data: z.ZodObject<{
+            id: z.ZodString;
+            name: z.ZodString;
+            link: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>;
+        override_callback_uri: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>>;
 }, z.core.$strip>;
 /**
  * Permission tasks for WhatsApp Business Account access
@@ -388,10 +421,11 @@ type WabaListResponse = z.infer<typeof wabaListResponseSchema>;
 type WabaCreate = z.infer<typeof wabaCreateSchema>;
 type WabaCreateResponse = z.infer<typeof wabaCreateResponseSchema>;
 type WabaListOptions = z.infer<typeof wabaListOptionsSchema>;
+type WhatsAppBusinessApiData = z.infer<typeof whatsappBusinessApiDataSchema>;
 type SubscribedApp = z.infer<typeof subscribedAppSchema>;
-type SubscribedAppsListResponse = z.infer<typeof subscribedAppsListResponseSchema>;
-type SubscribeAppResponse = z.infer<typeof subscribeAppResponseSchema>;
-type UnsubscribeAppResponse = z.infer<typeof unsubscribeAppResponseSchema>;
+type SubscribedAppsResponse = z.infer<typeof subscribedAppsResponseSchema>;
+type SubscriptionRequest = z.infer<typeof subscriptionRequestSchema>;
+type SubscriptionResponse = z.infer<typeof subscriptionResponseSchema>;
 type PermissionTask = z.infer<typeof permissionTaskSchema>;
 type AssignedUserType = z.infer<typeof assignedUserTypeSchema>;
 type BusinessNode = z.infer<typeof businessNodeSchema>;
@@ -501,35 +535,63 @@ declare class WabasResource {
     /**
      * List apps subscribed to this WABA
      *
+     * @see GET /{WABA-ID}/subscribed_apps
+     *
      * @param wabaId - WABA ID (overrides config.businessAccountId)
+     * @param fields - Comma-separated list of fields to return (id, name, link)
      * @returns List of subscribed apps
+     *
+     * @example
+     * ```typescript
+     * const apps = await client.wabas.listSubscribedApps();
+     *
+     * // With specific fields
+     * const apps = await client.wabas.listSubscribedApps(undefined, "id,name,link");
+     * ```
      */
-    listSubscribedApps(wabaId?: string): Promise<SubscribedAppsListResponse>;
+    listSubscribedApps(wabaId?: string, fields?: string): Promise<SubscribedAppsResponse>;
     /**
      * Subscribe an app to this WABA
      *
      * This is required to receive webhooks (incoming messages, status updates).
      * Without subscribing, your app won't receive any webhook events.
      *
+     * @see POST /{WABA-ID}/subscribed_apps
+     *
+     * @param wabaId - WABA ID (overrides config.businessAccountId)
+     * @param options - Optional webhook configuration (callback URI, verify token)
+     * @returns Success status
+     *
+     * @example
+     * ```typescript
+     * // Subscribe using app's default webhook settings
+     * await client.wabas.subscribeApp();
+     *
+     * // Subscribe with custom callback URL
+     * await client.wabas.subscribeApp(undefined, {
+     *   override_callback_uri: "https://example.com/webhook",
+     *   verify_token: "my_verify_token"
+     * });
+     * ```
+     */
+    subscribeApp(wabaId?: string, options?: SubscriptionRequest): Promise<SubscriptionResponse>;
+    /**
+     * Unsubscribe an app from this WABA
+     *
+     * After unsubscribing, your app will no longer receive webhooks for this WABA.
+     * This action takes effect immediately.
+     *
+     * @see DELETE /{WABA-ID}/subscribed_apps
+     *
      * @param wabaId - WABA ID (overrides config.businessAccountId)
      * @returns Success status
      *
      * @example
      * ```typescript
-     * // Subscribe your app to receive webhooks
-     * await client.wabas.subscribeApp();
+     * await client.wabas.unsubscribeApp();
      * ```
      */
-    subscribeApp(wabaId?: string): Promise<SubscribeAppResponse>;
-    /**
-     * Unsubscribe an app from this WABA
-     *
-     * After unsubscribing, your app will no longer receive webhooks for this WABA.
-     *
-     * @param wabaId - WABA ID (overrides config.businessAccountId)
-     * @returns Success status
-     */
-    unsubscribeApp(wabaId?: string): Promise<UnsubscribeAppResponse>;
+    unsubscribeApp(wabaId?: string): Promise<SubscriptionResponse>;
     /**
      * Build query string for assigned users list
      */
@@ -5101,4 +5163,4 @@ declare class GraphAPIError extends Error {
     statusCode: number);
 }
 
-export { type AccountMode, type AccountReviewStatus, type AddPreverifiedRequest, type AddPreverifiedResponse, type AssignedUser, type AssignedUserMutationResponse, type AssignedUserType, type AssignedUsersListOptions, type AssignedUsersResponse, type AssignedUsersSummary, type Business, type BusinessGetOptions, type BusinessNode, type BusinessProfile, type BusinessProfileResponse, type BusinessProfileUpdate, type BusinessProfileUpdateResponse, BusinessResource, type BusinessVerificationStatus, type ClientConfig, type CodeMethod, type CodeVerificationStatus, type CursorPaging, type DebugTokenResponse, GraphAPIError, type GraphAPIErrorResponse, type HostPlatform, HttpClient, type MediaDeleteResponse, type MediaMetadata, MediaResource, type MediaType, type MediaUpload, type MediaUploadResponse, type MessageImage, type MessageImageContent, type MessageIncoming, type MessageIncomingAudio, type MessageIncomingImage, type MessageIncomingText, type MessageLocation, type MessageLocationContent, type MessageOutgoing, type MessageReaction, type MessageReactionContent, type MessageSendImage, type MessageSendLocation, type MessageSendReaction, type MessageSendResponse, type MessageSendText, type MessageText, type MessageTextContent, MessagesResource, type MessagingLimitTier, type NameStatus, type OnBehalfOfBusinessInfo, type PermissionTask, type PhoneNumber, type PhoneNumberCreateRequest, type PhoneNumberCreateResponse, type PhoneNumberListOptions, type PhoneNumberListResponse, type PhoneNumberQualityRating, type PhoneNumberRegister, type PhoneNumberRegisterResponse, type PhoneNumberStatus, PhoneNumbersResource, type RequestVerificationCode, type SubscribeAppResponse, type SubscribedApp, type SubscribedAppsListResponse, type Template, type TemplateBodyComponentInput, type TemplateBodyExample, type TemplateButton, type TemplateButtonInput, type TemplateButtonsComponentInput, type TemplateCategory, type TemplateComponent, type TemplateComponentInput, type TemplateCopyCodeButtonInput, type TemplateCreate, type TemplateCreateResponse, type TemplateDelete, type TemplateDeleteResponse, type TemplateFlowButtonInput, type TemplateFooterComponentInput, type TemplateHeaderComponentInput, type TemplateHeaderLocationInput, type TemplateHeaderMediaInput, type TemplateHeaderTextExample, type TemplateHeaderTextInput, type TemplateLanguage, type TemplateList, type TemplateListResponse, type TemplateNamedParamExample, type TemplatePaging, type TemplatePagingCursors, type TemplateParameterFormat, type TemplatePhoneNumberButtonInput, type TemplateQualityScore, type TemplateQuickReplyButtonInput, type TemplateStatus, type TemplateUpdate, type TemplateUpdateResponse, type TemplateUrlButtonInput, TemplatesResource, type UnifiedCertStatus, type UnsubscribeAppResponse, type VerificationResponse, type VerifyCode, type Vertical, type Waba, type WabaBusinessType, type WabaCreate, type WabaCreateResponse, type WabaListOptions, type WabaListResponse, WabasResource, type WebhookContact, type WebhookContext, type WebhookConversation, type WebhookFilter, type WebhookHandleOptions, type WebhookHandlers, type WebhookMetadata, type WebhookPayload, type WebhookPricing, type WebhookStatus, type WebhookStatusError, type WebhookVerifyQuery, WebhooksResource, WhatsAppClient, accountModeSchema, accountReviewStatusSchema, addPreverifiedRequestSchema, addPreverifiedResponseSchema, assignedUserMutationResponseSchema, assignedUserSchema, assignedUserTypeSchema, assignedUsersListOptionsSchema, assignedUsersResponseSchema, assignedUsersSummarySchema, buildMessagePayload, businessGetOptionsSchema, businessNodeSchema, businessProfileResponseSchema, businessProfileSchema, businessProfileUpdateResponseSchema, businessProfileUpdateSchema, businessSchema, businessVerificationStatusSchema, clientConfigSchema, codeMethodSchema, codeVerificationStatusSchema, cursorPagingSchema, debugTokenResponseSchema, extractMessages, extractStatuses, hostPlatformSchema, mediaDeleteResponseSchema, mediaMetadataSchema, mediaMimeTypeSchema, mediaTypeSchema, mediaUploadResponseSchema, mediaUploadSchema, messageImageContentSchema, messageImageSchema, messageIncomingAudioSchema, messageIncomingImageSchema, messageIncomingSchema, messageIncomingTextSchema, messageLocationContentSchema, messageLocationSchema, messageOutgoingSchema, messageReactionContentSchema, messageReactionSchema, messageSendImageSchema, messageSendLocationSchema, messageSendReactionSchema, messageSendResponseSchema, messageSendTextSchema, messageTextContentSchema, messageTextSchema, messagingLimitTierSchema, nameStatusSchema, onBehalfOfBusinessInfoSchema, permissionTaskSchema, phoneNumberCreateRequestSchema, phoneNumberCreateResponseSchema, phoneNumberListOptionsSchema, phoneNumberListResponseSchema, phoneNumberQualityRatingSchema, phoneNumberRegisterResponseSchema, phoneNumberRegisterSchema, phoneNumberResponseSchema, phoneNumberSchema, phoneNumberStatusSchema, requestVerificationCodeSchema, subscribeAppResponseSchema, subscribedAppSchema, subscribedAppsListResponseSchema, templateBodyComponentInputSchema, templateBodyExampleSchema, templateButtonInputSchema, templateButtonSchema, templateButtonsComponentInputSchema, templateCategorySchema, templateComponentInputSchema, templateComponentSchema, templateCopyCodeButtonInputSchema, templateCreateAuthenticationSchema, templateCreateMarketingSchema, templateCreateResponseSchema, templateCreateSchema, templateCreateUtilitySchema, templateDeleteResponseSchema, templateDeleteSchema, templateFlowButtonInputSchema, templateFooterComponentInputSchema, templateHeaderComponentInputSchema, templateHeaderLocationInputSchema, templateHeaderMediaInputSchema, templateHeaderTextExampleSchema, templateHeaderTextInputSchema, templateLanguageSchema, templateListResponseSchema, templateListSchema, templateNamedParamExampleSchema, templatePagingCursorsSchema, templatePagingSchema, templateParameterFormatSchema, templatePhoneNumberButtonInputSchema, templateQualityScoreSchema, templateQuickReplyButtonInputSchema, templateSchema, templateStatusSchema, templateUpdateResponseSchema, templateUpdateSchema, templateUrlButtonInputSchema, toTemplateName, unifiedCertStatusSchema, unsubscribeAppResponseSchema, verificationResponseSchema, verifyCodeSchema, verifyWebhook, verticalSchema, wabaBusinessTypeSchema, wabaCreateResponseSchema, wabaCreateSchema, wabaListOptionsSchema, wabaListResponseSchema, wabaSchema, webhookChangeSchema, webhookContactSchema, webhookConversationOriginSchema, webhookConversationSchema, webhookEntrySchema, webhookMetadataSchema, webhookPayloadSchema, webhookPricingSchema, webhookStatusErrorSchema, webhookStatusSchema, webhookValueSchema, webhookVerifyQuerySchema };
+export { type AccountMode, type AccountReviewStatus, type AddPreverifiedRequest, type AddPreverifiedResponse, type AssignedUser, type AssignedUserMutationResponse, type AssignedUserType, type AssignedUsersListOptions, type AssignedUsersResponse, type AssignedUsersSummary, type Business, type BusinessGetOptions, type BusinessNode, type BusinessProfile, type BusinessProfileResponse, type BusinessProfileUpdate, type BusinessProfileUpdateResponse, BusinessResource, type BusinessVerificationStatus, type ClientConfig, type CodeMethod, type CodeVerificationStatus, type CursorPaging, type DebugTokenResponse, GraphAPIError, type GraphAPIErrorResponse, type HostPlatform, HttpClient, type MediaDeleteResponse, type MediaMetadata, MediaResource, type MediaType, type MediaUpload, type MediaUploadResponse, type MessageImage, type MessageImageContent, type MessageIncoming, type MessageIncomingAudio, type MessageIncomingImage, type MessageIncomingText, type MessageLocation, type MessageLocationContent, type MessageOutgoing, type MessageReaction, type MessageReactionContent, type MessageSendImage, type MessageSendLocation, type MessageSendReaction, type MessageSendResponse, type MessageSendText, type MessageText, type MessageTextContent, MessagesResource, type MessagingLimitTier, type NameStatus, type OnBehalfOfBusinessInfo, type PermissionTask, type PhoneNumber, type PhoneNumberCreateRequest, type PhoneNumberCreateResponse, type PhoneNumberListOptions, type PhoneNumberListResponse, type PhoneNumberQualityRating, type PhoneNumberRegister, type PhoneNumberRegisterResponse, type PhoneNumberStatus, PhoneNumbersResource, type RequestVerificationCode, type SubscribedApp, type SubscribedAppsResponse, type SubscriptionRequest, type SubscriptionResponse, type Template, type TemplateBodyComponentInput, type TemplateBodyExample, type TemplateButton, type TemplateButtonInput, type TemplateButtonsComponentInput, type TemplateCategory, type TemplateComponent, type TemplateComponentInput, type TemplateCopyCodeButtonInput, type TemplateCreate, type TemplateCreateResponse, type TemplateDelete, type TemplateDeleteResponse, type TemplateFlowButtonInput, type TemplateFooterComponentInput, type TemplateHeaderComponentInput, type TemplateHeaderLocationInput, type TemplateHeaderMediaInput, type TemplateHeaderTextExample, type TemplateHeaderTextInput, type TemplateLanguage, type TemplateList, type TemplateListResponse, type TemplateNamedParamExample, type TemplatePaging, type TemplatePagingCursors, type TemplateParameterFormat, type TemplatePhoneNumberButtonInput, type TemplateQualityScore, type TemplateQuickReplyButtonInput, type TemplateStatus, type TemplateUpdate, type TemplateUpdateResponse, type TemplateUrlButtonInput, TemplatesResource, type UnifiedCertStatus, type VerificationResponse, type VerifyCode, type Vertical, type Waba, type WabaBusinessType, type WabaCreate, type WabaCreateResponse, type WabaListOptions, type WabaListResponse, WabasResource, type WebhookContact, type WebhookContext, type WebhookConversation, type WebhookFilter, type WebhookHandleOptions, type WebhookHandlers, type WebhookMetadata, type WebhookPayload, type WebhookPricing, type WebhookStatus, type WebhookStatusError, type WebhookVerifyQuery, WebhooksResource, type WhatsAppBusinessApiData, WhatsAppClient, accountModeSchema, accountReviewStatusSchema, addPreverifiedRequestSchema, addPreverifiedResponseSchema, assignedUserMutationResponseSchema, assignedUserSchema, assignedUserTypeSchema, assignedUsersListOptionsSchema, assignedUsersResponseSchema, assignedUsersSummarySchema, buildMessagePayload, businessGetOptionsSchema, businessNodeSchema, businessProfileResponseSchema, businessProfileSchema, businessProfileUpdateResponseSchema, businessProfileUpdateSchema, businessSchema, businessVerificationStatusSchema, clientConfigSchema, codeMethodSchema, codeVerificationStatusSchema, cursorPagingSchema, debugTokenResponseSchema, extractMessages, extractStatuses, hostPlatformSchema, mediaDeleteResponseSchema, mediaMetadataSchema, mediaMimeTypeSchema, mediaTypeSchema, mediaUploadResponseSchema, mediaUploadSchema, messageImageContentSchema, messageImageSchema, messageIncomingAudioSchema, messageIncomingImageSchema, messageIncomingSchema, messageIncomingTextSchema, messageLocationContentSchema, messageLocationSchema, messageOutgoingSchema, messageReactionContentSchema, messageReactionSchema, messageSendImageSchema, messageSendLocationSchema, messageSendReactionSchema, messageSendResponseSchema, messageSendTextSchema, messageTextContentSchema, messageTextSchema, messagingLimitTierSchema, nameStatusSchema, onBehalfOfBusinessInfoSchema, permissionTaskSchema, phoneNumberCreateRequestSchema, phoneNumberCreateResponseSchema, phoneNumberListOptionsSchema, phoneNumberListResponseSchema, phoneNumberQualityRatingSchema, phoneNumberRegisterResponseSchema, phoneNumberRegisterSchema, phoneNumberResponseSchema, phoneNumberSchema, phoneNumberStatusSchema, requestVerificationCodeSchema, subscribedAppSchema, subscribedAppsResponseSchema, subscriptionRequestSchema, subscriptionResponseSchema, templateBodyComponentInputSchema, templateBodyExampleSchema, templateButtonInputSchema, templateButtonSchema, templateButtonsComponentInputSchema, templateCategorySchema, templateComponentInputSchema, templateComponentSchema, templateCopyCodeButtonInputSchema, templateCreateAuthenticationSchema, templateCreateMarketingSchema, templateCreateResponseSchema, templateCreateSchema, templateCreateUtilitySchema, templateDeleteResponseSchema, templateDeleteSchema, templateFlowButtonInputSchema, templateFooterComponentInputSchema, templateHeaderComponentInputSchema, templateHeaderLocationInputSchema, templateHeaderMediaInputSchema, templateHeaderTextExampleSchema, templateHeaderTextInputSchema, templateLanguageSchema, templateListResponseSchema, templateListSchema, templateNamedParamExampleSchema, templatePagingCursorsSchema, templatePagingSchema, templateParameterFormatSchema, templatePhoneNumberButtonInputSchema, templateQualityScoreSchema, templateQuickReplyButtonInputSchema, templateSchema, templateStatusSchema, templateUpdateResponseSchema, templateUpdateSchema, templateUrlButtonInputSchema, toTemplateName, unifiedCertStatusSchema, verificationResponseSchema, verifyCodeSchema, verifyWebhook, verticalSchema, wabaBusinessTypeSchema, wabaCreateResponseSchema, wabaCreateSchema, wabaListOptionsSchema, wabaListResponseSchema, wabaSchema, webhookChangeSchema, webhookContactSchema, webhookConversationOriginSchema, webhookConversationSchema, webhookEntrySchema, webhookMetadataSchema, webhookPayloadSchema, webhookPricingSchema, webhookStatusErrorSchema, webhookStatusSchema, webhookValueSchema, webhookVerifyQuerySchema, whatsappBusinessApiDataSchema };

@@ -434,13 +434,25 @@ var WabasResource = class {
   /**
    * List apps subscribed to this WABA
    *
+   * @see GET /{WABA-ID}/subscribed_apps
+   *
    * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @param fields - Comma-separated list of fields to return (id, name, link)
    * @returns List of subscribed apps
+   *
+   * @example
+   * ```typescript
+   * const apps = await client.wabas.listSubscribedApps();
+   *
+   * // With specific fields
+   * const apps = await client.wabas.listSubscribedApps(undefined, "id,name,link");
+   * ```
    */
-  async listSubscribedApps(wabaId) {
+  async listSubscribedApps(wabaId, fields) {
     const id = this.getWabaId(wabaId);
+    const query = fields ? `?fields=${fields}` : "";
     return this.httpClient.get(
-      `/${id}/subscribed_apps`
+      `/${id}/subscribed_apps${query}`
     );
   }
   /**
@@ -449,29 +461,46 @@ var WabasResource = class {
    * This is required to receive webhooks (incoming messages, status updates).
    * Without subscribing, your app won't receive any webhook events.
    *
+   * @see POST /{WABA-ID}/subscribed_apps
+   *
    * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @param options - Optional webhook configuration (callback URI, verify token)
    * @returns Success status
    *
    * @example
    * ```typescript
-   * // Subscribe your app to receive webhooks
+   * // Subscribe using app's default webhook settings
    * await client.wabas.subscribeApp();
+   *
+   * // Subscribe with custom callback URL
+   * await client.wabas.subscribeApp(undefined, {
+   *   override_callback_uri: "https://example.com/webhook",
+   *   verify_token: "my_verify_token"
+   * });
    * ```
    */
-  async subscribeApp(wabaId) {
+  async subscribeApp(wabaId, options) {
     const id = this.getWabaId(wabaId);
     return this.httpClient.post(
       `/${id}/subscribed_apps`,
-      {}
+      options ?? {}
     );
   }
   /**
    * Unsubscribe an app from this WABA
    *
    * After unsubscribing, your app will no longer receive webhooks for this WABA.
+   * This action takes effect immediately.
+   *
+   * @see DELETE /{WABA-ID}/subscribed_apps
    *
    * @param wabaId - WABA ID (overrides config.businessAccountId)
    * @returns Success status
+   *
+   * @example
+   * ```typescript
+   * await client.wabas.unsubscribeApp();
+   * ```
    */
   async unsubscribeApp(wabaId) {
     const id = this.getWabaId(wabaId);
@@ -644,21 +673,27 @@ var wabaListOptionsSchema = z3.object({
   after: z3.string().optional(),
   before: z3.string().optional()
 });
-var subscribedAppSchema = z3.object({
-  whatsapp_business_api_data: z3.object({
-    id: z3.string().optional(),
-    link: z3.string().optional(),
-    name: z3.string().optional()
-  }).optional()
+var whatsappBusinessApiDataSchema = z3.object({
+  id: z3.string(),
+  name: z3.string(),
+  link: z3.string().optional()
 });
-var subscribedAppsListResponseSchema = z3.object({
+var subscribedAppSchema = z3.object({
+  whatsapp_business_api_data: whatsappBusinessApiDataSchema,
+  override_callback_uri: z3.string().optional()
+});
+var subscribedAppsResponseSchema = z3.object({
   data: z3.array(subscribedAppSchema)
 });
-var subscribeAppResponseSchema = z3.object({
-  success: z3.boolean()
+var subscriptionRequestSchema = z3.object({
+  /** Custom webhook callback URL to override app default */
+  override_callback_uri: z3.string().optional(),
+  /** Verification token for webhook security */
+  verify_token: z3.string().optional()
 });
-var unsubscribeAppResponseSchema = z3.object({
-  success: z3.boolean()
+var subscriptionResponseSchema = z3.object({
+  success: z3.boolean(),
+  data: z3.array(subscribedAppSchema).optional()
 });
 var permissionTaskSchema = z3.enum([
   "MANAGE",
@@ -2715,9 +2750,10 @@ export {
   phoneNumberSchema,
   phoneNumberStatusSchema,
   requestVerificationCodeSchema,
-  subscribeAppResponseSchema,
   subscribedAppSchema,
-  subscribedAppsListResponseSchema,
+  subscribedAppsResponseSchema,
+  subscriptionRequestSchema,
+  subscriptionResponseSchema,
   templateBodyComponentInputSchema,
   templateBodyExampleSchema,
   templateButtonInputSchema,
@@ -2758,7 +2794,6 @@ export {
   templateUrlButtonInputSchema,
   toTemplateName,
   unifiedCertStatusSchema,
-  unsubscribeAppResponseSchema,
   verificationResponseSchema,
   verifyCodeSchema,
   verifyWebhook,
@@ -2780,5 +2815,6 @@ export {
   webhookStatusErrorSchema,
   webhookStatusSchema,
   webhookValueSchema,
-  webhookVerifyQuerySchema
+  webhookVerifyQuerySchema,
+  whatsappBusinessApiDataSchema
 };
