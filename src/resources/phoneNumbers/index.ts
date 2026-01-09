@@ -60,3 +60,85 @@ export {
   businessProfileUpdateSchema,
   businessProfileUpdateResponseSchema,
 } from "./schema";
+
+// =============================================================================
+// Subresources
+// =============================================================================
+
+// Block
+export { BlockResource } from "./subresources/block";
+export type {
+  BlockedUser,
+  BlockedUserOperation,
+  ListBlockedUsersResponse,
+  BlockUsersResponse,
+  UnblockUsersResponse,
+  ListBlockedUsersOptions,
+} from "./subresources/block";
+export {
+  blockedUserSchema,
+  blockedUserOperationSchema,
+  listBlockedUsersResponseSchema,
+  blockUsersResponseSchema,
+  unblockUsersResponseSchema,
+  listBlockedUsersOptionsSchema,
+} from "./subresources/block";
+
+// QR Codes
+export { QrCodesResource } from "./subresources/qrCodes";
+export type {
+  QrImageFormat,
+  QrCode,
+  QrCodeListResponse,
+  QrCodeResponse,
+  QrCodeMutationResponse,
+  QrCodeDeleteResponse,
+  CreateQrCodeRequest,
+  UpdateQrCodeRequest,
+  QrCodeListOptions,
+} from "./subresources/qrCodes";
+export {
+  qrImageFormatSchema,
+  qrCodeSchema,
+  qrCodeListResponseSchema,
+  qrCodeResponseSchema,
+  qrCodeMutationResponseSchema,
+  qrCodeDeleteResponseSchema,
+  createQrCodeRequestSchema,
+  updateQrCodeRequestSchema,
+  qrCodeListOptionsSchema,
+} from "./subresources/qrCodes";
+
+// Message History
+export { MessageHistoryResource } from "./subresources/messageHistory";
+export type {
+  MessageDeliveryStatus,
+  WebhookUpdateState,
+  MessageDeliveryStatusEvent,
+  MessageHistoryEntry,
+  MessageHistoryResponse,
+  MessageHistoryListOptions,
+} from "./subresources/messageHistory";
+export {
+  messageDeliveryStatusSchema,
+  webhookUpdateStateSchema,
+  messageDeliveryStatusEventSchema,
+  messageHistoryEntrySchema,
+  messageHistoryResponseSchema,
+  messageHistoryListOptionsSchema,
+} from "./subresources/messageHistory";
+
+// Official Account
+export { OfficialAccountResource } from "./subresources/officialAccount";
+export type {
+  ObaStatus,
+  OfficialAccountStatus,
+  OfficialAccountApplyRequest,
+  OfficialAccountApplyResponse,
+} from "./subresources/officialAccount";
+export {
+  obaStatusSchema,
+  officialAccountStatusSchema,
+  officialAccountApplyRequestSchema,
+  officialAccountApplyResponseSchema,
+} from "./subresources/officialAccount";

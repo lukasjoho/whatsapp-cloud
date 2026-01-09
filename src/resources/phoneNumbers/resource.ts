@@ -15,6 +15,10 @@ import type {
   BusinessProfileUpdate,
   BusinessProfileUpdateResponse,
 } from "./types";
+import { BlockResource } from "./subresources/block";
+import { QrCodesResource } from "./subresources/qrCodes";
+import { MessageHistoryResource } from "./subresources/messageHistory";
+import { OfficialAccountResource } from "./subresources/officialAccount";
 
 /**
  * Phone Numbers resource
@@ -55,7 +59,83 @@ import type {
  * ```
  */
 export class PhoneNumbersResource {
-  constructor(private readonly httpClient: HttpClient) {}
+  /**
+   * Block users subresource
+   *
+   * @example
+   * ```typescript
+   * // List blocked users
+   * const blocked = await client.phoneNumbers.block.list();
+   *
+   * // Block users
+   * await client.phoneNumbers.block.add(["+1234567890"]);
+   *
+   * // Unblock users
+   * await client.phoneNumbers.block.remove(["+1234567890"]);
+   * ```
+   */
+  public readonly block: BlockResource;
+
+  /**
+   * QR Codes subresource
+   *
+   * @example
+   * ```typescript
+   * // List QR codes
+   * const codes = await client.phoneNumbers.qrCodes.list();
+   *
+   * // Create a QR code
+   * const qr = await client.phoneNumbers.qrCodes.create({
+   *   prefilled_message: "Hello!",
+   *   generate_qr_image: "PNG"
+   * });
+   *
+   * // Delete a QR code
+   * await client.phoneNumbers.qrCodes.delete("QRCODE123456");
+   * ```
+   */
+  public readonly qrCodes: QrCodesResource;
+
+  /**
+   * Message History subresource
+   *
+   * @example
+   * ```typescript
+   * // List message history
+   * const history = await client.phoneNumbers.messageHistory.list();
+   *
+   * // Filter by message ID
+   * const history = await client.phoneNumbers.messageHistory.list({
+   *   message_id: "wamid.ABC123..."
+   * });
+   * ```
+   */
+  public readonly messageHistory: MessageHistoryResource;
+
+  /**
+   * Official Business Account subresource
+   *
+   * @example
+   * ```typescript
+   * // Get OBA status
+   * const status = await client.phoneNumbers.officialAccount.get();
+   *
+   * // Apply for OBA verification
+   * await client.phoneNumbers.officialAccount.apply({
+   *   business_website_url: "https://example.com",
+   *   primary_country_of_operation: "US",
+   *   supporting_links: ["...", "...", "...", "...", "..."]
+   * });
+   * ```
+   */
+  public readonly officialAccount: OfficialAccountResource;
+
+  constructor(private readonly httpClient: HttpClient) {
+    this.block = new BlockResource(httpClient);
+    this.qrCodes = new QrCodesResource(httpClient);
+    this.messageHistory = new MessageHistoryResource(httpClient);
+    this.officialAccount = new OfficialAccountResource(httpClient);
+  }
 
   /**
    * Get the business ID (from parameter or config)

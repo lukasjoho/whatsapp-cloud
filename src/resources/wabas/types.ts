@@ -28,6 +28,12 @@ import type {
   assignedUsersResponseSchema,
   assignedUsersListOptionsSchema,
   assignedUserMutationResponseSchema,
+  // Activities
+  activityTypeSchema,
+  actorTypeSchema,
+  activitySchema,
+  activitiesResponseSchema,
+  activitiesListOptionsSchema,
 } from "./schema";
 
 // =============================================================================
@@ -80,3 +86,13 @@ export type AssignedUsersSummary = z.infer<typeof assignedUsersSummarySchema>;
 export type AssignedUsersResponse = z.infer<typeof assignedUsersResponseSchema>;
 export type AssignedUsersListOptions = z.infer<typeof assignedUsersListOptionsSchema>;
 export type AssignedUserMutationResponse = z.infer<typeof assignedUserMutationResponseSchema>;
+
+// =============================================================================
+// Activities
+// =============================================================================
+
+export type ActivityType = z.infer<typeof activityTypeSchema>;
+export type ActorType = z.infer<typeof actorTypeSchema>;
+export type Activity = z.infer<typeof activitySchema>;
+export type ActivitiesResponse = z.infer<typeof activitiesResponseSchema>;
+export type ActivitiesListOptions = z.infer<typeof activitiesListOptionsSchema>;

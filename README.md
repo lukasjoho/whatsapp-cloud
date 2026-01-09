@@ -100,12 +100,122 @@ export async function POST(request: NextRequest) {
 }
 ```
 
-## APIs
+## API Support
 
-- `client.messages` - Send messages
-- `client.webhooks` - Handle messages
-- `client.accounts` - Manage WhatsApp Business Accounts
-- `client.business` - Manage Business Portfolios
-- `client.templates` - Create, retrieve and send WhatsApp templates
-- `client.media` - Upload, download, and manage media files
-- ... more to come very soon. 🕒
+| Resource           | Status | Description                                                  |
+| ------------------ | ------ | ------------------------------------------------------------ |
+| **Messages**       | ✅     | Send text, media, location, contacts, interactive, reactions |
+| **Media**          | ✅     | Upload, download, get info, delete                           |
+| **Templates**      | ✅     | CRUD operations for message templates                        |
+| **Webhooks**       | ✅     | Verify, extract, handle incoming events                      |
+| **WABAs**          | ✅     | Manage WhatsApp Business Accounts                            |
+| **Phone Numbers**  | ✅     | Registration, verification, profiles                         |
+| ↳ Block            | ✅     | Block/unblock users                                          |
+| ↳ QR Codes         | ✅     | Create/manage QR codes                                       |
+| ↳ Message History  | ✅     | Query delivery status history                                |
+| ↳ Official Account | ✅     | OBA verification status                                      |
+| Flows              | ❌     | Coming soon                                                  |
+| Commerce           | ❌     | Coming soon                                                  |
+
+## Method Reference
+
+### Messages
+
+```typescript
+client.messages.send(message); // Generic send
+client.messages.sendText(message); // Text message
+client.messages.sendImage(message); // Image message
+client.messages.sendLocation(message); // Location message
+client.messages.sendReaction(message); // Reaction message
+```
+
+### Media
+
+```typescript
+client.media.upload(file, type); // Upload media
+client.media.get(mediaId); // Get media info
+client.media.download(mediaId); // Download binary
+client.media.delete(mediaId); // Delete media
+```
+
+### Templates
+
+```typescript
+client.templates.create(data)              // Create template
+client.templates.list(options?)            // List templates
+client.templates.get(templateId)           // Get template
+client.templates.update(templateId, data)  // Update template
+client.templates.delete(templateName)      // Delete template
+```
+
+### Phone Numbers
+
+```typescript
+client.phoneNumbers.list(options?)                         // List numbers
+client.phoneNumbers.get(phoneNumberId?)                    // Get number details
+client.phoneNumbers.addPreverified(phoneNumber)            // Partner flow
+client.phoneNumbers.create(data)                           // Standard flow
+client.phoneNumbers.requestVerificationCode(data)          // Request code
+client.phoneNumbers.verifyCode(data)                       // Verify code
+client.phoneNumbers.register(data)                         // Register
+client.phoneNumbers.deregister()                           // Deregister
+client.phoneNumbers.getProfile()                           // Get business profile
+client.phoneNumbers.updateProfile(data)                    // Update profile
+```
+
+### Phone Numbers → Block
+
+```typescript
+client.phoneNumbers.block.list(options?)   // List blocked users
+client.phoneNumbers.block.add(users)       // Block users
+client.phoneNumbers.block.remove(users)    // Unblock users
+```
+
+### Phone Numbers → QR Codes
+
+```typescript
+client.phoneNumbers.qrCodes.list(options?) // List QR codes
+client.phoneNumbers.qrCodes.get(codeId)    // Get QR code
+client.phoneNumbers.qrCodes.create(data)   // Create QR code
+client.phoneNumbers.qrCodes.update(data)   // Update QR code
+client.phoneNumbers.qrCodes.delete(codeId) // Delete QR code
+```
+
+### Phone Numbers → Message History
+
+```typescript
+client.phoneNumbers.messageHistory.list(options?)  // Query history
+```
+
+### Phone Numbers → Official Account
+
+```typescript
+client.phoneNumbers.officialAccount.get(); // Get OBA status
+client.phoneNumbers.officialAccount.apply(data); // Apply for OBA
+```
+
+### WABAs (WhatsApp Business Accounts)
+
+```typescript
+client.wabas.list(options?)                    // List WABAs
+client.wabas.listClient(options?)              // List client WABAs
+client.wabas.get(wabaId?)                      // Get WABA
+client.wabas.create(data)                      // Create WABA
+client.wabas.update(data)                      // Update WABA
+client.wabas.listSubscribedApps()              // List subscribed apps
+client.wabas.subscribeApp()                    // Subscribe app
+client.wabas.unsubscribeApp()                  // Unsubscribe app
+client.wabas.listAssignedUsers(options?)       // List assigned users
+client.wabas.addAssignedUser(userId, tasks)    // Add user
+client.wabas.removeAssignedUser(userId)        // Remove user
+client.wabas.listActivities(options?)          // List activities
+```
+
+### Webhooks
+
+```typescript
+client.webhooks.verify(params, token); // Verify webhook
+client.webhooks.extractMessages(payload); // Extract messages
+client.webhooks.extractStatuses(payload); // Extract statuses
+client.webhooks.handle(payload, handlers); // Handle events
+```

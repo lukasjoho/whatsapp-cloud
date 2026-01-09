@@ -222,4 +222,27 @@ export class HttpClient {
 
     return response.json() as Promise<T>;
   }
+
+  /**
+   * Make a DELETE request with JSON body
+   * Used by some Graph API endpoints like block_users
+   */
+  async deleteWithBody<T>(path: string, body: unknown): Promise<T> {
+    const url = `${this.baseURL}/${this.apiVersion}${path}`;
+
+    const response = await fetch(url, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.accessToken}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      await this.handleError(response);
+    }
+
+    return response.json() as Promise<T>;
+  }
 }

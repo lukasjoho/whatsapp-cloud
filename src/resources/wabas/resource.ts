@@ -16,6 +16,9 @@ import type {
   AssignedUsersResponse,
   AssignedUsersListOptions,
   AssignedUserMutationResponse,
+  // Activities
+  ActivitiesResponse,
+  ActivitiesListOptions,
 } from "./types";
 
 /**
@@ -414,5 +417,66 @@ export class WabasResource {
       `/${id}/assigned_users`,
       { user: userId }
     );
+  }
+
+  // ===========================================================================
+  // Activities
+  // ===========================================================================
+
+  /**
+   * Build query string for activities list
+   */
+  private buildActivitiesQuery(options?: ActivitiesListOptions): string {
+    if (!options) return "";
+
+    const params = new URLSearchParams();
+
+    if (options.fields) params.set("fields", options.fields);
+    if (options.limit) params.set("limit", options.limit.toString());
+    if (options.after) params.set("after", options.after);
+    if (options.before) params.set("before", options.before);
+    if (options.since) params.set("since", options.since);
+    if (options.until) params.set("until", options.until);
+    if (options.activity_type) params.set("activity_type", options.activity_type);
+
+    const queryString = params.toString();
+    return queryString ? `?${queryString}` : "";
+  }
+
+  /**
+   * List activities for this WhatsApp Business Account
+   *
+   * Retrieve activity logs and audit trails for a WABA.
+   *
+   * @see GET /{WABA-ID}/activities
+   *
+   * @param options - Query options (fields, pagination, time filters, activity_type)
+   * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @returns List of activities
+   *
+   * @example
+   * ```typescript
+   * // List all activities
+   * const activities = await client.wabas.listActivities();
+   *
+   * // With time filter
+   * const activities = await client.wabas.listActivities({
+   *   since: "2024-01-01T00:00:00Z",
+   *   until: "2024-01-31T23:59:59Z"
+   * });
+   *
+   * // Filter by activity type
+   * const activities = await client.wabas.listActivities({
+   *   activity_type: "USER_ADDED,USER_REMOVED"
+   * });
+   * ```
+   */
+  async listActivities(
+    options?: ActivitiesListOptions,
+    wabaId?: string
+  ): Promise<ActivitiesResponse> {
+    const id = this.getWabaId(wabaId);
+    const query = this.buildActivitiesQuery(options);
+    return this.httpClient.get<ActivitiesResponse>(`/${id}/activities${query}`);
   }
 }

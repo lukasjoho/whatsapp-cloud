@@ -252,3 +252,81 @@ export const assignedUsersListOptionsSchema = z.object({
 export const assignedUserMutationResponseSchema = z.object({
   success: z.boolean(),
 });
+
+// =============================================================================
+// Activities
+// =============================================================================
+
+/**
+ * Type of activity performed on the WhatsApp Business Account
+ */
+export const activityTypeSchema = z.enum([
+  "ACCOUNT_CREATED",
+  "ACCOUNT_UPDATED",
+  "ACCOUNT_DELETED",
+  "PHONE_NUMBER_ADDED",
+  "PHONE_NUMBER_REMOVED",
+  "PHONE_NUMBER_VERIFIED",
+  "USER_ADDED",
+  "USER_REMOVED",
+  "USER_ROLE_CHANGED",
+  "PERMISSION_GRANTED",
+  "PERMISSION_REVOKED",
+  "TEMPLATE_CREATED",
+  "TEMPLATE_UPDATED",
+  "TEMPLATE_DELETED",
+  "WEBHOOK_CONFIGURED",
+  "API_ACCESS_GRANTED",
+  "API_ACCESS_REVOKED",
+  "BILLING_UPDATED",
+  "COMPLIANCE_ACTION",
+  "SECURITY_EVENT",
+]);
+
+/**
+ * Type of entity that performed the activity
+ */
+export const actorTypeSchema = z.enum([
+  "USER",
+  "SYSTEM",
+  "API",
+  "ADMIN",
+  "AUTOMATED_PROCESS",
+]);
+
+/**
+ * WhatsApp Business Account activity record
+ */
+export const activitySchema = z.object({
+  id: z.string(),
+  activity_type: activityTypeSchema,
+  timestamp: z.string(),
+  actor_type: actorTypeSchema,
+  actor_id: z.string().optional(),
+  actor_name: z.string().optional(),
+  description: z.string().optional(),
+  details: z.record(z.string(), z.unknown()).optional(),
+  ip_address: z.string().optional(),
+  user_agent: z.string().optional(),
+});
+
+/**
+ * Response from listing activities
+ */
+export const activitiesResponseSchema = z.object({
+  data: z.array(activitySchema),
+  paging: cursorPagingSchema.optional(),
+});
+
+/**
+ * Options for listing activities
+ */
+export const activitiesListOptionsSchema = z.object({
+  fields: z.string().optional(),
+  limit: z.number().min(1).max(100).optional(),
+  after: z.string().optional(),
+  before: z.string().optional(),
+  since: z.string().optional(),
+  until: z.string().optional(),
+  activity_type: z.string().optional(),
+});

@@ -82,6 +82,11 @@ declare class HttpClient {
      * Used by some Graph API endpoints like assigned_users
      */
     deleteForm<T>(path: string, body: Record<string, string>): Promise<T>;
+    /**
+     * Make a DELETE request with JSON body
+     * Used by some Graph API endpoints like block_users
+     */
+    deleteWithBody<T>(path: string, body: unknown): Promise<T>;
 }
 
 declare const businessSchema: z.ZodObject<{
@@ -434,6 +439,147 @@ declare const assignedUsersListOptionsSchema: z.ZodObject<{
 declare const assignedUserMutationResponseSchema: z.ZodObject<{
     success: z.ZodBoolean;
 }, z.core.$strip>;
+/**
+ * Type of activity performed on the WhatsApp Business Account
+ */
+declare const activityTypeSchema: z.ZodEnum<{
+    ACCOUNT_CREATED: "ACCOUNT_CREATED";
+    ACCOUNT_UPDATED: "ACCOUNT_UPDATED";
+    ACCOUNT_DELETED: "ACCOUNT_DELETED";
+    PHONE_NUMBER_ADDED: "PHONE_NUMBER_ADDED";
+    PHONE_NUMBER_REMOVED: "PHONE_NUMBER_REMOVED";
+    PHONE_NUMBER_VERIFIED: "PHONE_NUMBER_VERIFIED";
+    USER_ADDED: "USER_ADDED";
+    USER_REMOVED: "USER_REMOVED";
+    USER_ROLE_CHANGED: "USER_ROLE_CHANGED";
+    PERMISSION_GRANTED: "PERMISSION_GRANTED";
+    PERMISSION_REVOKED: "PERMISSION_REVOKED";
+    TEMPLATE_CREATED: "TEMPLATE_CREATED";
+    TEMPLATE_UPDATED: "TEMPLATE_UPDATED";
+    TEMPLATE_DELETED: "TEMPLATE_DELETED";
+    WEBHOOK_CONFIGURED: "WEBHOOK_CONFIGURED";
+    API_ACCESS_GRANTED: "API_ACCESS_GRANTED";
+    API_ACCESS_REVOKED: "API_ACCESS_REVOKED";
+    BILLING_UPDATED: "BILLING_UPDATED";
+    COMPLIANCE_ACTION: "COMPLIANCE_ACTION";
+    SECURITY_EVENT: "SECURITY_EVENT";
+}>;
+/**
+ * Type of entity that performed the activity
+ */
+declare const actorTypeSchema: z.ZodEnum<{
+    USER: "USER";
+    SYSTEM: "SYSTEM";
+    API: "API";
+    ADMIN: "ADMIN";
+    AUTOMATED_PROCESS: "AUTOMATED_PROCESS";
+}>;
+/**
+ * WhatsApp Business Account activity record
+ */
+declare const activitySchema: z.ZodObject<{
+    id: z.ZodString;
+    activity_type: z.ZodEnum<{
+        ACCOUNT_CREATED: "ACCOUNT_CREATED";
+        ACCOUNT_UPDATED: "ACCOUNT_UPDATED";
+        ACCOUNT_DELETED: "ACCOUNT_DELETED";
+        PHONE_NUMBER_ADDED: "PHONE_NUMBER_ADDED";
+        PHONE_NUMBER_REMOVED: "PHONE_NUMBER_REMOVED";
+        PHONE_NUMBER_VERIFIED: "PHONE_NUMBER_VERIFIED";
+        USER_ADDED: "USER_ADDED";
+        USER_REMOVED: "USER_REMOVED";
+        USER_ROLE_CHANGED: "USER_ROLE_CHANGED";
+        PERMISSION_GRANTED: "PERMISSION_GRANTED";
+        PERMISSION_REVOKED: "PERMISSION_REVOKED";
+        TEMPLATE_CREATED: "TEMPLATE_CREATED";
+        TEMPLATE_UPDATED: "TEMPLATE_UPDATED";
+        TEMPLATE_DELETED: "TEMPLATE_DELETED";
+        WEBHOOK_CONFIGURED: "WEBHOOK_CONFIGURED";
+        API_ACCESS_GRANTED: "API_ACCESS_GRANTED";
+        API_ACCESS_REVOKED: "API_ACCESS_REVOKED";
+        BILLING_UPDATED: "BILLING_UPDATED";
+        COMPLIANCE_ACTION: "COMPLIANCE_ACTION";
+        SECURITY_EVENT: "SECURITY_EVENT";
+    }>;
+    timestamp: z.ZodString;
+    actor_type: z.ZodEnum<{
+        USER: "USER";
+        SYSTEM: "SYSTEM";
+        API: "API";
+        ADMIN: "ADMIN";
+        AUTOMATED_PROCESS: "AUTOMATED_PROCESS";
+    }>;
+    actor_id: z.ZodOptional<z.ZodString>;
+    actor_name: z.ZodOptional<z.ZodString>;
+    description: z.ZodOptional<z.ZodString>;
+    details: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    ip_address: z.ZodOptional<z.ZodString>;
+    user_agent: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+/**
+ * Response from listing activities
+ */
+declare const activitiesResponseSchema: z.ZodObject<{
+    data: z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        activity_type: z.ZodEnum<{
+            ACCOUNT_CREATED: "ACCOUNT_CREATED";
+            ACCOUNT_UPDATED: "ACCOUNT_UPDATED";
+            ACCOUNT_DELETED: "ACCOUNT_DELETED";
+            PHONE_NUMBER_ADDED: "PHONE_NUMBER_ADDED";
+            PHONE_NUMBER_REMOVED: "PHONE_NUMBER_REMOVED";
+            PHONE_NUMBER_VERIFIED: "PHONE_NUMBER_VERIFIED";
+            USER_ADDED: "USER_ADDED";
+            USER_REMOVED: "USER_REMOVED";
+            USER_ROLE_CHANGED: "USER_ROLE_CHANGED";
+            PERMISSION_GRANTED: "PERMISSION_GRANTED";
+            PERMISSION_REVOKED: "PERMISSION_REVOKED";
+            TEMPLATE_CREATED: "TEMPLATE_CREATED";
+            TEMPLATE_UPDATED: "TEMPLATE_UPDATED";
+            TEMPLATE_DELETED: "TEMPLATE_DELETED";
+            WEBHOOK_CONFIGURED: "WEBHOOK_CONFIGURED";
+            API_ACCESS_GRANTED: "API_ACCESS_GRANTED";
+            API_ACCESS_REVOKED: "API_ACCESS_REVOKED";
+            BILLING_UPDATED: "BILLING_UPDATED";
+            COMPLIANCE_ACTION: "COMPLIANCE_ACTION";
+            SECURITY_EVENT: "SECURITY_EVENT";
+        }>;
+        timestamp: z.ZodString;
+        actor_type: z.ZodEnum<{
+            USER: "USER";
+            SYSTEM: "SYSTEM";
+            API: "API";
+            ADMIN: "ADMIN";
+            AUTOMATED_PROCESS: "AUTOMATED_PROCESS";
+        }>;
+        actor_id: z.ZodOptional<z.ZodString>;
+        actor_name: z.ZodOptional<z.ZodString>;
+        description: z.ZodOptional<z.ZodString>;
+        details: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        ip_address: z.ZodOptional<z.ZodString>;
+        user_agent: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>;
+    paging: z.ZodOptional<z.ZodObject<{
+        cursors: z.ZodOptional<z.ZodObject<{
+            before: z.ZodOptional<z.ZodString>;
+            after: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>;
+        previous: z.ZodOptional<z.ZodString>;
+        next: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+/**
+ * Options for listing activities
+ */
+declare const activitiesListOptionsSchema: z.ZodObject<{
+    fields: z.ZodOptional<z.ZodString>;
+    limit: z.ZodOptional<z.ZodNumber>;
+    after: z.ZodOptional<z.ZodString>;
+    before: z.ZodOptional<z.ZodString>;
+    since: z.ZodOptional<z.ZodString>;
+    until: z.ZodOptional<z.ZodString>;
+    activity_type: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
 
 type AccountReviewStatus = z.infer<typeof accountReviewStatusSchema>;
 type BusinessVerificationStatus = z.infer<typeof businessVerificationStatusSchema>;
@@ -461,6 +607,11 @@ type AssignedUsersSummary = z.infer<typeof assignedUsersSummarySchema>;
 type AssignedUsersResponse = z.infer<typeof assignedUsersResponseSchema>;
 type AssignedUsersListOptions = z.infer<typeof assignedUsersListOptionsSchema>;
 type AssignedUserMutationResponse = z.infer<typeof assignedUserMutationResponseSchema>;
+type ActivityType = z.infer<typeof activityTypeSchema>;
+type ActorType = z.infer<typeof actorTypeSchema>;
+type Activity = z.infer<typeof activitySchema>;
+type ActivitiesResponse = z.infer<typeof activitiesResponseSchema>;
+type ActivitiesListOptions = z.infer<typeof activitiesListOptionsSchema>;
 
 /**
  * WhatsApp Business Accounts (WABAs) resource
@@ -704,6 +855,39 @@ declare class WabasResource {
      * ```
      */
     removeAssignedUser(userId: string, wabaId?: string): Promise<AssignedUserMutationResponse>;
+    /**
+     * Build query string for activities list
+     */
+    private buildActivitiesQuery;
+    /**
+     * List activities for this WhatsApp Business Account
+     *
+     * Retrieve activity logs and audit trails for a WABA.
+     *
+     * @see GET /{WABA-ID}/activities
+     *
+     * @param options - Query options (fields, pagination, time filters, activity_type)
+     * @param wabaId - WABA ID (overrides config.businessAccountId)
+     * @returns List of activities
+     *
+     * @example
+     * ```typescript
+     * // List all activities
+     * const activities = await client.wabas.listActivities();
+     *
+     * // With time filter
+     * const activities = await client.wabas.listActivities({
+     *   since: "2024-01-01T00:00:00Z",
+     *   until: "2024-01-31T23:59:59Z"
+     * });
+     *
+     * // Filter by activity type
+     * const activities = await client.wabas.listActivities({
+     *   activity_type: "USER_ADDED,USER_REMOVED"
+     * });
+     * ```
+     */
+    listActivities(options?: ActivitiesListOptions, wabaId?: string): Promise<ActivitiesResponse>;
 }
 
 /**
@@ -1152,6 +1336,760 @@ type BusinessProfileResponse = z.infer<typeof businessProfileResponseSchema>;
 type BusinessProfileUpdate = z.infer<typeof businessProfileUpdateSchema>;
 type BusinessProfileUpdateResponse = z.infer<typeof businessProfileUpdateResponseSchema>;
 
+declare const blockedUserSchema: z.ZodObject<{
+    messaging_product: z.ZodOptional<z.ZodString>;
+    wa_id: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+declare const blockedUserOperationSchema: z.ZodObject<{
+    input: z.ZodOptional<z.ZodString>;
+    wa_id: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+declare const listBlockedUsersResponseSchema: z.ZodObject<{
+    data: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        messaging_product: z.ZodOptional<z.ZodString>;
+        wa_id: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>>;
+    paging: z.ZodOptional<z.ZodObject<{
+        cursors: z.ZodOptional<z.ZodObject<{
+            after: z.ZodOptional<z.ZodString>;
+            before: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+declare const blockUsersResponseSchema: z.ZodObject<{
+    block_users: z.ZodOptional<z.ZodObject<{
+        added_users: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            input: z.ZodOptional<z.ZodString>;
+            wa_id: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>;
+    messaging_product: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+declare const unblockUsersResponseSchema: z.ZodObject<{
+    block_users: z.ZodOptional<z.ZodObject<{
+        removed_users: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            input: z.ZodOptional<z.ZodString>;
+            wa_id: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>;
+    messaging_product: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+declare const listBlockedUsersOptionsSchema: z.ZodObject<{
+    limit: z.ZodOptional<z.ZodNumber>;
+    after: z.ZodOptional<z.ZodString>;
+    before: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+
+type BlockedUser = z.infer<typeof blockedUserSchema>;
+type BlockedUserOperation = z.infer<typeof blockedUserOperationSchema>;
+type ListBlockedUsersResponse = z.infer<typeof listBlockedUsersResponseSchema>;
+type BlockUsersResponse = z.infer<typeof blockUsersResponseSchema>;
+type UnblockUsersResponse = z.infer<typeof unblockUsersResponseSchema>;
+type ListBlockedUsersOptions = z.infer<typeof listBlockedUsersOptionsSchema>;
+
+/**
+ * Block Users subresource for Phone Numbers
+ *
+ * Manage blocked users for a WhatsApp Business phone number.
+ *
+ * @example
+ * ```typescript
+ * // List blocked users
+ * const blocked = await client.phoneNumbers.block.list("phone-number-id");
+ *
+ * // Block users
+ * await client.phoneNumbers.block.add("phone-number-id", ["+1234567890"]);
+ *
+ * // Unblock users
+ * await client.phoneNumbers.block.remove("phone-number-id", ["+1234567890"]);
+ * ```
+ */
+declare class BlockResource {
+    private readonly httpClient;
+    constructor(httpClient: HttpClient);
+    /**
+     * Get the phone number ID (from parameter or config)
+     */
+    private getPhoneNumberId;
+    /**
+     * Build query string for list options
+     */
+    private buildQueryString;
+    /**
+     * List blocked users for a phone number
+     *
+     * @see GET /{Phone-Number-ID}/block_users
+     *
+     * @param options - Pagination options
+     * @param phoneNumberId - Phone Number ID (overrides config)
+     * @returns List of blocked users
+     *
+     * @example
+     * ```typescript
+     * const blocked = await client.phoneNumbers.block.list();
+     *
+     * // With pagination
+     * const blocked = await client.phoneNumbers.block.list({ limit: 10 });
+     * ```
+     */
+    list(options?: ListBlockedUsersOptions, phoneNumberId?: string): Promise<ListBlockedUsersResponse>;
+    /**
+     * Block one or more users
+     *
+     * @see POST /{Phone-Number-ID}/block_users
+     *
+     * @param users - Array of phone numbers to block (with country code)
+     * @param phoneNumberId - Phone Number ID (overrides config)
+     * @returns Block operation result
+     *
+     * @example
+     * ```typescript
+     * // Block a single user
+     * await client.phoneNumbers.block.add(["+1234567890"]);
+     *
+     * // Block multiple users
+     * await client.phoneNumbers.block.add(["+1234567890", "+0987654321"]);
+     * ```
+     */
+    add(users: string[], phoneNumberId?: string): Promise<BlockUsersResponse>;
+    /**
+     * Unblock one or more users
+     *
+     * @see DELETE /{Phone-Number-ID}/block_users
+     *
+     * @param users - Array of phone numbers to unblock (with country code)
+     * @param phoneNumberId - Phone Number ID (overrides config)
+     * @returns Unblock operation result
+     *
+     * @example
+     * ```typescript
+     * // Unblock a single user
+     * await client.phoneNumbers.block.remove(["+1234567890"]);
+     *
+     * // Unblock multiple users
+     * await client.phoneNumbers.block.remove(["+1234567890", "+0987654321"]);
+     * ```
+     */
+    remove(users: string[], phoneNumberId?: string): Promise<UnblockUsersResponse>;
+}
+
+/**
+ * QR Code image format
+ */
+declare const qrImageFormatSchema: z.ZodEnum<{
+    PNG: "PNG";
+    SVG: "SVG";
+}>;
+/**
+ * QR Code details
+ */
+declare const qrCodeSchema: z.ZodObject<{
+    code: z.ZodString;
+    prefilled_message: z.ZodString;
+    deep_link_url: z.ZodString;
+    creation_time: z.ZodOptional<z.ZodNumber>;
+    qr_image_url: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+declare const qrCodeListResponseSchema: z.ZodObject<{
+    data: z.ZodArray<z.ZodObject<{
+        code: z.ZodString;
+        prefilled_message: z.ZodString;
+        deep_link_url: z.ZodString;
+        creation_time: z.ZodOptional<z.ZodNumber>;
+        qr_image_url: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>;
+    paging: z.ZodOptional<z.ZodObject<{
+        cursors: z.ZodOptional<z.ZodObject<{
+            before: z.ZodOptional<z.ZodString>;
+            after: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>;
+        previous: z.ZodOptional<z.ZodString>;
+        next: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+declare const qrCodeResponseSchema: z.ZodObject<{
+    data: z.ZodArray<z.ZodObject<{
+        code: z.ZodString;
+        prefilled_message: z.ZodString;
+        deep_link_url: z.ZodString;
+        creation_time: z.ZodOptional<z.ZodNumber>;
+        qr_image_url: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+declare const qrCodeMutationResponseSchema: z.ZodObject<{
+    code: z.ZodString;
+    prefilled_message: z.ZodString;
+    deep_link_url: z.ZodString;
+    qr_image_url: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+declare const qrCodeDeleteResponseSchema: z.ZodObject<{
+    success: z.ZodBoolean;
+}, z.core.$strip>;
+/**
+ * Request payload for creating a new QR code
+ */
+declare const createQrCodeRequestSchema: z.ZodObject<{
+    prefilled_message: z.ZodString;
+    generate_qr_image: z.ZodOptional<z.ZodEnum<{
+        PNG: "PNG";
+        SVG: "SVG";
+    }>>;
+}, z.core.$strip>;
+/**
+ * Request payload for updating an existing QR code
+ */
+declare const updateQrCodeRequestSchema: z.ZodObject<{
+    code: z.ZodString;
+    prefilled_message: z.ZodString;
+}, z.core.$strip>;
+declare const qrCodeListOptionsSchema: z.ZodObject<{
+    fields: z.ZodOptional<z.ZodString>;
+    code: z.ZodOptional<z.ZodString>;
+    limit: z.ZodOptional<z.ZodNumber>;
+    after: z.ZodOptional<z.ZodString>;
+    before: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+
+type QrImageFormat = z.infer<typeof qrImageFormatSchema>;
+type QrCode = z.infer<typeof qrCodeSchema>;
+type QrCodeListResponse = z.infer<typeof qrCodeListResponseSchema>;
+type QrCodeResponse = z.infer<typeof qrCodeResponseSchema>;
+type QrCodeMutationResponse = z.infer<typeof qrCodeMutationResponseSchema>;
+type QrCodeDeleteResponse = z.infer<typeof qrCodeDeleteResponseSchema>;
+type CreateQrCodeRequest = z.infer<typeof createQrCodeRequestSchema>;
+type UpdateQrCodeRequest = z.infer<typeof updateQrCodeRequestSchema>;
+type QrCodeListOptions = z.infer<typeof qrCodeListOptionsSchema>;
+
+/**
+ * QR Codes subresource for Phone Numbers
+ *
+ * Create and manage QR codes for WhatsApp Business conversations.
+ * When scanned, QR codes open WhatsApp with a pre-filled message.
+ *
+ * @example
+ * ```typescript
+ * // List all QR codes
+ * const codes = await client.phoneNumbers.qrCodes.list();
+ *
+ * // Create a QR code
+ * const qr = await client.phoneNumbers.qrCodes.create({
+ *   prefilled_message: "Hello! I'd like to learn more.",
+ *   generate_qr_image: "PNG"
+ * });
+ *
+ * // Get a specific QR code
+ * const code = await client.phoneNumbers.qrCodes.get(undefined, "QRCODE123456");
+ *
+ * // Update a QR code
+ * await client.phoneNumbers.qrCodes.update({
+ *   code: "QRCODE123456",
+ *   prefilled_message: "New message!"
+ * });
+ *
+ * // Delete a QR code
+ * await client.phoneNumbers.qrCodes.delete(undefined, "QRCODE123456");
+ * ```
+ */
+declare class QrCodesResource {
+    private readonly httpClient;
+    constructor(httpClient: HttpClient);
+    /**
+     * Get the phone number ID (from parameter or config)
+     */
+    private getPhoneNumberId;
+    /**
+     * Build query string for list options
+     */
+    private buildQueryString;
+    /**
+     * List all QR codes for a phone number
+     *
+     * Returns QR codes sorted by creation time (newest first).
+     *
+     * @see GET /{Phone-Number-ID}/message_qrdls
+     *
+     * @param options - Query options (fields, code filter, pagination)
+     * @param phoneNumberId - Phone Number ID (overrides config)
+     * @returns List of QR codes
+     *
+     * @example
+     * ```typescript
+     * // List all QR codes
+     * const codes = await client.phoneNumbers.qrCodes.list();
+     *
+     * // With image URLs
+     * const codes = await client.phoneNumbers.qrCodes.list({
+     *   fields: "code,prefilled_message,qr_image_url.format(PNG)"
+     * });
+     *
+     * // Filter by specific code
+     * const codes = await client.phoneNumbers.qrCodes.list({
+     *   code: "QRCODE123456"
+     * });
+     * ```
+     */
+    list(options?: QrCodeListOptions, phoneNumberId?: string): Promise<QrCodeListResponse>;
+    /**
+     * Get a specific QR code by ID
+     *
+     * @see GET /{Phone-Number-ID}/message_qrdls/{QR-Code-ID}
+     *
+     * @param qrCodeId - The 14-character QR code identifier
+     * @param fields - Optional fields to include (e.g., "code,prefilled_message,qr_image_url.format(SVG)")
+     * @param phoneNumberId - Phone Number ID (overrides config)
+     * @returns QR code details (wrapped in data array)
+     *
+     * @example
+     * ```typescript
+     * const qr = await client.phoneNumbers.qrCodes.get("QRCODE123456");
+     * console.log(qr.data[0].deep_link_url);
+     *
+     * // With QR image
+     * const qr = await client.phoneNumbers.qrCodes.get(
+     *   "QRCODE123456",
+     *   "code,prefilled_message,qr_image_url.format(PNG)"
+     * );
+     * ```
+     */
+    get(qrCodeId: string, fields?: string, phoneNumberId?: string): Promise<QrCodeResponse>;
+    /**
+     * Create a new QR code
+     *
+     * Creates a QR code with a pre-filled message. When scanned,
+     * it opens WhatsApp with the message ready to send.
+     *
+     * @see POST /{Phone-Number-ID}/message_qrdls
+     *
+     * @param data - QR code creation data
+     * @param phoneNumberId - Phone Number ID (overrides config)
+     * @returns Created QR code details
+     *
+     * @example
+     * ```typescript
+     * // Create with PNG image
+     * const qr = await client.phoneNumbers.qrCodes.create({
+     *   prefilled_message: "Hi! I saw your ad and want to learn more.",
+     *   generate_qr_image: "PNG"
+     * });
+     * console.log(qr.code);           // "QRCODE123456"
+     * console.log(qr.deep_link_url);  // "https://wa.me/..."
+     * console.log(qr.qr_image_url);   // "https://..."
+     *
+     * // Create without image (use deep_link_url to generate your own)
+     * const qr = await client.phoneNumbers.qrCodes.create({
+     *   prefilled_message: "Hello!"
+     * });
+     * ```
+     */
+    create(data: CreateQrCodeRequest, phoneNumberId?: string): Promise<QrCodeMutationResponse>;
+    /**
+     * Update an existing QR code
+     *
+     * Updates the pre-filled message for an existing QR code.
+     * The QR code identifier and deep link URL remain the same.
+     *
+     * @see POST /{Phone-Number-ID}/message_qrdls
+     *
+     * @param data - QR code update data (must include code)
+     * @param phoneNumberId - Phone Number ID (overrides config)
+     * @returns Updated QR code details
+     *
+     * @example
+     * ```typescript
+     * const qr = await client.phoneNumbers.qrCodes.update({
+     *   code: "QRCODE123456",
+     *   prefilled_message: "New promotional message!"
+     * });
+     * ```
+     */
+    update(data: UpdateQrCodeRequest, phoneNumberId?: string): Promise<QrCodeMutationResponse>;
+    /**
+     * Delete a QR code
+     *
+     * Permanently deletes a QR code. Once deleted, the QR code and
+     * deep link become invalid. This cannot be undone.
+     *
+     * @see DELETE /{Phone-Number-ID}/message_qrdls/{QR-Code-ID}
+     *
+     * @param qrCodeId - The 14-character QR code identifier
+     * @param phoneNumberId - Phone Number ID (overrides config)
+     * @returns Success status
+     *
+     * @example
+     * ```typescript
+     * await client.phoneNumbers.qrCodes.delete("QRCODE123456");
+     * ```
+     */
+    delete(qrCodeId: string, phoneNumberId?: string): Promise<QrCodeDeleteResponse>;
+}
+
+/**
+ * Message delivery status
+ */
+declare const messageDeliveryStatusSchema: z.ZodEnum<{
+    DELETED: "DELETED";
+    SENT: "SENT";
+    DELIVERED: "DELIVERED";
+    READ: "READ";
+    FAILED: "FAILED";
+}>;
+/**
+ * State of webhook update delivery
+ */
+declare const webhookUpdateStateSchema: z.ZodEnum<{
+    PENDING: "PENDING";
+    DELIVERED: "DELIVERED";
+    FAILED: "FAILED";
+    RETRYING: "RETRYING";
+}>;
+/**
+ * Message delivery status event occurrence
+ */
+declare const messageDeliveryStatusEventSchema: z.ZodObject<{
+    id: z.ZodString;
+    delivery_status: z.ZodEnum<{
+        DELETED: "DELETED";
+        SENT: "SENT";
+        DELIVERED: "DELIVERED";
+        READ: "READ";
+        FAILED: "FAILED";
+    }>;
+    webhook_update_state: z.ZodOptional<z.ZodEnum<{
+        PENDING: "PENDING";
+        DELIVERED: "DELIVERED";
+        FAILED: "FAILED";
+        RETRYING: "RETRYING";
+    }>>;
+    timestamp: z.ZodNumber;
+    application: z.ZodOptional<z.ZodObject<{
+        id: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>;
+    webhook_uri: z.ZodOptional<z.ZodString>;
+    error_description: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+/**
+ * WhatsApp message history entry with delivery status information
+ */
+declare const messageHistoryEntrySchema: z.ZodObject<{
+    id: z.ZodString;
+    message_id: z.ZodString;
+    events: z.ZodOptional<z.ZodObject<{
+        data: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            id: z.ZodString;
+            delivery_status: z.ZodEnum<{
+                DELETED: "DELETED";
+                SENT: "SENT";
+                DELIVERED: "DELIVERED";
+                READ: "READ";
+                FAILED: "FAILED";
+            }>;
+            webhook_update_state: z.ZodOptional<z.ZodEnum<{
+                PENDING: "PENDING";
+                DELIVERED: "DELIVERED";
+                FAILED: "FAILED";
+                RETRYING: "RETRYING";
+            }>>;
+            timestamp: z.ZodNumber;
+            application: z.ZodOptional<z.ZodObject<{
+                id: z.ZodOptional<z.ZodString>;
+            }, z.core.$strip>>;
+            webhook_uri: z.ZodOptional<z.ZodString>;
+            error_description: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>>;
+        paging: z.ZodOptional<z.ZodObject<{
+            cursors: z.ZodOptional<z.ZodObject<{
+                before: z.ZodOptional<z.ZodString>;
+                after: z.ZodOptional<z.ZodString>;
+            }, z.core.$strip>>;
+            previous: z.ZodOptional<z.ZodString>;
+            next: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+/**
+ * Paginated response containing message history entries
+ */
+declare const messageHistoryResponseSchema: z.ZodObject<{
+    data: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        message_id: z.ZodString;
+        events: z.ZodOptional<z.ZodObject<{
+            data: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                id: z.ZodString;
+                delivery_status: z.ZodEnum<{
+                    DELETED: "DELETED";
+                    SENT: "SENT";
+                    DELIVERED: "DELIVERED";
+                    READ: "READ";
+                    FAILED: "FAILED";
+                }>;
+                webhook_update_state: z.ZodOptional<z.ZodEnum<{
+                    PENDING: "PENDING";
+                    DELIVERED: "DELIVERED";
+                    FAILED: "FAILED";
+                    RETRYING: "RETRYING";
+                }>>;
+                timestamp: z.ZodNumber;
+                application: z.ZodOptional<z.ZodObject<{
+                    id: z.ZodOptional<z.ZodString>;
+                }, z.core.$strip>>;
+                webhook_uri: z.ZodOptional<z.ZodString>;
+                error_description: z.ZodOptional<z.ZodString>;
+            }, z.core.$strip>>>;
+            paging: z.ZodOptional<z.ZodObject<{
+                cursors: z.ZodOptional<z.ZodObject<{
+                    before: z.ZodOptional<z.ZodString>;
+                    after: z.ZodOptional<z.ZodString>;
+                }, z.core.$strip>>;
+                previous: z.ZodOptional<z.ZodString>;
+                next: z.ZodOptional<z.ZodString>;
+            }, z.core.$strip>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>>;
+    paging: z.ZodOptional<z.ZodObject<{
+        cursors: z.ZodOptional<z.ZodObject<{
+            before: z.ZodOptional<z.ZodString>;
+            after: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>;
+        previous: z.ZodOptional<z.ZodString>;
+        next: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+declare const messageHistoryListOptionsSchema: z.ZodObject<{
+    message_id: z.ZodOptional<z.ZodString>;
+    fields: z.ZodOptional<z.ZodString>;
+    limit: z.ZodOptional<z.ZodNumber>;
+    after: z.ZodOptional<z.ZodString>;
+    before: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+
+type MessageDeliveryStatus = z.infer<typeof messageDeliveryStatusSchema>;
+type WebhookUpdateState = z.infer<typeof webhookUpdateStateSchema>;
+type MessageDeliveryStatusEvent = z.infer<typeof messageDeliveryStatusEventSchema>;
+type MessageHistoryEntry = z.infer<typeof messageHistoryEntrySchema>;
+type MessageHistoryResponse = z.infer<typeof messageHistoryResponseSchema>;
+type MessageHistoryListOptions = z.infer<typeof messageHistoryListOptionsSchema>;
+
+/**
+ * Message History subresource for Phone Numbers
+ *
+ * Retrieve message delivery history and status events for a WhatsApp Business phone number.
+ *
+ * @example
+ * ```typescript
+ * // List message history
+ * const history = await client.phoneNumbers.messageHistory.list();
+ *
+ * // Filter by specific message ID
+ * const history = await client.phoneNumbers.messageHistory.list({
+ *   message_id: "wamid.ABC123..."
+ * });
+ *
+ * // With detailed event fields
+ * const history = await client.phoneNumbers.messageHistory.list({
+ *   fields: "id,message_id,events{delivery_status,timestamp,webhook_update_state}"
+ * });
+ * ```
+ */
+declare class MessageHistoryResource {
+    private readonly httpClient;
+    constructor(httpClient: HttpClient);
+    /**
+     * Get the phone number ID (from parameter or config)
+     */
+    private getPhoneNumberId;
+    /**
+     * Build query string for list options
+     */
+    private buildQueryString;
+    /**
+     * List message history for a phone number
+     *
+     * Retrieve paginated message history including delivery status events,
+     * timestamps, and webhook update information.
+     *
+     * @see GET /{Phone-Number-ID}/message_history
+     *
+     * @param options - Query options (message_id filter, fields, pagination)
+     * @param phoneNumberId - Phone Number ID (overrides config)
+     * @returns Paginated message history
+     *
+     * @example
+     * ```typescript
+     * // List all message history
+     * const history = await client.phoneNumbers.messageHistory.list();
+     *
+     * // Filter by specific message
+     * const history = await client.phoneNumbers.messageHistory.list({
+     *   message_id: "wamid.HBgLMTIzNDU2Nzg5MAA="
+     * });
+     *
+     * // With pagination
+     * const history = await client.phoneNumbers.messageHistory.list({
+     *   limit: 50
+     * });
+     *
+     * // With detailed event fields
+     * const history = await client.phoneNumbers.messageHistory.list({
+     *   fields: "id,message_id,events{delivery_status,timestamp,error_description}"
+     * });
+     * ```
+     */
+    list(options?: MessageHistoryListOptions, phoneNumberId?: string): Promise<MessageHistoryResponse>;
+}
+
+/**
+ * Official Business Account appeal and verification status
+ */
+declare const obaStatusSchema: z.ZodEnum<{
+    APPROVED: "APPROVED";
+    PENDING: "PENDING";
+    REJECTED: "REJECTED";
+    EXPIRED: "EXPIRED";
+    UNDER_REVIEW: "UNDER_REVIEW";
+    CANCELLED: "CANCELLED";
+}>;
+/**
+ * Official Business Account status information
+ */
+declare const officialAccountStatusSchema: z.ZodObject<{
+    id: z.ZodString;
+    oba_status: z.ZodEnum<{
+        APPROVED: "APPROVED";
+        PENDING: "PENDING";
+        REJECTED: "REJECTED";
+        EXPIRED: "EXPIRED";
+        UNDER_REVIEW: "UNDER_REVIEW";
+        CANCELLED: "CANCELLED";
+    }>;
+    status_message: z.ZodString;
+}, z.core.$strip>;
+/**
+ * Request payload for applying for Official Business Account status
+ */
+declare const officialAccountApplyRequestSchema: z.ZodObject<{
+    business_website_url: z.ZodString;
+    primary_country_of_operation: z.ZodString;
+    primary_language: z.ZodOptional<z.ZodString>;
+    parent_business_or_brand: z.ZodOptional<z.ZodString>;
+    supporting_links: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    additional_supporting_information: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+/**
+ * Response from applying for Official Business Account status
+ */
+declare const officialAccountApplyResponseSchema: z.ZodObject<{
+    success: z.ZodBoolean;
+    message: z.ZodString;
+    updated_status: z.ZodOptional<z.ZodObject<{
+        id: z.ZodString;
+        oba_status: z.ZodEnum<{
+            APPROVED: "APPROVED";
+            PENDING: "PENDING";
+            REJECTED: "REJECTED";
+            EXPIRED: "EXPIRED";
+            UNDER_REVIEW: "UNDER_REVIEW";
+            CANCELLED: "CANCELLED";
+        }>;
+        status_message: z.ZodString;
+    }, z.core.$strip>>;
+    tracking_id: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+
+type ObaStatus = z.infer<typeof obaStatusSchema>;
+type OfficialAccountStatus = z.infer<typeof officialAccountStatusSchema>;
+type OfficialAccountApplyRequest = z.infer<typeof officialAccountApplyRequestSchema>;
+type OfficialAccountApplyResponse = z.infer<typeof officialAccountApplyResponseSchema>;
+
+/**
+ * Official Business Account subresource for Phone Numbers
+ *
+ * Manage Official Business Account (OBA) verification status for a WhatsApp Business phone number.
+ * OBA verification provides a green checkmark badge and enhanced credibility.
+ *
+ * @example
+ * ```typescript
+ * // Get current OBA status
+ * const status = await client.phoneNumbers.officialAccount.get();
+ * console.log(status.oba_status); // "PENDING", "APPROVED", etc.
+ *
+ * // Apply for OBA verification
+ * const result = await client.phoneNumbers.officialAccount.apply({
+ *   business_website_url: "https://example.com",
+ *   primary_country_of_operation: "US",
+ *   supporting_links: [
+ *     "https://wikipedia.org/wiki/Example",
+ *     "https://news.example.com/article1",
+ *     "https://news.example.com/article2",
+ *     "https://forbes.com/example",
+ *     "https://linkedin.com/company/example"
+ *   ]
+ * });
+ * ```
+ */
+declare class OfficialAccountResource {
+    private readonly httpClient;
+    constructor(httpClient: HttpClient);
+    /**
+     * Get the phone number ID (from parameter or config)
+     */
+    private getPhoneNumberId;
+    /**
+     * Get Official Business Account status
+     *
+     * Retrieve the current OBA verification status for a phone number.
+     *
+     * @see GET /{Phone-Number-ID}/official_business_account
+     *
+     * @param fields - Comma-separated list of fields (oba_status, status_message)
+     * @param phoneNumberId - Phone Number ID (overrides config)
+     * @returns Current OBA status
+     *
+     * @example
+     * ```typescript
+     * const status = await client.phoneNumbers.officialAccount.get();
+     * console.log(status.oba_status);     // "APPROVED"
+     * console.log(status.status_message); // "Your account is verified"
+     * ```
+     */
+    get(fields?: string, phoneNumberId?: string): Promise<OfficialAccountStatus>;
+    /**
+     * Apply for Official Business Account verification
+     *
+     * Submit an application for OBA verification. Requires business website,
+     * country of operation, and supporting links that demonstrate notability.
+     *
+     * @see POST /{Phone-Number-ID}/official_business_account
+     *
+     * @param data - Application data
+     * @param phoneNumberId - Phone Number ID (overrides config)
+     * @returns Application result with tracking ID
+     *
+     * @example
+     * ```typescript
+     * const result = await client.phoneNumbers.officialAccount.apply({
+     *   business_website_url: "https://example.com",
+     *   primary_country_of_operation: "US",
+     *   primary_language: "en",
+     *   parent_business_or_brand: "Example Corp",
+     *   supporting_links: [
+     *     "https://wikipedia.org/wiki/Example_Corp",
+     *     "https://forbes.com/companies/example",
+     *     "https://techcrunch.com/example-raises-funding",
+     *     "https://linkedin.com/company/example",
+     *     "https://crunchbase.com/organization/example"
+     *   ],
+     *   additional_supporting_information: "We are a Fortune 500 company..."
+     * });
+     *
+     * if (result.success) {
+     *   console.log("Application submitted:", result.tracking_id);
+     * }
+     * ```
+     */
+    apply(data: OfficialAccountApplyRequest, phoneNumberId?: string): Promise<OfficialAccountApplyResponse>;
+}
+
 /**
  * Phone Numbers resource
  *
@@ -1192,6 +2130,73 @@ type BusinessProfileUpdateResponse = z.infer<typeof businessProfileUpdateRespons
  */
 declare class PhoneNumbersResource {
     private readonly httpClient;
+    /**
+     * Block users subresource
+     *
+     * @example
+     * ```typescript
+     * // List blocked users
+     * const blocked = await client.phoneNumbers.block.list();
+     *
+     * // Block users
+     * await client.phoneNumbers.block.add(["+1234567890"]);
+     *
+     * // Unblock users
+     * await client.phoneNumbers.block.remove(["+1234567890"]);
+     * ```
+     */
+    readonly block: BlockResource;
+    /**
+     * QR Codes subresource
+     *
+     * @example
+     * ```typescript
+     * // List QR codes
+     * const codes = await client.phoneNumbers.qrCodes.list();
+     *
+     * // Create a QR code
+     * const qr = await client.phoneNumbers.qrCodes.create({
+     *   prefilled_message: "Hello!",
+     *   generate_qr_image: "PNG"
+     * });
+     *
+     * // Delete a QR code
+     * await client.phoneNumbers.qrCodes.delete("QRCODE123456");
+     * ```
+     */
+    readonly qrCodes: QrCodesResource;
+    /**
+     * Message History subresource
+     *
+     * @example
+     * ```typescript
+     * // List message history
+     * const history = await client.phoneNumbers.messageHistory.list();
+     *
+     * // Filter by message ID
+     * const history = await client.phoneNumbers.messageHistory.list({
+     *   message_id: "wamid.ABC123..."
+     * });
+     * ```
+     */
+    readonly messageHistory: MessageHistoryResource;
+    /**
+     * Official Business Account subresource
+     *
+     * @example
+     * ```typescript
+     * // Get OBA status
+     * const status = await client.phoneNumbers.officialAccount.get();
+     *
+     * // Apply for OBA verification
+     * await client.phoneNumbers.officialAccount.apply({
+     *   business_website_url: "https://example.com",
+     *   primary_country_of_operation: "US",
+     *   supporting_links: ["...", "...", "...", "...", "..."]
+     * });
+     * ```
+     */
+    readonly officialAccount: OfficialAccountResource;
     constructor(httpClient: HttpClient);
     /**
      * Get the business ID (from parameter or config)
@@ -5206,4 +6211,4 @@ declare class GraphAPIError extends Error {
     statusCode: number);
 }
 
-export { type AccountMode, type AccountReviewStatus, type AddPreverifiedRequest, type AddPreverifiedResponse, type AssignedUser, type AssignedUserMutationResponse, type AssignedUserType, type AssignedUsersListOptions, type AssignedUsersResponse, type AssignedUsersSummary, type Business, type BusinessGetOptions, type BusinessNode, type BusinessProfile, type BusinessProfileResponse, type BusinessProfileUpdate, type BusinessProfileUpdateResponse, BusinessResource, type BusinessVerificationStatus, type ClientConfig, type CodeMethod, type CodeVerificationStatus, type CursorPaging, type DebugTokenResponse, GraphAPIError, type GraphAPIErrorResponse, type HostPlatform, HttpClient, type MediaDeleteResponse, type MediaMetadata, MediaResource, type MediaType, type MediaUpload, type MediaUploadResponse, type MessageImage, type MessageImageContent, type MessageIncoming, type MessageIncomingAudio, type MessageIncomingImage, type MessageIncomingText, type MessageLocation, type MessageLocationContent, type MessageOutgoing, type MessageReaction, type MessageReactionContent, type MessageSendImage, type MessageSendLocation, type MessageSendReaction, type MessageSendResponse, type MessageSendText, type MessageText, type MessageTextContent, MessagesResource, type MessagingLimitTier, type NameStatus, type OnBehalfOfBusinessInfo, type OwnershipType, type PermissionTask, type PhoneNumber, type PhoneNumberCreateRequest, type PhoneNumberCreateResponse, type PhoneNumberListOptions, type PhoneNumberListResponse, type PhoneNumberQualityRating, type PhoneNumberRegister, type PhoneNumberRegisterResponse, type PhoneNumberStatus, PhoneNumbersResource, type RequestVerificationCode, type SubscribedApp, type SubscribedAppsResponse, type SubscriptionRequest, type SubscriptionResponse, type Template, type TemplateBodyComponentInput, type TemplateBodyExample, type TemplateButton, type TemplateButtonInput, type TemplateButtonsComponentInput, type TemplateCategory, type TemplateComponent, type TemplateComponentInput, type TemplateCopyCodeButtonInput, type TemplateCreate, type TemplateCreateResponse, type TemplateDelete, type TemplateDeleteResponse, type TemplateFlowButtonInput, type TemplateFooterComponentInput, type TemplateHeaderComponentInput, type TemplateHeaderLocationInput, type TemplateHeaderMediaInput, type TemplateHeaderTextExample, type TemplateHeaderTextInput, type TemplateLanguage, type TemplateList, type TemplateListResponse, type TemplateNamedParamExample, type TemplatePaging, type TemplatePagingCursors, type TemplateParameterFormat, type TemplatePhoneNumberButtonInput, type TemplateQualityScore, type TemplateQuickReplyButtonInput, type TemplateStatus, type TemplateUpdate, type TemplateUpdateResponse, type TemplateUrlButtonInput, TemplatesResource, type UnifiedCertStatus, type VerificationResponse, type VerifyCode, type Vertical, type Waba, type WabaBusinessType, type WabaCreate, type WabaCreateResponse, type WabaListOptions, type WabaListResponse, type WabaUpdate, type WabaUpdateResponse, WabasResource, type WebhookContact, type WebhookContext, type WebhookConversation, type WebhookFilter, type WebhookHandleOptions, type WebhookHandlers, type WebhookMetadata, type WebhookPayload, type WebhookPricing, type WebhookStatus, type WebhookStatusError, type WebhookVerifyQuery, WebhooksResource, type WhatsAppBusinessApiData, WhatsAppClient, accountModeSchema, accountReviewStatusSchema, addPreverifiedRequestSchema, addPreverifiedResponseSchema, assignedUserMutationResponseSchema, assignedUserSchema, assignedUserTypeSchema, assignedUsersListOptionsSchema, assignedUsersResponseSchema, assignedUsersSummarySchema, buildMessagePayload, businessGetOptionsSchema, businessNodeSchema, businessProfileResponseSchema, businessProfileSchema, businessProfileUpdateResponseSchema, businessProfileUpdateSchema, businessSchema, businessVerificationStatusSchema, clientConfigSchema, codeMethodSchema, codeVerificationStatusSchema, cursorPagingSchema, debugTokenResponseSchema, extractMessages, extractStatuses, hostPlatformSchema, mediaDeleteResponseSchema, mediaMetadataSchema, mediaMimeTypeSchema, mediaTypeSchema, mediaUploadResponseSchema, mediaUploadSchema, messageImageContentSchema, messageImageSchema, messageIncomingAudioSchema, messageIncomingImageSchema, messageIncomingSchema, messageIncomingTextSchema, messageLocationContentSchema, messageLocationSchema, messageOutgoingSchema, messageReactionContentSchema, messageReactionSchema, messageSendImageSchema, messageSendLocationSchema, messageSendReactionSchema, messageSendResponseSchema, messageSendTextSchema, messageTextContentSchema, messageTextSchema, messagingLimitTierSchema, nameStatusSchema, onBehalfOfBusinessInfoSchema, ownershipTypeSchema, permissionTaskSchema, phoneNumberCreateRequestSchema, phoneNumberCreateResponseSchema, phoneNumberListOptionsSchema, phoneNumberListResponseSchema, phoneNumberQualityRatingSchema, phoneNumberRegisterResponseSchema, phoneNumberRegisterSchema, phoneNumberResponseSchema, phoneNumberSchema, phoneNumberStatusSchema, requestVerificationCodeSchema, subscribedAppSchema, subscribedAppsResponseSchema, subscriptionRequestSchema, subscriptionResponseSchema, templateBodyComponentInputSchema, templateBodyExampleSchema, templateButtonInputSchema, templateButtonSchema, templateButtonsComponentInputSchema, templateCategorySchema, templateComponentInputSchema, templateComponentSchema, templateCopyCodeButtonInputSchema, templateCreateAuthenticationSchema, templateCreateMarketingSchema, templateCreateResponseSchema, templateCreateSchema, templateCreateUtilitySchema, templateDeleteResponseSchema, templateDeleteSchema, templateFlowButtonInputSchema, templateFooterComponentInputSchema, templateHeaderComponentInputSchema, templateHeaderLocationInputSchema, templateHeaderMediaInputSchema, templateHeaderTextExampleSchema, templateHeaderTextInputSchema, templateLanguageSchema, templateListResponseSchema, templateListSchema, templateNamedParamExampleSchema, templatePagingCursorsSchema, templatePagingSchema, templateParameterFormatSchema, templatePhoneNumberButtonInputSchema, templateQualityScoreSchema, templateQuickReplyButtonInputSchema, templateSchema, templateStatusSchema, templateUpdateResponseSchema, templateUpdateSchema, templateUrlButtonInputSchema, toTemplateName, unifiedCertStatusSchema, verificationResponseSchema, verifyCodeSchema, verifyWebhook, verticalSchema, wabaBusinessTypeSchema, wabaCreateResponseSchema, wabaCreateSchema, wabaListOptionsSchema, wabaListResponseSchema, wabaSchema, wabaUpdateResponseSchema, wabaUpdateSchema, webhookChangeSchema, webhookContactSchema, webhookConversationOriginSchema, webhookConversationSchema, webhookEntrySchema, webhookMetadataSchema, webhookPayloadSchema, webhookPricingSchema, webhookStatusErrorSchema, webhookStatusSchema, webhookValueSchema, webhookVerifyQuerySchema, whatsappBusinessApiDataSchema };
+export { type AccountMode, type AccountReviewStatus, type ActivitiesListOptions, type ActivitiesResponse, type Activity, type ActivityType, type ActorType, type AddPreverifiedRequest, type AddPreverifiedResponse, type AssignedUser, type AssignedUserMutationResponse, type AssignedUserType, type AssignedUsersListOptions, type AssignedUsersResponse, type AssignedUsersSummary, BlockResource, type BlockUsersResponse, type BlockedUser, type BlockedUserOperation, type Business, type BusinessGetOptions, type BusinessNode, type BusinessProfile, type BusinessProfileResponse, type BusinessProfileUpdate, type BusinessProfileUpdateResponse, BusinessResource, type BusinessVerificationStatus, type ClientConfig, type CodeMethod, type CodeVerificationStatus, type CreateQrCodeRequest, type CursorPaging, type DebugTokenResponse, GraphAPIError, type GraphAPIErrorResponse, type HostPlatform, HttpClient, type ListBlockedUsersOptions, type ListBlockedUsersResponse, type MediaDeleteResponse, type MediaMetadata, MediaResource, type MediaType, type MediaUpload, type MediaUploadResponse, type MessageDeliveryStatus, type MessageDeliveryStatusEvent, type MessageHistoryEntry, type MessageHistoryListOptions, MessageHistoryResource, type MessageHistoryResponse, type MessageImage, type MessageImageContent, type MessageIncoming, type MessageIncomingAudio, type MessageIncomingImage, type MessageIncomingText, type MessageLocation, type MessageLocationContent, type MessageOutgoing, type MessageReaction, type MessageReactionContent, type MessageSendImage, type MessageSendLocation, type MessageSendReaction, type MessageSendResponse, type MessageSendText, type MessageText, type MessageTextContent, MessagesResource, type MessagingLimitTier, type NameStatus, type ObaStatus, type OfficialAccountApplyRequest, type OfficialAccountApplyResponse, OfficialAccountResource, type OfficialAccountStatus, type OnBehalfOfBusinessInfo, type OwnershipType, type PermissionTask, type PhoneNumber, type PhoneNumberCreateRequest, type PhoneNumberCreateResponse, type PhoneNumberListOptions, type PhoneNumberListResponse, type PhoneNumberQualityRating, type PhoneNumberRegister, type PhoneNumberRegisterResponse, type PhoneNumberStatus, PhoneNumbersResource, type QrCode, type QrCodeDeleteResponse, type QrCodeListOptions, type QrCodeListResponse, type QrCodeMutationResponse, type QrCodeResponse, QrCodesResource, type QrImageFormat, type RequestVerificationCode, type SubscribedApp, type SubscribedAppsResponse, type SubscriptionRequest, type SubscriptionResponse, type Template, type TemplateBodyComponentInput, type TemplateBodyExample, type TemplateButton, type TemplateButtonInput, type TemplateButtonsComponentInput, type TemplateCategory, type TemplateComponent, type TemplateComponentInput, type TemplateCopyCodeButtonInput, type TemplateCreate, type TemplateCreateResponse, type TemplateDelete, type TemplateDeleteResponse, type TemplateFlowButtonInput, type TemplateFooterComponentInput, type TemplateHeaderComponentInput, type TemplateHeaderLocationInput, type TemplateHeaderMediaInput, type TemplateHeaderTextExample, type TemplateHeaderTextInput, type TemplateLanguage, type TemplateList, type TemplateListResponse, type TemplateNamedParamExample, type TemplatePaging, type TemplatePagingCursors, type TemplateParameterFormat, type TemplatePhoneNumberButtonInput, type TemplateQualityScore, type TemplateQuickReplyButtonInput, type TemplateStatus, type TemplateUpdate, type TemplateUpdateResponse, type TemplateUrlButtonInput, TemplatesResource, type UnblockUsersResponse, type UnifiedCertStatus, type UpdateQrCodeRequest, type VerificationResponse, type VerifyCode, type Vertical, type Waba, type WabaBusinessType, type WabaCreate, type WabaCreateResponse, type WabaListOptions, type WabaListResponse, type WabaUpdate, type WabaUpdateResponse, WabasResource, type WebhookContact, type WebhookContext, type WebhookConversation, type WebhookFilter, type WebhookHandleOptions, type WebhookHandlers, type WebhookMetadata, type WebhookPayload, type WebhookPricing, type WebhookStatus, type WebhookStatusError, type WebhookUpdateState, type WebhookVerifyQuery, WebhooksResource, type WhatsAppBusinessApiData, WhatsAppClient, accountModeSchema, accountReviewStatusSchema, activitiesListOptionsSchema, activitiesResponseSchema, activitySchema, activityTypeSchema, actorTypeSchema, addPreverifiedRequestSchema, addPreverifiedResponseSchema, assignedUserMutationResponseSchema, assignedUserSchema, assignedUserTypeSchema, assignedUsersListOptionsSchema, assignedUsersResponseSchema, assignedUsersSummarySchema, blockUsersResponseSchema, blockedUserOperationSchema, blockedUserSchema, buildMessagePayload, businessGetOptionsSchema, businessNodeSchema, businessProfileResponseSchema, businessProfileSchema, businessProfileUpdateResponseSchema, businessProfileUpdateSchema, businessSchema, businessVerificationStatusSchema, clientConfigSchema, codeMethodSchema, codeVerificationStatusSchema, createQrCodeRequestSchema, cursorPagingSchema, debugTokenResponseSchema, extractMessages, extractStatuses, hostPlatformSchema, listBlockedUsersOptionsSchema, listBlockedUsersResponseSchema, mediaDeleteResponseSchema, mediaMetadataSchema, mediaMimeTypeSchema, mediaTypeSchema, mediaUploadResponseSchema, mediaUploadSchema, messageDeliveryStatusEventSchema, messageDeliveryStatusSchema, messageHistoryEntrySchema, messageHistoryListOptionsSchema, messageHistoryResponseSchema, messageImageContentSchema, messageImageSchema, messageIncomingAudioSchema, messageIncomingImageSchema, messageIncomingSchema, messageIncomingTextSchema, messageLocationContentSchema, messageLocationSchema, messageOutgoingSchema, messageReactionContentSchema, messageReactionSchema, messageSendImageSchema, messageSendLocationSchema, messageSendReactionSchema, messageSendResponseSchema, messageSendTextSchema, messageTextContentSchema, messageTextSchema, messagingLimitTierSchema, nameStatusSchema, obaStatusSchema, officialAccountApplyRequestSchema, officialAccountApplyResponseSchema, officialAccountStatusSchema, onBehalfOfBusinessInfoSchema, ownershipTypeSchema, permissionTaskSchema, phoneNumberCreateRequestSchema, phoneNumberCreateResponseSchema, phoneNumberListOptionsSchema, phoneNumberListResponseSchema, phoneNumberQualityRatingSchema, phoneNumberRegisterResponseSchema, phoneNumberRegisterSchema, phoneNumberResponseSchema, phoneNumberSchema, phoneNumberStatusSchema, qrCodeDeleteResponseSchema, qrCodeListOptionsSchema, qrCodeListResponseSchema, qrCodeMutationResponseSchema, qrCodeResponseSchema, qrCodeSchema, qrImageFormatSchema, requestVerificationCodeSchema, subscribedAppSchema, subscribedAppsResponseSchema, subscriptionRequestSchema, subscriptionResponseSchema, templateBodyComponentInputSchema, templateBodyExampleSchema, templateButtonInputSchema, templateButtonSchema, templateButtonsComponentInputSchema, templateCategorySchema, templateComponentInputSchema, templateComponentSchema, templateCopyCodeButtonInputSchema, templateCreateAuthenticationSchema, templateCreateMarketingSchema, templateCreateResponseSchema, templateCreateSchema, templateCreateUtilitySchema, templateDeleteResponseSchema, templateDeleteSchema, templateFlowButtonInputSchema, templateFooterComponentInputSchema, templateHeaderComponentInputSchema, templateHeaderLocationInputSchema, templateHeaderMediaInputSchema, templateHeaderTextExampleSchema, templateHeaderTextInputSchema, templateLanguageSchema, templateListResponseSchema, templateListSchema, templateNamedParamExampleSchema, templatePagingCursorsSchema, templatePagingSchema, templateParameterFormatSchema, templatePhoneNumberButtonInputSchema, templateQualityScoreSchema, templateQuickReplyButtonInputSchema, templateSchema, templateStatusSchema, templateUpdateResponseSchema, templateUpdateSchema, templateUrlButtonInputSchema, toTemplateName, unblockUsersResponseSchema, unifiedCertStatusSchema, updateQrCodeRequestSchema, verificationResponseSchema, verifyCodeSchema, verifyWebhook, verticalSchema, wabaBusinessTypeSchema, wabaCreateResponseSchema, wabaCreateSchema, wabaListOptionsSchema, wabaListResponseSchema, wabaSchema, wabaUpdateResponseSchema, wabaUpdateSchema, webhookChangeSchema, webhookContactSchema, webhookConversationOriginSchema, webhookConversationSchema, webhookEntrySchema, webhookMetadataSchema, webhookPayloadSchema, webhookPricingSchema, webhookStatusErrorSchema, webhookStatusSchema, webhookUpdateStateSchema, webhookValueSchema, webhookVerifyQuerySchema, whatsappBusinessApiDataSchema };

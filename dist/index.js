@@ -239,6 +239,25 @@ var HttpClient = class {
     }
     return response.json();
   }
+  /**
+   * Make a DELETE request with JSON body
+   * Used by some Graph API endpoints like block_users
+   */
+  async deleteWithBody(path, body) {
+    const url = `${this.baseURL}/${this.apiVersion}${path}`;
+    const response = await fetch(url, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.accessToken}`
+      },
+      body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+      await this.handleError(response);
+    }
+    return response.json();
+  }
 };
 
 // src/resources/business/resource.ts
@@ -626,6 +645,58 @@ var WabasResource = class {
       { user: userId }
     );
   }
+  // ===========================================================================
+  // Activities
+  // ===========================================================================
+  /**
+   * Build query string for activities list
+   */
+  buildActivitiesQuery(options) {
+    if (!options) return "";
+    const params = new URLSearchParams();
+    if (options.fields) params.set("fields", options.fields);
+    if (options.limit) params.set("limit", options.limit.toString());
+    if (options.after) params.set("after", options.after);
+    if (options.before) params.set("before", options.before);
+    if (options.since) params.set("since", options.since);
+    if (options.until) params.set("until", options.until);
+    if (options.activity_type) params.set("activity_type", options.activity_type);
+    const queryString = params.toString();
+    return queryString ? `?${queryString}` : "";
+  }
+  /**
+   * List activities for this WhatsApp Business Account
+   *
+   * Retrieve activity logs and audit trails for a WABA.
+   *
+   * @see GET /{WABA-ID}/activities
+   *
+   * @param options - Query options (fields, pagination, time filters, activity_type)
+   * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @returns List of activities
+   *
+   * @example
+   * ```typescript
+   * // List all activities
+   * const activities = await client.wabas.listActivities();
+   *
+   * // With time filter
+   * const activities = await client.wabas.listActivities({
+   *   since: "2024-01-01T00:00:00Z",
+   *   until: "2024-01-31T23:59:59Z"
+   * });
+   *
+   * // Filter by activity type
+   * const activities = await client.wabas.listActivities({
+   *   activity_type: "USER_ADDED,USER_REMOVED"
+   * });
+   * ```
+   */
+  async listActivities(options, wabaId) {
+    const id = this.getWabaId(wabaId);
+    const query = this.buildActivitiesQuery(options);
+    return this.httpClient.get(`/${id}/activities${query}`);
+  }
 };
 
 // src/resources/wabas/schema.ts
@@ -777,12 +848,817 @@ var assignedUsersListOptionsSchema = z3.object({
 var assignedUserMutationResponseSchema = z3.object({
   success: z3.boolean()
 });
+var activityTypeSchema = z3.enum([
+  "ACCOUNT_CREATED",
+  "ACCOUNT_UPDATED",
+  "ACCOUNT_DELETED",
+  "PHONE_NUMBER_ADDED",
+  "PHONE_NUMBER_REMOVED",
+  "PHONE_NUMBER_VERIFIED",
+  "USER_ADDED",
+  "USER_REMOVED",
+  "USER_ROLE_CHANGED",
+  "PERMISSION_GRANTED",
+  "PERMISSION_REVOKED",
+  "TEMPLATE_CREATED",
+  "TEMPLATE_UPDATED",
+  "TEMPLATE_DELETED",
+  "WEBHOOK_CONFIGURED",
+  "API_ACCESS_GRANTED",
+  "API_ACCESS_REVOKED",
+  "BILLING_UPDATED",
+  "COMPLIANCE_ACTION",
+  "SECURITY_EVENT"
+]);
+var actorTypeSchema = z3.enum([
+  "USER",
+  "SYSTEM",
+  "API",
+  "ADMIN",
+  "AUTOMATED_PROCESS"
+]);
+var activitySchema = z3.object({
+  id: z3.string(),
+  activity_type: activityTypeSchema,
+  timestamp: z3.string(),
+  actor_type: actorTypeSchema,
+  actor_id: z3.string().optional(),
+  actor_name: z3.string().optional(),
+  description: z3.string().optional(),
+  details: z3.record(z3.string(), z3.unknown()).optional(),
+  ip_address: z3.string().optional(),
+  user_agent: z3.string().optional()
+});
+var activitiesResponseSchema = z3.object({
+  data: z3.array(activitySchema),
+  paging: cursorPagingSchema.optional()
+});
+var activitiesListOptionsSchema = z3.object({
+  fields: z3.string().optional(),
+  limit: z3.number().min(1).max(100).optional(),
+  after: z3.string().optional(),
+  before: z3.string().optional(),
+  since: z3.string().optional(),
+  until: z3.string().optional(),
+  activity_type: z3.string().optional()
+});
+
+// src/resources/phoneNumbers/subresources/block/resource.ts
+var BlockResource = class {
+  constructor(httpClient) {
+    this.httpClient = httpClient;
+  }
+  /**
+   * Get the phone number ID (from parameter or config)
+   */
+  getPhoneNumberId(overrideId) {
+    const id = overrideId ?? this.httpClient.phoneNumberId;
+    if (!id) {
+      throw new Error(
+        "phoneNumberId is required. Provide it in WhatsAppClient config or as a parameter."
+      );
+    }
+    return id;
+  }
+  /**
+   * Build query string for list options
+   */
+  buildQueryString(options) {
+    if (!options) return "";
+    const params = new URLSearchParams();
+    if (options.limit) params.set("limit", options.limit.toString());
+    if (options.after) params.set("after", options.after);
+    if (options.before) params.set("before", options.before);
+    const queryString = params.toString();
+    return queryString ? `?${queryString}` : "";
+  }
+  /**
+   * List blocked users for a phone number
+   *
+   * @see GET /{Phone-Number-ID}/block_users
+   *
+   * @param options - Pagination options
+   * @param phoneNumberId - Phone Number ID (overrides config)
+   * @returns List of blocked users
+   *
+   * @example
+   * ```typescript
+   * const blocked = await client.phoneNumbers.block.list();
+   *
+   * // With pagination
+   * const blocked = await client.phoneNumbers.block.list({ limit: 10 });
+   * ```
+   */
+  async list(options, phoneNumberId) {
+    const id = this.getPhoneNumberId(phoneNumberId);
+    const query = this.buildQueryString(options);
+    return this.httpClient.get(
+      `/${id}/block_users${query}`
+    );
+  }
+  /**
+   * Block one or more users
+   *
+   * @see POST /{Phone-Number-ID}/block_users
+   *
+   * @param users - Array of phone numbers to block (with country code)
+   * @param phoneNumberId - Phone Number ID (overrides config)
+   * @returns Block operation result
+   *
+   * @example
+   * ```typescript
+   * // Block a single user
+   * await client.phoneNumbers.block.add(["+1234567890"]);
+   *
+   * // Block multiple users
+   * await client.phoneNumbers.block.add(["+1234567890", "+0987654321"]);
+   * ```
+   */
+  async add(users, phoneNumberId) {
+    const id = this.getPhoneNumberId(phoneNumberId);
+    return this.httpClient.post(`/${id}/block_users`, {
+      messaging_product: "whatsapp",
+      block_users: users.map((user) => ({ user }))
+    });
+  }
+  /**
+   * Unblock one or more users
+   *
+   * @see DELETE /{Phone-Number-ID}/block_users
+   *
+   * @param users - Array of phone numbers to unblock (with country code)
+   * @param phoneNumberId - Phone Number ID (overrides config)
+   * @returns Unblock operation result
+   *
+   * @example
+   * ```typescript
+   * // Unblock a single user
+   * await client.phoneNumbers.block.remove(["+1234567890"]);
+   *
+   * // Unblock multiple users
+   * await client.phoneNumbers.block.remove(["+1234567890", "+0987654321"]);
+   * ```
+   */
+  async remove(users, phoneNumberId) {
+    const id = this.getPhoneNumberId(phoneNumberId);
+    return this.httpClient.deleteWithBody(
+      `/${id}/block_users`,
+      {
+        messaging_product: "whatsapp",
+        block_users: users.map((user) => ({ user }))
+      }
+    );
+  }
+};
+
+// src/resources/phoneNumbers/subresources/block/schema.ts
+import { z as z4 } from "zod";
+var paginationCursorsSchema = z4.object({
+  after: z4.string().optional(),
+  before: z4.string().optional()
+});
+var blockPagingSchema = z4.object({
+  cursors: paginationCursorsSchema.optional()
+});
+var blockedUserSchema = z4.object({
+  messaging_product: z4.string().optional(),
+  wa_id: z4.string().optional()
+});
+var blockUserInputSchema = z4.object({
+  user: z4.string()
+});
+var blockUsersRequestSchema = z4.object({
+  block_users: z4.array(blockUserInputSchema),
+  messaging_product: z4.literal("whatsapp").optional()
+});
+var blockedUserOperationSchema = z4.object({
+  input: z4.string().optional(),
+  wa_id: z4.string().optional()
+});
+var blockUsersResultSchema = z4.object({
+  added_users: z4.array(blockedUserOperationSchema).optional()
+});
+var unblockUsersResultSchema = z4.object({
+  removed_users: z4.array(blockedUserOperationSchema).optional()
+});
+var listBlockedUsersResponseSchema = z4.object({
+  data: z4.array(blockedUserSchema).optional(),
+  paging: blockPagingSchema.optional()
+});
+var blockUsersResponseSchema = z4.object({
+  block_users: blockUsersResultSchema.optional(),
+  messaging_product: z4.string().optional()
+});
+var unblockUsersResponseSchema = z4.object({
+  block_users: unblockUsersResultSchema.optional(),
+  messaging_product: z4.string().optional()
+});
+var listBlockedUsersOptionsSchema = z4.object({
+  limit: z4.number().min(1).max(100).optional(),
+  after: z4.string().optional(),
+  before: z4.string().optional()
+});
+
+// src/resources/phoneNumbers/subresources/qrCodes/resource.ts
+var QrCodesResource = class {
+  constructor(httpClient) {
+    this.httpClient = httpClient;
+  }
+  /**
+   * Get the phone number ID (from parameter or config)
+   */
+  getPhoneNumberId(overrideId) {
+    const id = overrideId ?? this.httpClient.phoneNumberId;
+    if (!id) {
+      throw new Error(
+        "phoneNumberId is required. Provide it in WhatsAppClient config or as a parameter."
+      );
+    }
+    return id;
+  }
+  /**
+   * Build query string for list options
+   */
+  buildQueryString(options) {
+    if (!options) return "";
+    const params = new URLSearchParams();
+    if (options.fields) params.set("fields", options.fields);
+    if (options.code) params.set("code", options.code);
+    if (options.limit) params.set("limit", options.limit.toString());
+    if (options.after) params.set("after", options.after);
+    if (options.before) params.set("before", options.before);
+    const queryString = params.toString();
+    return queryString ? `?${queryString}` : "";
+  }
+  /**
+   * List all QR codes for a phone number
+   *
+   * Returns QR codes sorted by creation time (newest first).
+   *
+   * @see GET /{Phone-Number-ID}/message_qrdls
+   *
+   * @param options - Query options (fields, code filter, pagination)
+   * @param phoneNumberId - Phone Number ID (overrides config)
+   * @returns List of QR codes
+   *
+   * @example
+   * ```typescript
+   * // List all QR codes
+   * const codes = await client.phoneNumbers.qrCodes.list();
+   *
+   * // With image URLs
+   * const codes = await client.phoneNumbers.qrCodes.list({
+   *   fields: "code,prefilled_message,qr_image_url.format(PNG)"
+   * });
+   *
+   * // Filter by specific code
+   * const codes = await client.phoneNumbers.qrCodes.list({
+   *   code: "QRCODE123456"
+   * });
+   * ```
+   */
+  async list(options, phoneNumberId) {
+    const id = this.getPhoneNumberId(phoneNumberId);
+    const query = this.buildQueryString(options);
+    return this.httpClient.get(
+      `/${id}/message_qrdls${query}`
+    );
+  }
+  /**
+   * Get a specific QR code by ID
+   *
+   * @see GET /{Phone-Number-ID}/message_qrdls/{QR-Code-ID}
+   *
+   * @param qrCodeId - The 14-character QR code identifier
+   * @param fields - Optional fields to include (e.g., "code,prefilled_message,qr_image_url.format(SVG)")
+   * @param phoneNumberId - Phone Number ID (overrides config)
+   * @returns QR code details (wrapped in data array)
+   *
+   * @example
+   * ```typescript
+   * const qr = await client.phoneNumbers.qrCodes.get("QRCODE123456");
+   * console.log(qr.data[0].deep_link_url);
+   *
+   * // With QR image
+   * const qr = await client.phoneNumbers.qrCodes.get(
+   *   "QRCODE123456",
+   *   "code,prefilled_message,qr_image_url.format(PNG)"
+   * );
+   * ```
+   */
+  async get(qrCodeId, fields, phoneNumberId) {
+    const id = this.getPhoneNumberId(phoneNumberId);
+    const query = fields ? `?fields=${fields}` : "";
+    return this.httpClient.get(
+      `/${id}/message_qrdls/${qrCodeId}${query}`
+    );
+  }
+  /**
+   * Create a new QR code
+   *
+   * Creates a QR code with a pre-filled message. When scanned,
+   * it opens WhatsApp with the message ready to send.
+   *
+   * @see POST /{Phone-Number-ID}/message_qrdls
+   *
+   * @param data - QR code creation data
+   * @param phoneNumberId - Phone Number ID (overrides config)
+   * @returns Created QR code details
+   *
+   * @example
+   * ```typescript
+   * // Create with PNG image
+   * const qr = await client.phoneNumbers.qrCodes.create({
+   *   prefilled_message: "Hi! I saw your ad and want to learn more.",
+   *   generate_qr_image: "PNG"
+   * });
+   * console.log(qr.code);           // "QRCODE123456"
+   * console.log(qr.deep_link_url);  // "https://wa.me/..."
+   * console.log(qr.qr_image_url);   // "https://..."
+   *
+   * // Create without image (use deep_link_url to generate your own)
+   * const qr = await client.phoneNumbers.qrCodes.create({
+   *   prefilled_message: "Hello!"
+   * });
+   * ```
+   */
+  async create(data, phoneNumberId) {
+    const id = this.getPhoneNumberId(phoneNumberId);
+    return this.httpClient.post(
+      `/${id}/message_qrdls`,
+      data
+    );
+  }
+  /**
+   * Update an existing QR code
+   *
+   * Updates the pre-filled message for an existing QR code.
+   * The QR code identifier and deep link URL remain the same.
+   *
+   * @see POST /{Phone-Number-ID}/message_qrdls
+   *
+   * @param data - QR code update data (must include code)
+   * @param phoneNumberId - Phone Number ID (overrides config)
+   * @returns Updated QR code details
+   *
+   * @example
+   * ```typescript
+   * const qr = await client.phoneNumbers.qrCodes.update({
+   *   code: "QRCODE123456",
+   *   prefilled_message: "New promotional message!"
+   * });
+   * ```
+   */
+  async update(data, phoneNumberId) {
+    const id = this.getPhoneNumberId(phoneNumberId);
+    return this.httpClient.post(
+      `/${id}/message_qrdls`,
+      data
+    );
+  }
+  /**
+   * Delete a QR code
+   *
+   * Permanently deletes a QR code. Once deleted, the QR code and
+   * deep link become invalid. This cannot be undone.
+   *
+   * @see DELETE /{Phone-Number-ID}/message_qrdls/{QR-Code-ID}
+   *
+   * @param qrCodeId - The 14-character QR code identifier
+   * @param phoneNumberId - Phone Number ID (overrides config)
+   * @returns Success status
+   *
+   * @example
+   * ```typescript
+   * await client.phoneNumbers.qrCodes.delete("QRCODE123456");
+   * ```
+   */
+  async delete(qrCodeId, phoneNumberId) {
+    const id = this.getPhoneNumberId(phoneNumberId);
+    return this.httpClient.delete(
+      `/${id}/message_qrdls/${qrCodeId}`
+    );
+  }
+};
+
+// src/resources/phoneNumbers/subresources/qrCodes/schema.ts
+import { z as z5 } from "zod";
+var qrCodeCursorsSchema = z5.object({
+  before: z5.string().optional(),
+  after: z5.string().optional()
+});
+var qrCodePagingSchema = z5.object({
+  cursors: qrCodeCursorsSchema.optional(),
+  previous: z5.string().optional(),
+  next: z5.string().optional()
+});
+var qrImageFormatSchema = z5.enum(["PNG", "SVG"]);
+var qrCodeSchema = z5.object({
+  /** Unique 14-character QR code identifier */
+  code: z5.string(),
+  /** Pre-filled message text that appears in customer chat */
+  prefilled_message: z5.string(),
+  /** WhatsApp deep link URL for direct conversation initiation */
+  deep_link_url: z5.string(),
+  /** Unix timestamp when QR code was created (first-party apps only) */
+  creation_time: z5.number().optional(),
+  /** QR code image download URL (when format specified in fields) */
+  qr_image_url: z5.string().optional()
+});
+var qrCodeListResponseSchema = z5.object({
+  data: z5.array(qrCodeSchema),
+  paging: qrCodePagingSchema.optional()
+});
+var qrCodeResponseSchema = z5.object({
+  data: z5.array(qrCodeSchema)
+});
+var qrCodeMutationResponseSchema = z5.object({
+  /** Unique 14-character identifier for the QR code */
+  code: z5.string(),
+  /** The pre-filled message text associated with this QR code */
+  prefilled_message: z5.string(),
+  /** WhatsApp deep link URL */
+  deep_link_url: z5.string(),
+  /** URL to download the QR code image (if generate_qr_image was specified) */
+  qr_image_url: z5.string().optional()
+});
+var qrCodeDeleteResponseSchema = z5.object({
+  success: z5.boolean()
+});
+var createQrCodeRequestSchema = z5.object({
+  /** Pre-filled message text (max 140 characters) */
+  prefilled_message: z5.string().max(140),
+  /** QR image format - when specified, response includes qr_image_url */
+  generate_qr_image: qrImageFormatSchema.optional()
+});
+var updateQrCodeRequestSchema = z5.object({
+  /** 14-character QR code identifier to update */
+  code: z5.string(),
+  /** New pre-filled message text (max 140 characters) */
+  prefilled_message: z5.string().max(140)
+});
+var qrCodeListOptionsSchema = z5.object({
+  /** Comma-separated list of fields to include */
+  fields: z5.string().optional(),
+  /** Filter results to a specific QR code by its identifier */
+  code: z5.string().optional(),
+  /** Maximum number of QR codes to return (1-25) */
+  limit: z5.number().min(1).max(25).optional(),
+  /** Cursor for next page */
+  after: z5.string().optional(),
+  /** Cursor for previous page */
+  before: z5.string().optional()
+});
+
+// src/resources/phoneNumbers/subresources/messageHistory/resource.ts
+var MessageHistoryResource = class {
+  constructor(httpClient) {
+    this.httpClient = httpClient;
+  }
+  /**
+   * Get the phone number ID (from parameter or config)
+   */
+  getPhoneNumberId(overrideId) {
+    const id = overrideId ?? this.httpClient.phoneNumberId;
+    if (!id) {
+      throw new Error(
+        "phoneNumberId is required. Provide it in WhatsAppClient config or as a parameter."
+      );
+    }
+    return id;
+  }
+  /**
+   * Build query string for list options
+   */
+  buildQueryString(options) {
+    if (!options) return "";
+    const params = new URLSearchParams();
+    if (options.message_id) params.set("message_id", options.message_id);
+    if (options.fields) params.set("fields", options.fields);
+    if (options.limit) params.set("limit", options.limit.toString());
+    if (options.after) params.set("after", options.after);
+    if (options.before) params.set("before", options.before);
+    const queryString = params.toString();
+    return queryString ? `?${queryString}` : "";
+  }
+  /**
+   * List message history for a phone number
+   *
+   * Retrieve paginated message history including delivery status events,
+   * timestamps, and webhook update information.
+   *
+   * @see GET /{Phone-Number-ID}/message_history
+   *
+   * @param options - Query options (message_id filter, fields, pagination)
+   * @param phoneNumberId - Phone Number ID (overrides config)
+   * @returns Paginated message history
+   *
+   * @example
+   * ```typescript
+   * // List all message history
+   * const history = await client.phoneNumbers.messageHistory.list();
+   *
+   * // Filter by specific message
+   * const history = await client.phoneNumbers.messageHistory.list({
+   *   message_id: "wamid.HBgLMTIzNDU2Nzg5MAA="
+   * });
+   *
+   * // With pagination
+   * const history = await client.phoneNumbers.messageHistory.list({
+   *   limit: 50
+   * });
+   *
+   * // With detailed event fields
+   * const history = await client.phoneNumbers.messageHistory.list({
+   *   fields: "id,message_id,events{delivery_status,timestamp,error_description}"
+   * });
+   * ```
+   */
+  async list(options, phoneNumberId) {
+    const id = this.getPhoneNumberId(phoneNumberId);
+    const query = this.buildQueryString(options);
+    return this.httpClient.get(
+      `/${id}/message_history${query}`
+    );
+  }
+};
+
+// src/resources/phoneNumbers/subresources/messageHistory/schema.ts
+import { z as z6 } from "zod";
+var messageDeliveryStatusSchema = z6.enum([
+  "SENT",
+  "DELIVERED",
+  "READ",
+  "FAILED",
+  "DELETED"
+]);
+var webhookUpdateStateSchema = z6.enum([
+  "PENDING",
+  "DELIVERED",
+  "FAILED",
+  "RETRYING"
+]);
+var messageHistoryCursorsSchema = z6.object({
+  before: z6.string().optional(),
+  after: z6.string().optional()
+});
+var messageHistoryPagingSchema = z6.object({
+  cursors: messageHistoryCursorsSchema.optional(),
+  previous: z6.string().optional(),
+  next: z6.string().optional()
+});
+var eventApplicationSchema = z6.object({
+  id: z6.string().optional()
+});
+var messageDeliveryStatusEventSchema = z6.object({
+  /** Unique identifier for the delivery status event */
+  id: z6.string(),
+  /** Delivery status of the message */
+  delivery_status: messageDeliveryStatusSchema,
+  /** State of webhook update delivery */
+  webhook_update_state: webhookUpdateStateSchema.optional(),
+  /** Unix timestamp when the delivery status event occurred */
+  timestamp: z6.number(),
+  /** Application information for the event */
+  application: eventApplicationSchema.optional(),
+  /** Webhook URI where the event was delivered */
+  webhook_uri: z6.string().optional(),
+  /** Error description if the delivery failed */
+  error_description: z6.string().optional()
+});
+var messageEventsSchema = z6.object({
+  data: z6.array(messageDeliveryStatusEventSchema).optional(),
+  paging: messageHistoryPagingSchema.optional()
+});
+var messageHistoryEntrySchema = z6.object({
+  /** Unique identifier for the message history entry */
+  id: z6.string(),
+  /** WhatsApp message ID (WAMID) for the message */
+  message_id: z6.string(),
+  /** Message delivery status events and occurrences */
+  events: messageEventsSchema.optional()
+});
+var messageHistoryResponseSchema = z6.object({
+  data: z6.array(messageHistoryEntrySchema).optional(),
+  paging: messageHistoryPagingSchema.optional()
+});
+var messageHistoryListOptionsSchema = z6.object({
+  /** Filter results by specific WhatsApp message ID (WAMID) */
+  message_id: z6.string().optional(),
+  /** Comma-separated list of fields to include */
+  fields: z6.string().optional(),
+  /** Maximum number of entries to return (1-100, default 25) */
+  limit: z6.number().min(1).max(100).optional(),
+  /** Cursor for next page */
+  after: z6.string().optional(),
+  /** Cursor for previous page */
+  before: z6.string().optional()
+});
+
+// src/resources/phoneNumbers/subresources/officialAccount/resource.ts
+var OfficialAccountResource = class {
+  constructor(httpClient) {
+    this.httpClient = httpClient;
+  }
+  /**
+   * Get the phone number ID (from parameter or config)
+   */
+  getPhoneNumberId(overrideId) {
+    const id = overrideId ?? this.httpClient.phoneNumberId;
+    if (!id) {
+      throw new Error(
+        "phoneNumberId is required. Provide it in WhatsAppClient config or as a parameter."
+      );
+    }
+    return id;
+  }
+  /**
+   * Get Official Business Account status
+   *
+   * Retrieve the current OBA verification status for a phone number.
+   *
+   * @see GET /{Phone-Number-ID}/official_business_account
+   *
+   * @param fields - Comma-separated list of fields (oba_status, status_message)
+   * @param phoneNumberId - Phone Number ID (overrides config)
+   * @returns Current OBA status
+   *
+   * @example
+   * ```typescript
+   * const status = await client.phoneNumbers.officialAccount.get();
+   * console.log(status.oba_status);     // "APPROVED"
+   * console.log(status.status_message); // "Your account is verified"
+   * ```
+   */
+  async get(fields, phoneNumberId) {
+    const id = this.getPhoneNumberId(phoneNumberId);
+    const query = fields ? `?fields=${fields}` : "";
+    return this.httpClient.get(
+      `/${id}/official_business_account${query}`
+    );
+  }
+  /**
+   * Apply for Official Business Account verification
+   *
+   * Submit an application for OBA verification. Requires business website,
+   * country of operation, and supporting links that demonstrate notability.
+   *
+   * @see POST /{Phone-Number-ID}/official_business_account
+   *
+   * @param data - Application data
+   * @param phoneNumberId - Phone Number ID (overrides config)
+   * @returns Application result with tracking ID
+   *
+   * @example
+   * ```typescript
+   * const result = await client.phoneNumbers.officialAccount.apply({
+   *   business_website_url: "https://example.com",
+   *   primary_country_of_operation: "US",
+   *   primary_language: "en",
+   *   parent_business_or_brand: "Example Corp",
+   *   supporting_links: [
+   *     "https://wikipedia.org/wiki/Example_Corp",
+   *     "https://forbes.com/companies/example",
+   *     "https://techcrunch.com/example-raises-funding",
+   *     "https://linkedin.com/company/example",
+   *     "https://crunchbase.com/organization/example"
+   *   ],
+   *   additional_supporting_information: "We are a Fortune 500 company..."
+   * });
+   *
+   * if (result.success) {
+   *   console.log("Application submitted:", result.tracking_id);
+   * }
+   * ```
+   */
+  async apply(data, phoneNumberId) {
+    const id = this.getPhoneNumberId(phoneNumberId);
+    return this.httpClient.post(
+      `/${id}/official_business_account`,
+      data
+    );
+  }
+};
+
+// src/resources/phoneNumbers/subresources/officialAccount/schema.ts
+import { z as z7 } from "zod";
+var obaStatusSchema = z7.enum([
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+  "UNDER_REVIEW",
+  "EXPIRED",
+  "CANCELLED"
+]);
+var officialAccountStatusSchema = z7.object({
+  /** Unique identifier for the WhatsApp Business Account phone number */
+  id: z7.string(),
+  /** Current OBA verification status */
+  oba_status: obaStatusSchema,
+  /** Human-readable message describing the current status */
+  status_message: z7.string()
+});
+var officialAccountApplyRequestSchema = z7.object({
+  /** Official business website URL */
+  business_website_url: z7.string().url(),
+  /** Primary country where the business operates */
+  primary_country_of_operation: z7.string(),
+  /** Primary language used by the business */
+  primary_language: z7.string().optional(),
+  /** Parent business or brand name */
+  parent_business_or_brand: z7.string().optional(),
+  /** Supporting links that demonstrate business notability (min 5, max 10) */
+  supporting_links: z7.array(z7.string().url()).min(5).max(10).optional(),
+  /** Additional information to support the application */
+  additional_supporting_information: z7.string().optional()
+});
+var officialAccountApplyResponseSchema = z7.object({
+  /** Indicates if the operation was successful */
+  success: z7.boolean(),
+  /** Human-readable message describing the result */
+  message: z7.string(),
+  /** Updated status after the operation */
+  updated_status: officialAccountStatusSchema.optional(),
+  /** Unique identifier for tracking the application request */
+  tracking_id: z7.string().optional()
+});
 
 // src/resources/phoneNumbers/resource.ts
 var PhoneNumbersResource = class {
   constructor(httpClient) {
     this.httpClient = httpClient;
+    this.block = new BlockResource(httpClient);
+    this.qrCodes = new QrCodesResource(httpClient);
+    this.messageHistory = new MessageHistoryResource(httpClient);
+    this.officialAccount = new OfficialAccountResource(httpClient);
   }
+  /**
+   * Block users subresource
+   *
+   * @example
+   * ```typescript
+   * // List blocked users
+   * const blocked = await client.phoneNumbers.block.list();
+   *
+   * // Block users
+   * await client.phoneNumbers.block.add(["+1234567890"]);
+   *
+   * // Unblock users
+   * await client.phoneNumbers.block.remove(["+1234567890"]);
+   * ```
+   */
+  block;
+  /**
+   * QR Codes subresource
+   *
+   * @example
+   * ```typescript
+   * // List QR codes
+   * const codes = await client.phoneNumbers.qrCodes.list();
+   *
+   * // Create a QR code
+   * const qr = await client.phoneNumbers.qrCodes.create({
+   *   prefilled_message: "Hello!",
+   *   generate_qr_image: "PNG"
+   * });
+   *
+   * // Delete a QR code
+   * await client.phoneNumbers.qrCodes.delete("QRCODE123456");
+   * ```
+   */
+  qrCodes;
+  /**
+   * Message History subresource
+   *
+   * @example
+   * ```typescript
+   * // List message history
+   * const history = await client.phoneNumbers.messageHistory.list();
+   *
+   * // Filter by message ID
+   * const history = await client.phoneNumbers.messageHistory.list({
+   *   message_id: "wamid.ABC123..."
+   * });
+   * ```
+   */
+  messageHistory;
+  /**
+   * Official Business Account subresource
+   *
+   * @example
+   * ```typescript
+   * // Get OBA status
+   * const status = await client.phoneNumbers.officialAccount.get();
+   *
+   * // Apply for OBA verification
+   * await client.phoneNumbers.officialAccount.apply({
+   *   business_website_url: "https://example.com",
+   *   primary_country_of_operation: "US",
+   *   supporting_links: ["...", "...", "...", "...", "..."]
+   * });
+   * ```
+   */
+  officialAccount;
   /**
    * Get the business ID (from parameter or config)
    */
@@ -1139,15 +2015,15 @@ var PhoneNumbersResource = class {
 };
 
 // src/resources/phoneNumbers/schema.ts
-import { z as z4 } from "zod";
-var phoneNumberQualityRatingSchema = z4.enum([
+import { z as z8 } from "zod";
+var phoneNumberQualityRatingSchema = z8.enum([
   "GREEN",
   "YELLOW",
   "RED",
   "UNKNOWN",
   "NA"
 ]);
-var phoneNumberStatusSchema = z4.enum([
+var phoneNumberStatusSchema = z8.enum([
   "PENDING",
   "LINKED",
   "UNLINKED",
@@ -1160,25 +2036,25 @@ var phoneNumberStatusSchema = z4.enum([
   "FLAGGED",
   "RATE_LIMITED"
 ]);
-var codeVerificationStatusSchema = z4.enum([
+var codeVerificationStatusSchema = z8.enum([
   "VERIFIED",
   "NOT_VERIFIED",
   "EXPIRED"
 ]);
-var unifiedCertStatusSchema = z4.enum([
+var unifiedCertStatusSchema = z8.enum([
   "APPROVED",
   "NAME_PENDING_REVIEW",
   "NAME_NOT_APPROVED",
   "ACCOUNT_REVIEW_NOT_STARTED",
   "LIMITED_ACCESS"
 ]);
-var accountModeSchema = z4.enum(["LIVE", "SANDBOX"]);
-var hostPlatformSchema = z4.enum([
+var accountModeSchema = z8.enum(["LIVE", "SANDBOX"]);
+var hostPlatformSchema = z8.enum([
   "CLOUD_API",
   "ON_PREMISE",
   "NOT_APPLICABLE"
 ]);
-var nameStatusSchema = z4.enum([
+var nameStatusSchema = z8.enum([
   "APPROVED",
   "AVAILABLE_WITHOUT_REVIEW",
   "DECLINED",
@@ -1186,7 +2062,7 @@ var nameStatusSchema = z4.enum([
   "PENDING_REVIEW",
   "NONE"
 ]);
-var messagingLimitTierSchema = z4.enum([
+var messagingLimitTierSchema = z8.enum([
   "TIER_50",
   "TIER_250",
   "TIER_1K",
@@ -1194,8 +2070,8 @@ var messagingLimitTierSchema = z4.enum([
   "TIER_100K",
   "TIER_UNLIMITED"
 ]);
-var codeMethodSchema = z4.enum(["SMS", "VOICE"]);
-var verticalSchema = z4.enum([
+var codeMethodSchema = z8.enum(["SMS", "VOICE"]);
+var verticalSchema = z8.enum([
   "UNDEFINED",
   "OTHER",
   "AUTO",
@@ -1216,207 +2092,207 @@ var verticalSchema = z4.enum([
   "RESTAURANT",
   "NOT_A_BIZ"
 ]);
-var phoneNumberResponseSchema = z4.object({
-  id: z4.string(),
-  display_phone_number: z4.string(),
-  verified_name: z4.string().optional(),
+var phoneNumberResponseSchema = z8.object({
+  id: z8.string(),
+  display_phone_number: z8.string(),
+  verified_name: z8.string().optional(),
   status: phoneNumberStatusSchema.optional(),
   quality_rating: phoneNumberQualityRatingSchema.optional(),
-  country_code: z4.string().optional(),
-  country_dial_code: z4.string().optional(),
+  country_code: z8.string().optional(),
+  country_dial_code: z8.string().optional(),
   code_verification_status: codeVerificationStatusSchema.optional(),
   unified_cert_status: unifiedCertStatusSchema.optional(),
   account_mode: accountModeSchema.optional(),
   host_platform: hostPlatformSchema.optional(),
   messaging_limit_tier: messagingLimitTierSchema.optional(),
-  is_official_business_account: z4.boolean().optional(),
-  username: z4.string().optional(),
+  is_official_business_account: z8.boolean().optional(),
+  username: z8.string().optional(),
   name_status: nameStatusSchema.optional(),
-  certificate: z4.string().optional(),
-  is_pin_enabled: z4.boolean().optional(),
-  search_visibility: z4.string().optional()
+  certificate: z8.string().optional(),
+  is_pin_enabled: z8.boolean().optional(),
+  search_visibility: z8.string().optional()
 });
-var cursorPagingSchema2 = z4.object({
-  cursors: z4.object({
-    before: z4.string().optional(),
-    after: z4.string().optional()
+var cursorPagingSchema2 = z8.object({
+  cursors: z8.object({
+    before: z8.string().optional(),
+    after: z8.string().optional()
   }).optional(),
-  previous: z4.string().optional(),
-  next: z4.string().optional()
+  previous: z8.string().optional(),
+  next: z8.string().optional()
 });
-var phoneNumberListResponseSchema = z4.object({
-  data: z4.array(phoneNumberResponseSchema),
+var phoneNumberListResponseSchema = z8.object({
+  data: z8.array(phoneNumberResponseSchema),
   paging: cursorPagingSchema2.optional()
 });
-var phoneNumberListOptionsSchema = z4.object({
-  fields: z4.string().optional(),
-  filtering: z4.string().optional(),
-  sort: z4.enum([
+var phoneNumberListOptionsSchema = z8.object({
+  fields: z8.string().optional(),
+  filtering: z8.string().optional(),
+  sort: z8.enum([
     "creation_time.asc",
     "creation_time.desc",
     "last_onboarded_time.asc",
     "last_onboarded_time.desc"
   ]).optional(),
-  limit: z4.number().min(1).max(100).optional(),
-  after: z4.string().optional(),
-  before: z4.string().optional()
+  limit: z8.number().min(1).max(100).optional(),
+  after: z8.string().optional(),
+  before: z8.string().optional()
 });
-var addPreverifiedRequestSchema = z4.object({
-  phone_number: z4.string()
+var addPreverifiedRequestSchema = z8.object({
+  phone_number: z8.string()
 });
-var addPreverifiedResponseSchema = z4.object({
-  id: z4.string()
+var addPreverifiedResponseSchema = z8.object({
+  id: z8.string()
 });
-var phoneNumberCreateRequestSchema = z4.object({
+var phoneNumberCreateRequestSchema = z8.object({
   /** Phone number in E.164 format without the + prefix */
-  phone_number: z4.string(),
+  phone_number: z8.string(),
   /** Business name to be verified for this phone number */
-  verified_name: z4.string(),
+  verified_name: z8.string(),
   /** Country code for the phone number */
-  cc: z4.string().optional(),
+  cc: z8.string().optional(),
   /** Whether this is a phone number migration from on-premises */
-  migrate_phone_number: z4.boolean().optional(),
+  migrate_phone_number: z8.boolean().optional(),
   /** Pre-verified phone number ID for BSP scenarios (from addPreverified) */
-  preverified_id: z4.string().optional()
+  preverified_id: z8.string().optional()
 });
-var phoneNumberCreateResponseSchema = z4.object({
-  id: z4.string()
+var phoneNumberCreateResponseSchema = z8.object({
+  id: z8.string()
 });
-var phoneNumberRegisterSchema = z4.object({
-  messaging_product: z4.literal("whatsapp"),
-  pin: z4.string().min(6).max(6)
+var phoneNumberRegisterSchema = z8.object({
+  messaging_product: z8.literal("whatsapp"),
+  pin: z8.string().min(6).max(6)
 });
-var phoneNumberRegisterResponseSchema = z4.object({
-  success: z4.boolean()
+var phoneNumberRegisterResponseSchema = z8.object({
+  success: z8.boolean()
 });
-var requestVerificationCodeSchema = z4.object({
+var requestVerificationCodeSchema = z8.object({
   code_method: codeMethodSchema,
-  language: z4.string().optional()
+  language: z8.string().optional()
 });
-var verifyCodeSchema = z4.object({
-  code: z4.string()
+var verifyCodeSchema = z8.object({
+  code: z8.string()
 });
-var verificationResponseSchema = z4.object({
-  success: z4.boolean()
+var verificationResponseSchema = z8.object({
+  success: z8.boolean()
 });
-var businessProfileSchema = z4.object({
-  messaging_product: z4.literal("whatsapp").optional(),
-  about: z4.string().max(139).optional(),
-  address: z4.string().max(256).optional(),
-  description: z4.string().max(512).optional(),
-  email: z4.string().email().optional(),
-  profile_picture_url: z4.string().url().optional(),
-  websites: z4.array(z4.string().url()).max(2).optional(),
+var businessProfileSchema = z8.object({
+  messaging_product: z8.literal("whatsapp").optional(),
+  about: z8.string().max(139).optional(),
+  address: z8.string().max(256).optional(),
+  description: z8.string().max(512).optional(),
+  email: z8.string().email().optional(),
+  profile_picture_url: z8.string().url().optional(),
+  websites: z8.array(z8.string().url()).max(2).optional(),
   vertical: verticalSchema.optional()
 });
-var businessProfileResponseSchema = z4.object({
-  data: z4.array(businessProfileSchema)
+var businessProfileResponseSchema = z8.object({
+  data: z8.array(businessProfileSchema)
 });
 var businessProfileUpdateSchema = businessProfileSchema.extend({
-  messaging_product: z4.literal("whatsapp")
+  messaging_product: z8.literal("whatsapp")
 });
-var businessProfileUpdateResponseSchema = z4.object({
-  success: z4.boolean()
+var businessProfileUpdateResponseSchema = z8.object({
+  success: z8.boolean()
 });
 
 // src/resources/messages/schema.ts
-import { z as z5 } from "zod";
-var phoneNumberSchema = z5.string().regex(/^\+[1-9]\d{1,14}$/, "Invalid phone number format (use E.164: +1234567890)");
-var messageTextContentSchema = z5.object({
-  body: z5.string().min(1).max(4096),
-  preview_url: z5.boolean().optional()
+import { z as z9 } from "zod";
+var phoneNumberSchema = z9.string().regex(/^\+[1-9]\d{1,14}$/, "Invalid phone number format (use E.164: +1234567890)");
+var messageTextContentSchema = z9.object({
+  body: z9.string().min(1).max(4096),
+  preview_url: z9.boolean().optional()
 });
-var messageImageContentSchema = z5.object({
-  id: z5.string().optional(),
-  link: z5.string().url().optional(),
-  caption: z5.string().max(1024).optional()
+var messageImageContentSchema = z9.object({
+  id: z9.string().optional(),
+  link: z9.string().url().optional(),
+  caption: z9.string().max(1024).optional()
 }).refine((data) => data.link || data.id, "Either link or id must be provided");
-var messageLocationContentSchema = z5.object({
-  longitude: z5.number().min(-180).max(180),
-  latitude: z5.number().min(-90).max(90),
-  name: z5.string().optional(),
-  address: z5.string().optional()
+var messageLocationContentSchema = z9.object({
+  longitude: z9.number().min(-180).max(180),
+  latitude: z9.number().min(-90).max(90),
+  name: z9.string().optional(),
+  address: z9.string().optional()
 });
-var messageReactionContentSchema = z5.object({
-  message_id: z5.string().min(1),
-  emoji: z5.string().min(1).max(1)
+var messageReactionContentSchema = z9.object({
+  message_id: z9.string().min(1),
+  emoji: z9.string().min(1).max(1)
 });
-var messageSendTextSchema = z5.object({
+var messageSendTextSchema = z9.object({
   to: phoneNumberSchema,
   text: messageTextContentSchema
 });
-var messageSendImageSchema = z5.object({
+var messageSendImageSchema = z9.object({
   to: phoneNumberSchema,
   image: messageImageContentSchema
 });
-var messageSendLocationSchema = z5.object({
+var messageSendLocationSchema = z9.object({
   to: phoneNumberSchema,
   location: messageLocationContentSchema
 });
-var messageSendReactionSchema = z5.object({
+var messageSendReactionSchema = z9.object({
   to: phoneNumberSchema,
   reaction: messageReactionContentSchema
 });
 var messageTextSchema = messageSendTextSchema.extend({
-  type: z5.literal("text")
+  type: z9.literal("text")
 });
 var messageImageSchema = messageSendImageSchema.extend({
-  type: z5.literal("image")
+  type: z9.literal("image")
 });
 var messageLocationSchema = messageSendLocationSchema.extend({
-  type: z5.literal("location")
+  type: z9.literal("location")
 });
 var messageReactionSchema = messageSendReactionSchema.extend({
-  type: z5.literal("reaction")
+  type: z9.literal("reaction")
 });
-var messageOutgoingSchema = z5.discriminatedUnion("type", [
+var messageOutgoingSchema = z9.discriminatedUnion("type", [
   messageTextSchema,
   messageImageSchema,
   messageLocationSchema,
   messageReactionSchema
 ]);
-var messageSendResponseSchema = z5.object({
-  messaging_product: z5.literal("whatsapp"),
-  contacts: z5.array(
-    z5.object({
-      input: z5.string(),
-      wa_id: z5.string()
+var messageSendResponseSchema = z9.object({
+  messaging_product: z9.literal("whatsapp"),
+  contacts: z9.array(
+    z9.object({
+      input: z9.string(),
+      wa_id: z9.string()
     })
   ),
-  messages: z5.array(
-    z5.object({
-      id: z5.string(),
-      message_status: z5.string().optional()
+  messages: z9.array(
+    z9.object({
+      id: z9.string(),
+      message_status: z9.string().optional()
     })
   )
 });
-var incomingMessageBaseSchema = z5.object({
-  from: z5.string(),
-  id: z5.string(),
-  timestamp: z5.string()
+var incomingMessageBaseSchema = z9.object({
+  from: z9.string(),
+  id: z9.string(),
+  timestamp: z9.string()
 });
 var messageIncomingTextSchema = incomingMessageBaseSchema.extend({
-  type: z5.literal("text"),
-  text: z5.object({
-    body: z5.string()
+  type: z9.literal("text"),
+  text: z9.object({
+    body: z9.string()
   })
 });
 var messageIncomingImageSchema = incomingMessageBaseSchema.extend({
-  type: z5.literal("image"),
-  image: z5.object({
-    id: z5.string(),
-    mime_type: z5.string().optional(),
-    caption: z5.string().optional()
+  type: z9.literal("image"),
+  image: z9.object({
+    id: z9.string(),
+    mime_type: z9.string().optional(),
+    caption: z9.string().optional()
   })
 });
 var messageIncomingAudioSchema = incomingMessageBaseSchema.extend({
-  type: z5.literal("audio"),
-  audio: z5.object({
-    id: z5.string(),
-    mime_type: z5.string().optional()
+  type: z9.literal("audio"),
+  audio: z9.object({
+    id: z9.string(),
+    mime_type: z9.string().optional()
   })
 });
-var messageIncomingSchema = z5.discriminatedUnion("type", [
+var messageIncomingSchema = z9.discriminatedUnion("type", [
   messageIncomingTextSchema,
   messageIncomingImageSchema,
   messageIncomingAudioSchema
@@ -1583,8 +2459,8 @@ var MessagesResource = class {
 };
 
 // src/resources/templates/schema.ts
-import { z as z6 } from "zod";
-var templateLanguageSchema = z6.enum([
+import { z as z10 } from "zod";
+var templateLanguageSchema = z10.enum([
   "af",
   // Afrikaans
   "sq",
@@ -1808,13 +2684,13 @@ var templateLanguageSchema = z6.enum([
   "zu"
   // Zulu
 ]);
-var templateCategorySchema = z6.enum([
+var templateCategorySchema = z10.enum([
   "AUTHENTICATION",
   "MARKETING",
   "UTILITY"
 ]);
-var templateParameterFormatSchema = z6.enum(["positional", "named"]);
-var templateStatusSchema = z6.enum([
+var templateParameterFormatSchema = z10.enum(["positional", "named"]);
+var templateStatusSchema = z10.enum([
   "APPROVED",
   "PENDING",
   "REJECTED",
@@ -1825,71 +2701,71 @@ var templateStatusSchema = z6.enum([
   "DELETED",
   "LIMIT_EXCEEDED"
 ]);
-var templateQualityScoreSchema = z6.object({
-  score: z6.enum(["GREEN", "YELLOW", "RED", "UNKNOWN"]).optional(),
-  date: z6.number().optional()
+var templateQualityScoreSchema = z10.object({
+  score: z10.enum(["GREEN", "YELLOW", "RED", "UNKNOWN"]).optional(),
+  date: z10.number().optional()
 });
-var templateNamedParamExampleSchema = z6.object({
-  param_name: z6.string(),
-  example: z6.string()
+var templateNamedParamExampleSchema = z10.object({
+  param_name: z10.string(),
+  example: z10.string()
 });
-var templateQuickReplyButtonInputSchema = z6.object({
-  type: z6.literal("QUICK_REPLY"),
-  text: z6.string().min(1).max(25, "Button text must be 25 characters or less")
+var templateQuickReplyButtonInputSchema = z10.object({
+  type: z10.literal("QUICK_REPLY"),
+  text: z10.string().min(1).max(25, "Button text must be 25 characters or less")
 });
-var templateUrlButtonInputSchema = z6.object({
-  type: z6.literal("URL"),
-  text: z6.string().min(1).max(25, "Button text must be 25 characters or less"),
-  url: z6.string().url().max(2e3, "URL must be 2000 characters or less"),
-  example: z6.array(z6.string()).optional()
+var templateUrlButtonInputSchema = z10.object({
+  type: z10.literal("URL"),
+  text: z10.string().min(1).max(25, "Button text must be 25 characters or less"),
+  url: z10.string().url().max(2e3, "URL must be 2000 characters or less"),
+  example: z10.array(z10.string()).optional()
 });
-var templatePhoneNumberButtonInputSchema = z6.object({
-  type: z6.literal("PHONE_NUMBER"),
-  text: z6.string().min(1).max(25, "Button text must be 25 characters or less"),
-  phone_number: z6.string().min(1).max(20, "Phone number must be 20 characters or less")
+var templatePhoneNumberButtonInputSchema = z10.object({
+  type: z10.literal("PHONE_NUMBER"),
+  text: z10.string().min(1).max(25, "Button text must be 25 characters or less"),
+  phone_number: z10.string().min(1).max(20, "Phone number must be 20 characters or less")
 });
-var templateCopyCodeButtonInputSchema = z6.object({
-  type: z6.literal("COPY_CODE"),
-  example: z6.string().max(15).optional()
+var templateCopyCodeButtonInputSchema = z10.object({
+  type: z10.literal("COPY_CODE"),
+  example: z10.string().max(15).optional()
 });
-var templateFlowButtonInputSchema = z6.object({
-  type: z6.literal("FLOW"),
-  text: z6.string().min(1).max(25, "Button text must be 25 characters or less"),
-  flow_id: z6.string().optional(),
-  flow_action: z6.enum(["navigate", "data_exchange"]).optional(),
-  navigate_screen: z6.string().optional()
+var templateFlowButtonInputSchema = z10.object({
+  type: z10.literal("FLOW"),
+  text: z10.string().min(1).max(25, "Button text must be 25 characters or less"),
+  flow_id: z10.string().optional(),
+  flow_action: z10.enum(["navigate", "data_exchange"]).optional(),
+  navigate_screen: z10.string().optional()
 });
-var templateButtonInputSchema = z6.discriminatedUnion("type", [
+var templateButtonInputSchema = z10.discriminatedUnion("type", [
   templateQuickReplyButtonInputSchema,
   templateUrlButtonInputSchema,
   templatePhoneNumberButtonInputSchema,
   templateCopyCodeButtonInputSchema,
   templateFlowButtonInputSchema
 ]);
-var templateHeaderTextExampleSchema = z6.object({
+var templateHeaderTextExampleSchema = z10.object({
   // Positional: header_text: ["value1"]
-  header_text: z6.array(z6.string()).optional(),
+  header_text: z10.array(z10.string()).optional(),
   // Named: header_text_named_params: [{ param_name: "name", example: "value" }]
-  header_text_named_params: z6.array(templateNamedParamExampleSchema).optional()
+  header_text_named_params: z10.array(templateNamedParamExampleSchema).optional()
 });
-var templateHeaderTextInputSchema = z6.object({
-  type: z6.literal("HEADER"),
-  format: z6.literal("TEXT"),
-  text: z6.string().min(1).max(60, "Header text must be 60 characters or less"),
+var templateHeaderTextInputSchema = z10.object({
+  type: z10.literal("HEADER"),
+  format: z10.literal("TEXT"),
+  text: z10.string().min(1).max(60, "Header text must be 60 characters or less"),
   example: templateHeaderTextExampleSchema.optional()
 });
-var templateHeaderMediaInputSchema = z6.object({
-  type: z6.literal("HEADER"),
-  format: z6.enum(["IMAGE", "VIDEO", "DOCUMENT"]),
-  example: z6.object({
-    header_handle: z6.array(z6.string()).min(1, "At least one header_handle is required")
+var templateHeaderMediaInputSchema = z10.object({
+  type: z10.literal("HEADER"),
+  format: z10.enum(["IMAGE", "VIDEO", "DOCUMENT"]),
+  example: z10.object({
+    header_handle: z10.array(z10.string()).min(1, "At least one header_handle is required")
   })
 });
-var templateHeaderLocationInputSchema = z6.object({
-  type: z6.literal("HEADER"),
-  format: z6.literal("LOCATION")
+var templateHeaderLocationInputSchema = z10.object({
+  type: z10.literal("HEADER"),
+  format: z10.literal("LOCATION")
 });
-var templateHeaderComponentInputSchema = z6.discriminatedUnion(
+var templateHeaderComponentInputSchema = z10.discriminatedUnion(
   "format",
   [
     templateHeaderTextInputSchema,
@@ -1897,141 +2773,141 @@ var templateHeaderComponentInputSchema = z6.discriminatedUnion(
     templateHeaderLocationInputSchema
   ]
 );
-var templateBodyExampleSchema = z6.object({
+var templateBodyExampleSchema = z10.object({
   // Positional: body_text: [["value1", "value2"]]
-  body_text: z6.array(z6.array(z6.string())).optional(),
+  body_text: z10.array(z10.array(z10.string())).optional(),
   // Named: body_text_named_params: [{ param_name: "name", example: "value" }]
-  body_text_named_params: z6.array(templateNamedParamExampleSchema).optional()
+  body_text_named_params: z10.array(templateNamedParamExampleSchema).optional()
 });
-var templateBodyComponentInputSchema = z6.object({
-  type: z6.literal("BODY"),
-  text: z6.string().min(1).max(1024, "Body text must be 1024 characters or less"),
+var templateBodyComponentInputSchema = z10.object({
+  type: z10.literal("BODY"),
+  text: z10.string().min(1).max(1024, "Body text must be 1024 characters or less"),
   example: templateBodyExampleSchema.optional()
 });
-var templateFooterComponentInputSchema = z6.object({
-  type: z6.literal("FOOTER"),
-  text: z6.string().min(1).max(60, "Footer text must be 60 characters or less")
+var templateFooterComponentInputSchema = z10.object({
+  type: z10.literal("FOOTER"),
+  text: z10.string().min(1).max(60, "Footer text must be 60 characters or less")
 });
-var templateButtonsComponentInputSchema = z6.object({
-  type: z6.literal("BUTTONS"),
-  buttons: z6.array(templateButtonInputSchema).min(1).max(10, "Maximum 10 buttons allowed")
+var templateButtonsComponentInputSchema = z10.object({
+  type: z10.literal("BUTTONS"),
+  buttons: z10.array(templateButtonInputSchema).min(1).max(10, "Maximum 10 buttons allowed")
 });
-var templateComponentInputSchema = z6.union([
+var templateComponentInputSchema = z10.union([
   templateHeaderComponentInputSchema,
   templateBodyComponentInputSchema,
   templateFooterComponentInputSchema,
   templateButtonsComponentInputSchema
 ]);
-var templateButtonSchema = z6.object({
-  type: z6.string(),
-  text: z6.string().optional(),
-  url: z6.string().optional(),
-  phone_number: z6.string().optional(),
-  example: z6.union([z6.array(z6.string()), z6.string()]).optional(),
-  flow_id: z6.string().optional(),
-  flow_action: z6.string().optional(),
-  navigate_screen: z6.string().optional()
+var templateButtonSchema = z10.object({
+  type: z10.string(),
+  text: z10.string().optional(),
+  url: z10.string().optional(),
+  phone_number: z10.string().optional(),
+  example: z10.union([z10.array(z10.string()), z10.string()]).optional(),
+  flow_id: z10.string().optional(),
+  flow_action: z10.string().optional(),
+  navigate_screen: z10.string().optional()
 });
-var templateComponentSchema = z6.object({
-  type: z6.enum(["HEADER", "BODY", "FOOTER", "BUTTONS"]),
-  format: z6.string().optional(),
-  text: z6.string().optional(),
-  buttons: z6.array(templateButtonSchema).optional(),
-  example: z6.object({
-    header_text: z6.array(z6.string()).optional(),
-    header_text_named_params: z6.array(templateNamedParamExampleSchema).optional(),
-    header_handle: z6.array(z6.string()).optional(),
-    body_text: z6.array(z6.array(z6.string())).optional(),
-    body_text_named_params: z6.array(templateNamedParamExampleSchema).optional()
+var templateComponentSchema = z10.object({
+  type: z10.enum(["HEADER", "BODY", "FOOTER", "BUTTONS"]),
+  format: z10.string().optional(),
+  text: z10.string().optional(),
+  buttons: z10.array(templateButtonSchema).optional(),
+  example: z10.object({
+    header_text: z10.array(z10.string()).optional(),
+    header_text_named_params: z10.array(templateNamedParamExampleSchema).optional(),
+    header_handle: z10.array(z10.string()).optional(),
+    body_text: z10.array(z10.array(z10.string())).optional(),
+    body_text_named_params: z10.array(templateNamedParamExampleSchema).optional()
   }).optional()
 });
 var hasBody = (components) => components.some((c) => c.type === "BODY");
 var hasMaxOneHeader = (components) => components.filter((c) => c.type === "HEADER").length <= 1;
 var hasMaxOneFooter = (components) => components.filter((c) => c.type === "FOOTER").length <= 1;
 var hasMaxOneButtons = (components) => components.filter((c) => c.type === "BUTTONS").length <= 1;
-var baseComponentsSchema = z6.array(templateComponentInputSchema).min(1, "At least one component is required").refine(hasBody, { message: "BODY component is required" }).refine(hasMaxOneHeader, { message: "Only one HEADER component is allowed" }).refine(hasMaxOneFooter, { message: "Only one FOOTER component is allowed" }).refine(hasMaxOneButtons, {
+var baseComponentsSchema = z10.array(templateComponentInputSchema).min(1, "At least one component is required").refine(hasBody, { message: "BODY component is required" }).refine(hasMaxOneHeader, { message: "Only one HEADER component is allowed" }).refine(hasMaxOneFooter, { message: "Only one FOOTER component is allowed" }).refine(hasMaxOneButtons, {
   message: "Only one BUTTONS component is allowed"
 });
-var templateNameSchema = z6.string().min(1, "Template name is required").max(512, "Template name must be 512 characters or less");
-var templateCreateMarketingSchema = z6.object({
+var templateNameSchema = z10.string().min(1, "Template name is required").max(512, "Template name must be 512 characters or less");
+var templateCreateMarketingSchema = z10.object({
   name: templateNameSchema,
   language: templateLanguageSchema,
-  category: z6.literal("MARKETING"),
+  category: z10.literal("MARKETING"),
   parameter_format: templateParameterFormatSchema.optional(),
   components: baseComponentsSchema
 });
-var templateCreateUtilitySchema = z6.object({
+var templateCreateUtilitySchema = z10.object({
   name: templateNameSchema,
   language: templateLanguageSchema,
-  category: z6.literal("UTILITY"),
+  category: z10.literal("UTILITY"),
   parameter_format: templateParameterFormatSchema.optional(),
   components: baseComponentsSchema
 });
-var templateCreateAuthenticationSchema = z6.object({
+var templateCreateAuthenticationSchema = z10.object({
   name: templateNameSchema,
   language: templateLanguageSchema,
-  category: z6.literal("AUTHENTICATION"),
+  category: z10.literal("AUTHENTICATION"),
   parameter_format: templateParameterFormatSchema.optional(),
-  components: z6.array(templateComponentInputSchema).min(1, "At least one component is required").refine(hasBody, { message: "BODY component is required" })
+  components: z10.array(templateComponentInputSchema).min(1, "At least one component is required").refine(hasBody, { message: "BODY component is required" })
 });
-var templateCreateSchema = z6.discriminatedUnion("category", [
+var templateCreateSchema = z10.discriminatedUnion("category", [
   templateCreateMarketingSchema,
   templateCreateUtilitySchema,
   templateCreateAuthenticationSchema
 ]);
-var templateUpdateSchema = z6.object({
+var templateUpdateSchema = z10.object({
   category: templateCategorySchema.optional(),
-  components: z6.array(templateComponentInputSchema).optional(),
+  components: z10.array(templateComponentInputSchema).optional(),
   language: templateLanguageSchema.optional(),
-  name: z6.string().min(1).max(512).optional()
+  name: z10.string().min(1).max(512).optional()
 });
-var templateListSchema = z6.object({
-  name: z6.string().optional(),
-  limit: z6.number().min(1).max(1e3).optional(),
-  after: z6.string().optional(),
-  before: z6.string().optional()
+var templateListSchema = z10.object({
+  name: z10.string().optional(),
+  limit: z10.number().min(1).max(1e3).optional(),
+  after: z10.string().optional(),
+  before: z10.string().optional()
 });
-var templateDeleteSchema = z6.object({
-  name: z6.string().optional(),
-  hsm_id: z6.string().optional()
+var templateDeleteSchema = z10.object({
+  name: z10.string().optional(),
+  hsm_id: z10.string().optional()
 }).refine((data) => data.name || data.hsm_id, {
   message: "Either name or hsm_id must be provided"
 });
-var templateSchema = z6.object({
-  id: z6.string(),
-  name: z6.string(),
-  language: z6.string(),
+var templateSchema = z10.object({
+  id: z10.string(),
+  name: z10.string(),
+  language: z10.string(),
   status: templateStatusSchema,
   category: templateCategorySchema,
-  components: z6.array(templateComponentSchema),
+  components: z10.array(templateComponentSchema),
   parameter_format: templateParameterFormatSchema.optional(),
   quality_score: templateQualityScoreSchema.optional(),
-  rejected_reason: z6.string().optional(),
-  previous_category: z6.string().optional()
+  rejected_reason: z10.string().optional(),
+  previous_category: z10.string().optional()
 });
-var templateCreateResponseSchema = z6.object({
-  id: z6.string(),
+var templateCreateResponseSchema = z10.object({
+  id: z10.string(),
   status: templateStatusSchema,
   category: templateCategorySchema
 });
-var templatePagingCursorsSchema = z6.object({
-  before: z6.string().optional(),
-  after: z6.string().optional()
+var templatePagingCursorsSchema = z10.object({
+  before: z10.string().optional(),
+  after: z10.string().optional()
 });
-var templatePagingSchema = z6.object({
+var templatePagingSchema = z10.object({
   cursors: templatePagingCursorsSchema.optional(),
-  next: z6.string().optional(),
-  previous: z6.string().optional()
+  next: z10.string().optional(),
+  previous: z10.string().optional()
 });
-var templateListResponseSchema = z6.object({
-  data: z6.array(templateSchema),
+var templateListResponseSchema = z10.object({
+  data: z10.array(templateSchema),
   paging: templatePagingSchema.optional()
 });
-var templateUpdateResponseSchema = z6.object({
-  success: z6.boolean()
+var templateUpdateResponseSchema = z10.object({
+  success: z10.boolean()
 });
-var templateDeleteResponseSchema = z6.object({
-  success: z6.boolean()
+var templateDeleteResponseSchema = z10.object({
+  success: z10.boolean()
 });
 
 // src/resources/templates/resource.ts
@@ -2198,42 +3074,42 @@ function toTemplateName(input) {
 }
 
 // src/resources/media/schema.ts
-import { z as z7 } from "zod";
-var mediaTypeSchema = z7.enum([
+import { z as z11 } from "zod";
+var mediaTypeSchema = z11.enum([
   "image",
   "video",
   "audio",
   "document",
   "sticker"
 ]);
-var mediaMimeTypeSchema = z7.string();
-var mediaUploadSchema = z7.object({
+var mediaMimeTypeSchema = z11.string();
+var mediaUploadSchema = z11.object({
   /**
    * The file to upload - can be Buffer, Blob, or File
    */
-  file: z7.union([z7.instanceof(Blob), z7.instanceof(ArrayBuffer)]),
+  file: z11.union([z11.instanceof(Blob), z11.instanceof(ArrayBuffer)]),
   /**
    * MIME type of the file (e.g., "image/jpeg", "video/mp4")
    */
-  mimeType: z7.string().min(1),
+  mimeType: z11.string().min(1),
   /**
    * Optional filename
    */
-  filename: z7.string().optional()
+  filename: z11.string().optional()
 });
-var mediaUploadResponseSchema = z7.object({
-  id: z7.string()
+var mediaUploadResponseSchema = z11.object({
+  id: z11.string()
 });
-var mediaMetadataSchema = z7.object({
-  messaging_product: z7.literal("whatsapp"),
-  url: z7.string(),
-  mime_type: z7.string(),
-  sha256: z7.string(),
-  file_size: z7.string(),
-  id: z7.string()
+var mediaMetadataSchema = z11.object({
+  messaging_product: z11.literal("whatsapp"),
+  url: z11.string(),
+  mime_type: z11.string(),
+  sha256: z11.string(),
+  file_size: z11.string(),
+  id: z11.string()
 });
-var mediaDeleteResponseSchema = z7.object({
-  success: z7.boolean()
+var mediaDeleteResponseSchema = z11.object({
+  success: z11.boolean()
 });
 
 // src/resources/media/resource.ts
@@ -2401,19 +3277,19 @@ var MediaResource = class {
 };
 
 // src/resources/webhooks/schema.ts
-import { z as z8 } from "zod";
-var webhookContactSchema = z8.object({
-  profile: z8.object({
-    name: z8.string()
+import { z as z12 } from "zod";
+var webhookContactSchema = z12.object({
+  profile: z12.object({
+    name: z12.string()
   }),
-  wa_id: z8.string()
+  wa_id: z12.string()
 });
-var webhookMetadataSchema = z8.object({
-  display_phone_number: z8.string(),
-  phone_number_id: z8.string()
+var webhookMetadataSchema = z12.object({
+  display_phone_number: z12.string(),
+  phone_number_id: z12.string()
 });
-var webhookConversationOriginSchema = z8.object({
-  type: z8.enum([
+var webhookConversationOriginSchema = z12.object({
+  type: z12.enum([
     "authentication",
     "authentication_international",
     "marketing",
@@ -2423,16 +3299,16 @@ var webhookConversationOriginSchema = z8.object({
     "utility"
   ])
 });
-var webhookConversationSchema = z8.object({
-  id: z8.string(),
-  expiration_timestamp: z8.string().optional(),
+var webhookConversationSchema = z12.object({
+  id: z12.string(),
+  expiration_timestamp: z12.string().optional(),
   origin: webhookConversationOriginSchema
 });
-var webhookPricingSchema = z8.object({
-  billable: z8.boolean(),
-  pricing_model: z8.enum(["CBP", "PMP"]),
-  type: z8.enum(["regular", "free_customer_service", "free_entry_point"]),
-  category: z8.enum([
+var webhookPricingSchema = z12.object({
+  billable: z12.boolean(),
+  pricing_model: z12.enum(["CBP", "PMP"]),
+  type: z12.enum(["regular", "free_customer_service", "free_entry_point"]),
+  category: z12.enum([
     "authentication",
     "authentication-international",
     "marketing",
@@ -2442,52 +3318,52 @@ var webhookPricingSchema = z8.object({
     "utility"
   ])
 });
-var webhookStatusErrorSchema = z8.object({
-  code: z8.number(),
-  title: z8.string(),
-  message: z8.string(),
-  error_data: z8.object({
-    details: z8.string()
+var webhookStatusErrorSchema = z12.object({
+  code: z12.number(),
+  title: z12.string(),
+  message: z12.string(),
+  error_data: z12.object({
+    details: z12.string()
   }),
-  href: z8.string()
+  href: z12.string()
 });
-var webhookStatusSchema = z8.object({
-  id: z8.string(),
-  status: z8.enum(["sent", "delivered", "read", "failed", "played"]),
-  timestamp: z8.string(),
-  recipient_id: z8.string(),
-  recipient_type: z8.literal("group").optional(),
-  recipient_participant_id: z8.string().optional(),
-  recipient_identity_key_hash: z8.string().optional(),
-  biz_opaque_callback_data: z8.string().optional(),
+var webhookStatusSchema = z12.object({
+  id: z12.string(),
+  status: z12.enum(["sent", "delivered", "read", "failed", "played"]),
+  timestamp: z12.string(),
+  recipient_id: z12.string(),
+  recipient_type: z12.literal("group").optional(),
+  recipient_participant_id: z12.string().optional(),
+  recipient_identity_key_hash: z12.string().optional(),
+  biz_opaque_callback_data: z12.string().optional(),
   conversation: webhookConversationSchema.optional(),
   pricing: webhookPricingSchema.optional(),
-  errors: z8.array(webhookStatusErrorSchema).optional()
+  errors: z12.array(webhookStatusErrorSchema).optional()
 });
-var webhookValueSchema = z8.object({
-  messaging_product: z8.literal("whatsapp"),
+var webhookValueSchema = z12.object({
+  messaging_product: z12.literal("whatsapp"),
   metadata: webhookMetadataSchema,
-  contacts: z8.array(webhookContactSchema).optional(),
-  messages: z8.array(messageIncomingSchema).optional(),
-  statuses: z8.array(webhookStatusSchema).optional()
+  contacts: z12.array(webhookContactSchema).optional(),
+  messages: z12.array(messageIncomingSchema).optional(),
+  statuses: z12.array(webhookStatusSchema).optional()
 });
-var webhookChangeSchema = z8.object({
+var webhookChangeSchema = z12.object({
   value: webhookValueSchema,
-  field: z8.literal("messages")
+  field: z12.literal("messages")
 });
-var webhookEntrySchema = z8.object({
-  id: z8.string(),
+var webhookEntrySchema = z12.object({
+  id: z12.string(),
   // WABA ID
-  changes: z8.array(webhookChangeSchema)
+  changes: z12.array(webhookChangeSchema)
 });
-var webhookPayloadSchema = z8.object({
-  object: z8.literal("whatsapp_business_account"),
-  entry: z8.array(webhookEntrySchema)
+var webhookPayloadSchema = z12.object({
+  object: z12.literal("whatsapp_business_account"),
+  entry: z12.array(webhookEntrySchema)
 });
-var webhookVerifyQuerySchema = z8.object({
-  "hub.mode": z8.string().optional(),
-  "hub.verify_token": z8.string().optional(),
-  "hub.challenge": z8.string().optional()
+var webhookVerifyQuerySchema = z12.object({
+  "hub.mode": z12.string().optional(),
+  "hub.verify_token": z12.string().optional(),
+  "hub.challenge": z12.string().optional()
 });
 
 // src/resources/webhooks/utils.ts
@@ -2707,18 +3583,27 @@ var WhatsAppClient = class {
   }
 };
 export {
+  BlockResource,
   BusinessResource,
   GraphAPIError,
   HttpClient,
   MediaResource,
+  MessageHistoryResource,
   MessagesResource,
+  OfficialAccountResource,
   PhoneNumbersResource,
+  QrCodesResource,
   TemplatesResource,
   WabasResource,
   WebhooksResource,
   WhatsAppClient,
   accountModeSchema,
   accountReviewStatusSchema,
+  activitiesListOptionsSchema,
+  activitiesResponseSchema,
+  activitySchema,
+  activityTypeSchema,
+  actorTypeSchema,
   addPreverifiedRequestSchema,
   addPreverifiedResponseSchema,
   assignedUserMutationResponseSchema,
@@ -2727,6 +3612,9 @@ export {
   assignedUsersListOptionsSchema,
   assignedUsersResponseSchema,
   assignedUsersSummarySchema,
+  blockUsersResponseSchema,
+  blockedUserOperationSchema,
+  blockedUserSchema,
   buildMessagePayload,
   businessGetOptionsSchema,
   businessNodeSchema,
@@ -2739,17 +3627,25 @@ export {
   clientConfigSchema,
   codeMethodSchema,
   codeVerificationStatusSchema,
+  createQrCodeRequestSchema,
   cursorPagingSchema,
   debugTokenResponseSchema,
   extractMessages,
   extractStatuses,
   hostPlatformSchema,
+  listBlockedUsersOptionsSchema,
+  listBlockedUsersResponseSchema,
   mediaDeleteResponseSchema,
   mediaMetadataSchema,
   mediaMimeTypeSchema,
   mediaTypeSchema,
   mediaUploadResponseSchema,
   mediaUploadSchema,
+  messageDeliveryStatusEventSchema,
+  messageDeliveryStatusSchema,
+  messageHistoryEntrySchema,
+  messageHistoryListOptionsSchema,
+  messageHistoryResponseSchema,
   messageImageContentSchema,
   messageImageSchema,
   messageIncomingAudioSchema,
@@ -2770,6 +3666,10 @@ export {
   messageTextSchema,
   messagingLimitTierSchema,
   nameStatusSchema,
+  obaStatusSchema,
+  officialAccountApplyRequestSchema,
+  officialAccountApplyResponseSchema,
+  officialAccountStatusSchema,
   onBehalfOfBusinessInfoSchema,
   ownershipTypeSchema,
   permissionTaskSchema,
@@ -2783,6 +3683,13 @@ export {
   phoneNumberResponseSchema,
   phoneNumberSchema,
   phoneNumberStatusSchema,
+  qrCodeDeleteResponseSchema,
+  qrCodeListOptionsSchema,
+  qrCodeListResponseSchema,
+  qrCodeMutationResponseSchema,
+  qrCodeResponseSchema,
+  qrCodeSchema,
+  qrImageFormatSchema,
   requestVerificationCodeSchema,
   subscribedAppSchema,
   subscribedAppsResponseSchema,
@@ -2827,7 +3734,9 @@ export {
   templateUpdateSchema,
   templateUrlButtonInputSchema,
   toTemplateName,
+  unblockUsersResponseSchema,
   unifiedCertStatusSchema,
+  updateQrCodeRequestSchema,
   verificationResponseSchema,
   verifyCodeSchema,
   verifyWebhook,
@@ -2850,6 +3759,7 @@ export {
   webhookPricingSchema,
   webhookStatusErrorSchema,
   webhookStatusSchema,
+  webhookUpdateStateSchema,
   webhookValueSchema,
   webhookVerifyQuerySchema,
   whatsappBusinessApiDataSchema
