@@ -1,9 +1,16 @@
 # WhatsApp Cloud
 
-**This project is a work in progress 👷.**\\
-A WhatsApp client tailored for LLMs - built to actually work.
+A TypeScript SDK for the WhatsApp Cloud API that doesn't make you gnash your teeth.
 
-## Usage
+**Why this one?**
+
+- ✅ **Complete coverage** — Messages, media, templates, WABAs, phone numbers, webhooks. All of it.
+- ✅ **Zod-first** — Schemas are the source of truth. Types are inferred. No more guessing.
+- ✅ **Flexible config** — Set `accessToken` once, set IDs on client or override per-request.
+- ✅ **Logical structure** — `client.phoneNumbers.qrCodes.create()` reads like it should.
+- ✅ **Powerful webhooks** — Filter by phone number ID, run `beforeHandler` for shared logic, then route to type-safe handlers.
+
+## Quick Start
 
 ```typescript
 import { WhatsAppClient } from "whatsapp-cloud";
@@ -61,41 +68,38 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const payload = await request.json();
 
-  // handle() returns immediately - handlers run asynchronously
-  client.webhooks.handle(payload, {
-    text: async (message, context) => {
-      console.log(
-        `Text from ${context.contact?.name || message.from}: ${
-          message.text.body
-        }`
-      );
+  client.webhooks.handle(
+    payload,
+    {
+      // Runs before every handler - fetch user, log, etc.
+      beforeHandler: async (message, ctx) => {
+        const user = await db.users.findByPhone(message.from);
+        console.log(`[${ctx.metadata.displayPhoneNumber}] Message from ${message.from}`);
+        return { user };
+      },
 
-      // Send a reply
-      await client.messages.sendText({
-        to: `+${message.from}`,
-        text: { body: `You said: ${message.text.body}` },
-      });
+      text: async (message, ctx, before) => {
+        await client.messages.sendText({
+          to: `+${message.from}`,
+          text: { body: `Hey ${before?.user?.name || "there"}! You said: ${message.text.body}` },
+        });
+      },
+
+      image: async (message, ctx, before) => {
+        const imageData = await client.media.download(message.image.id);
+        // Process image...
+        await client.messages.sendText({
+          to: `+${message.from}`,
+          text: { body: "Image received!" },
+        });
+      },
     },
+    {
+      // Only handle messages for this phone number (useful for multi-tenant setups)
+      filter: { phoneNumberIds: [process.env.PHONE_NUMBER_ID!] },
+    }
+  );
 
-    image: async (message, context) => {
-      console.log(`Image from ${context.contact?.name || message.from}`);
-
-      // Download the image
-      const imageData = await client.media.download(message.image.id);
-
-      // Process the image (save to storage, analyze, etc.)
-      // const buffer = Buffer.from(imageData);
-      // await saveToStorage(buffer, message.image.id);
-
-      // Send a reply
-      await client.messages.sendText({
-        to: `+${message.from}`,
-        text: { body: "Image received! 📸" },
-      });
-    },
-  });
-
-  // Return 200 immediately (handlers continue in background)
   return NextResponse.json({ success: true });
 }
 ```
