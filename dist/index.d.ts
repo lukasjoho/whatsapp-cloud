@@ -1,9 +1,6 @@
 import { z } from 'zod';
 import * as node_buffer from 'node:buffer';
 
-/**
- * Client configuration schema
- */
 declare const clientConfigSchema: z.ZodObject<{
     accessToken: z.ZodString;
     phoneNumberId: z.ZodOptional<z.ZodString>;
@@ -13,11 +10,31 @@ declare const clientConfigSchema: z.ZodObject<{
     baseURL: z.ZodOptional<z.ZodDefault<z.ZodString>>;
     timeout: z.ZodOptional<z.ZodNumber>;
 }, z.core.$strip>;
+declare const debugTokenResponseSchema: z.ZodObject<{
+    data: z.ZodObject<{
+        app_id: z.ZodOptional<z.ZodString>;
+        type: z.ZodOptional<z.ZodString>;
+        application: z.ZodOptional<z.ZodString>;
+        data_access_expires_at: z.ZodOptional<z.ZodNumber>;
+        expires_at: z.ZodOptional<z.ZodNumber>;
+        is_valid: z.ZodOptional<z.ZodBoolean>;
+        issued_at: z.ZodOptional<z.ZodNumber>;
+        metadata: z.ZodOptional<z.ZodObject<{
+            auth_type: z.ZodOptional<z.ZodString>;
+            sso: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>;
+        scopes: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        granular_scopes: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            scope: z.ZodOptional<z.ZodString>;
+            target_ids: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        }, z.core.$strip>>>;
+        user_id: z.ZodOptional<z.ZodString>;
+        profile_id: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>;
+}, z.core.$strip>;
 
-/**
- * Client configuration type
- */
 type ClientConfig = z.infer<typeof clientConfigSchema>;
+type DebugTokenResponse = z.infer<typeof debugTokenResponseSchema>;
 
 /**
  * HTTP client for making requests to the WhatsApp Cloud API
@@ -55,6 +72,804 @@ declare class HttpClient {
      * Make a DELETE request
      */
     delete<T>(path: string): Promise<T>;
+}
+
+declare const businessSchema: z.ZodObject<{
+    id: z.ZodString;
+    name: z.ZodOptional<z.ZodString>;
+    timezone_id: z.ZodOptional<z.ZodNumber>;
+}, z.core.$strip>;
+declare const businessGetOptionsSchema: z.ZodObject<{
+    fields: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+
+type Business = z.infer<typeof businessSchema>;
+type BusinessGetOptions = z.infer<typeof businessGetOptionsSchema>;
+
+/**
+ * Business Portfolio resource
+ *
+ * Retrieves information about a Meta Business Portfolio.
+ *
+ * @example
+ * ```typescript
+ * // Get business portfolio info
+ * const business = await client.business.get();
+ * console.log(business.name);
+ * ```
+ */
+declare class BusinessResource {
+    private readonly httpClient;
+    constructor(httpClient: HttpClient);
+    /**
+     * Get the business ID (from parameter or config)
+     */
+    private getBusinessId;
+    /**
+     * Get Business Portfolio information
+     *
+     * @param options - Query options (fields)
+     * @param businessId - Business Portfolio ID (overrides config)
+     * @returns Business portfolio details
+     *
+     * @example
+     * ```typescript
+     * const business = await client.business.get();
+     * console.log(business.id, business.name, business.timezone_id);
+     *
+     * // With specific fields
+     * const business = await client.business.get({ fields: "id,name" });
+     *
+     * // Override business ID
+     * const business = await client.business.get({}, "other-business-id");
+     * ```
+     */
+    get(options?: BusinessGetOptions, businessId?: string): Promise<Business>;
+}
+
+declare const accountReviewStatusSchema: z.ZodEnum<{
+    APPROVED: "APPROVED";
+    PENDING: "PENDING";
+    REJECTED: "REJECTED";
+    RESTRICTED: "RESTRICTED";
+}>;
+declare const businessVerificationStatusSchema: z.ZodEnum<{
+    PENDING: "PENDING";
+    REJECTED: "REJECTED";
+    VERIFIED: "VERIFIED";
+    UNVERIFIED: "UNVERIFIED";
+}>;
+declare const wabaBusinessTypeSchema: z.ZodEnum<{
+    ENTERPRISE: "ENTERPRISE";
+    SMB: "SMB";
+}>;
+declare const onBehalfOfBusinessInfoSchema: z.ZodObject<{
+    id: z.ZodOptional<z.ZodString>;
+    name: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+declare const cursorPagingSchema: z.ZodObject<{
+    cursors: z.ZodOptional<z.ZodObject<{
+        before: z.ZodOptional<z.ZodString>;
+        after: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>;
+    previous: z.ZodOptional<z.ZodString>;
+    next: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+declare const wabaSchema: z.ZodObject<{
+    id: z.ZodString;
+    name: z.ZodOptional<z.ZodString>;
+    account_review_status: z.ZodOptional<z.ZodEnum<{
+        APPROVED: "APPROVED";
+        PENDING: "PENDING";
+        REJECTED: "REJECTED";
+        RESTRICTED: "RESTRICTED";
+    }>>;
+    purchase_order_number: z.ZodOptional<z.ZodString>;
+    currency: z.ZodOptional<z.ZodString>;
+    timezone_id: z.ZodOptional<z.ZodString>;
+    business_verification_status: z.ZodOptional<z.ZodEnum<{
+        PENDING: "PENDING";
+        REJECTED: "REJECTED";
+        VERIFIED: "VERIFIED";
+        UNVERIFIED: "UNVERIFIED";
+    }>>;
+    country: z.ZodOptional<z.ZodString>;
+    on_behalf_of_business_info: z.ZodOptional<z.ZodObject<{
+        id: z.ZodOptional<z.ZodString>;
+        name: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>;
+    is_enabled_for_insights: z.ZodOptional<z.ZodBoolean>;
+    message_template_namespace: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+declare const wabaListResponseSchema: z.ZodObject<{
+    data: z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        name: z.ZodOptional<z.ZodString>;
+        account_review_status: z.ZodOptional<z.ZodEnum<{
+            APPROVED: "APPROVED";
+            PENDING: "PENDING";
+            REJECTED: "REJECTED";
+            RESTRICTED: "RESTRICTED";
+        }>>;
+        purchase_order_number: z.ZodOptional<z.ZodString>;
+        currency: z.ZodOptional<z.ZodString>;
+        timezone_id: z.ZodOptional<z.ZodString>;
+        business_verification_status: z.ZodOptional<z.ZodEnum<{
+            PENDING: "PENDING";
+            REJECTED: "REJECTED";
+            VERIFIED: "VERIFIED";
+            UNVERIFIED: "UNVERIFIED";
+        }>>;
+        country: z.ZodOptional<z.ZodString>;
+        on_behalf_of_business_info: z.ZodOptional<z.ZodObject<{
+            id: z.ZodOptional<z.ZodString>;
+            name: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>;
+        is_enabled_for_insights: z.ZodOptional<z.ZodBoolean>;
+        message_template_namespace: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>;
+    paging: z.ZodOptional<z.ZodObject<{
+        cursors: z.ZodOptional<z.ZodObject<{
+            before: z.ZodOptional<z.ZodString>;
+            after: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>;
+        previous: z.ZodOptional<z.ZodString>;
+        next: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+declare const wabaCreateSchema: z.ZodObject<{
+    name: z.ZodString;
+    primary_funding_id: z.ZodOptional<z.ZodString>;
+    purchase_order_number: z.ZodOptional<z.ZodString>;
+    currency: z.ZodOptional<z.ZodString>;
+    timezone_id: z.ZodOptional<z.ZodNumber>;
+    business_type: z.ZodOptional<z.ZodEnum<{
+        ENTERPRISE: "ENTERPRISE";
+        SMB: "SMB";
+    }>>;
+    on_behalf_of_business_id: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+declare const wabaCreateResponseSchema: z.ZodObject<{
+    id: z.ZodString;
+    payment_account_id: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+declare const wabaListOptionsSchema: z.ZodObject<{
+    fields: z.ZodOptional<z.ZodString>;
+    business_type: z.ZodOptional<z.ZodArray<z.ZodEnum<{
+        ENTERPRISE: "ENTERPRISE";
+        SMB: "SMB";
+    }>>>;
+    limit: z.ZodOptional<z.ZodNumber>;
+    after: z.ZodOptional<z.ZodString>;
+    before: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+declare const subscribedAppSchema: z.ZodObject<{
+    whatsapp_business_api_data: z.ZodOptional<z.ZodObject<{
+        id: z.ZodOptional<z.ZodString>;
+        link: z.ZodOptional<z.ZodString>;
+        name: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+declare const subscribedAppsListResponseSchema: z.ZodObject<{
+    data: z.ZodArray<z.ZodObject<{
+        whatsapp_business_api_data: z.ZodOptional<z.ZodObject<{
+            id: z.ZodOptional<z.ZodString>;
+            link: z.ZodOptional<z.ZodString>;
+            name: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+declare const subscribeAppResponseSchema: z.ZodObject<{
+    success: z.ZodBoolean;
+}, z.core.$strip>;
+declare const unsubscribeAppResponseSchema: z.ZodObject<{
+    success: z.ZodBoolean;
+}, z.core.$strip>;
+
+type AccountReviewStatus = z.infer<typeof accountReviewStatusSchema>;
+type BusinessVerificationStatus = z.infer<typeof businessVerificationStatusSchema>;
+type WabaBusinessType = z.infer<typeof wabaBusinessTypeSchema>;
+type OnBehalfOfBusinessInfo = z.infer<typeof onBehalfOfBusinessInfoSchema>;
+type CursorPaging = z.infer<typeof cursorPagingSchema>;
+type Waba = z.infer<typeof wabaSchema>;
+type WabaListResponse = z.infer<typeof wabaListResponseSchema>;
+type WabaCreate = z.infer<typeof wabaCreateSchema>;
+type WabaCreateResponse = z.infer<typeof wabaCreateResponseSchema>;
+type WabaListOptions = z.infer<typeof wabaListOptionsSchema>;
+type SubscribedApp = z.infer<typeof subscribedAppSchema>;
+type SubscribedAppsListResponse = z.infer<typeof subscribedAppsListResponseSchema>;
+type SubscribeAppResponse = z.infer<typeof subscribeAppResponseSchema>;
+type UnsubscribeAppResponse = z.infer<typeof unsubscribeAppResponseSchema>;
+
+/**
+ * WhatsApp Business Accounts (WABAs) resource
+ *
+ * Manages WhatsApp Business Account operations including listing, creating,
+ * and retrieving WABAs.
+ *
+ * @example
+ * ```typescript
+ * // List WABAs for a business
+ * const wabas = await client.wabas.list();
+ *
+ * // Create a new WABA
+ * const newWaba = await client.wabas.create({ name: "My WABA" });
+ *
+ * // Get specific WABA details
+ * const waba = await client.wabas.get();
+ * ```
+ */
+declare class WabasResource {
+    private readonly httpClient;
+    constructor(httpClient: HttpClient);
+    /**
+     * Get the business ID (from parameter or config)
+     */
+    private getBusinessId;
+    /**
+     * Get the WABA ID (from parameter or config)
+     */
+    private getWabaId;
+    /**
+     * Build query string from options
+     */
+    private buildQueryString;
+    /**
+     * List WhatsApp Business Accounts owned by a business
+     *
+     * @param options - Query options (fields, pagination, filters)
+     * @param businessId - Business Portfolio ID (overrides config)
+     * @returns List of WABAs
+     *
+     * @example
+     * ```typescript
+     * // List all WABAs
+     * const wabas = await client.wabas.list();
+     *
+     * // With pagination
+     * const wabas = await client.wabas.list({ limit: 10 });
+     *
+     * // Override business ID
+     * const wabas = await client.wabas.list({}, "other-business-id");
+     * ```
+     */
+    list(options?: WabaListOptions, businessId?: string): Promise<WabaListResponse>;
+    /**
+     * List client (shared) WhatsApp Business Accounts
+     *
+     * These are WABAs that have been shared with the business (agency model).
+     *
+     * @param options - Query options (fields, pagination, filters)
+     * @param businessId - Business Portfolio ID (overrides config)
+     * @returns List of client WABAs
+     */
+    listClient(options?: WabaListOptions, businessId?: string): Promise<WabaListResponse>;
+    /**
+     * Create a new WhatsApp Business Account
+     *
+     * @param data - WABA creation data
+     * @param businessId - Business Portfolio ID (overrides config)
+     * @returns Created WABA ID and payment account ID
+     *
+     * @example
+     * ```typescript
+     * const waba = await client.wabas.create({
+     *   name: "My Business WABA",
+     *   currency: "USD",
+     *   timezone_id: 1,
+     * });
+     * console.log(waba.id);
+     * ```
+     */
+    create(data: WabaCreate, businessId?: string): Promise<WabaCreateResponse>;
+    /**
+     * Get details of a specific WhatsApp Business Account
+     *
+     * @param wabaId - WABA ID (overrides config.businessAccountId)
+     * @param fields - Comma-separated list of fields to return
+     * @returns WABA details
+     *
+     * @example
+     * ```typescript
+     * const waba = await client.wabas.get();
+     *
+     * // With specific fields
+     * const waba = await client.wabas.get(undefined, "id,name,currency");
+     * ```
+     */
+    get(wabaId?: string, fields?: string): Promise<Waba>;
+    /**
+     * List apps subscribed to this WABA
+     *
+     * @param wabaId - WABA ID (overrides config.businessAccountId)
+     * @returns List of subscribed apps
+     */
+    listSubscribedApps(wabaId?: string): Promise<SubscribedAppsListResponse>;
+    /**
+     * Subscribe an app to this WABA
+     *
+     * This is required to receive webhooks (incoming messages, status updates).
+     * Without subscribing, your app won't receive any webhook events.
+     *
+     * @param wabaId - WABA ID (overrides config.businessAccountId)
+     * @returns Success status
+     *
+     * @example
+     * ```typescript
+     * // Subscribe your app to receive webhooks
+     * await client.wabas.subscribeApp();
+     * ```
+     */
+    subscribeApp(wabaId?: string): Promise<SubscribeAppResponse>;
+    /**
+     * Unsubscribe an app from this WABA
+     *
+     * After unsubscribing, your app will no longer receive webhooks for this WABA.
+     *
+     * @param wabaId - WABA ID (overrides config.businessAccountId)
+     * @returns Success status
+     */
+    unsubscribeApp(wabaId?: string): Promise<UnsubscribeAppResponse>;
+}
+
+declare const phoneNumberQualityRatingSchema: z.ZodEnum<{
+    GREEN: "GREEN";
+    YELLOW: "YELLOW";
+    RED: "RED";
+    UNKNOWN: "UNKNOWN";
+}>;
+declare const phoneNumberStatusSchema: z.ZodEnum<{
+    PENDING: "PENDING";
+    RESTRICTED: "RESTRICTED";
+    UNKNOWN: "UNKNOWN";
+    DELETED: "DELETED";
+    MIGRATED: "MIGRATED";
+    BANNED: "BANNED";
+    RATE_LIMITED: "RATE_LIMITED";
+    FLAGGED: "FLAGGED";
+    CONNECTED: "CONNECTED";
+    DISCONNECTED: "DISCONNECTED";
+}>;
+declare const codeMethodSchema: z.ZodEnum<{
+    SMS: "SMS";
+    VOICE: "VOICE";
+}>;
+declare const verticalSchema: z.ZodEnum<{
+    UNDEFINED: "UNDEFINED";
+    OTHER: "OTHER";
+    AUTO: "AUTO";
+    BEAUTY: "BEAUTY";
+    APPAREL: "APPAREL";
+    EDU: "EDU";
+    ENTERTAIN: "ENTERTAIN";
+    EVENT_PLAN: "EVENT_PLAN";
+    FINANCE: "FINANCE";
+    GROCERY: "GROCERY";
+    GOVT: "GOVT";
+    HOTEL: "HOTEL";
+    HEALTH: "HEALTH";
+    NONPROFIT: "NONPROFIT";
+    PROF_SERVICES: "PROF_SERVICES";
+    RETAIL: "RETAIL";
+    TRAVEL: "TRAVEL";
+    RESTAURANT: "RESTAURANT";
+    NOT_A_BIZ: "NOT_A_BIZ";
+}>;
+declare const phoneNumberResponseSchema: z.ZodObject<{
+    id: z.ZodString;
+    display_phone_number: z.ZodString;
+    verified_name: z.ZodString;
+    quality_rating: z.ZodOptional<z.ZodEnum<{
+        GREEN: "GREEN";
+        YELLOW: "YELLOW";
+        RED: "RED";
+        UNKNOWN: "UNKNOWN";
+    }>>;
+    code_verification_status: z.ZodOptional<z.ZodString>;
+    is_official_business_account: z.ZodOptional<z.ZodBoolean>;
+    account_mode: z.ZodOptional<z.ZodString>;
+    eligibility_for_api_business_global_search: z.ZodOptional<z.ZodString>;
+    is_pin_enabled: z.ZodOptional<z.ZodBoolean>;
+    name_status: z.ZodOptional<z.ZodString>;
+    new_name_status: z.ZodOptional<z.ZodString>;
+    status: z.ZodOptional<z.ZodEnum<{
+        PENDING: "PENDING";
+        RESTRICTED: "RESTRICTED";
+        UNKNOWN: "UNKNOWN";
+        DELETED: "DELETED";
+        MIGRATED: "MIGRATED";
+        BANNED: "BANNED";
+        RATE_LIMITED: "RATE_LIMITED";
+        FLAGGED: "FLAGGED";
+        CONNECTED: "CONNECTED";
+        DISCONNECTED: "DISCONNECTED";
+    }>>;
+    search_visibility: z.ZodOptional<z.ZodString>;
+    messaging_limit_tier: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+declare const phoneNumberListResponseSchema: z.ZodObject<{
+    data: z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        display_phone_number: z.ZodString;
+        verified_name: z.ZodString;
+        quality_rating: z.ZodOptional<z.ZodEnum<{
+            GREEN: "GREEN";
+            YELLOW: "YELLOW";
+            RED: "RED";
+            UNKNOWN: "UNKNOWN";
+        }>>;
+        code_verification_status: z.ZodOptional<z.ZodString>;
+        is_official_business_account: z.ZodOptional<z.ZodBoolean>;
+        account_mode: z.ZodOptional<z.ZodString>;
+        eligibility_for_api_business_global_search: z.ZodOptional<z.ZodString>;
+        is_pin_enabled: z.ZodOptional<z.ZodBoolean>;
+        name_status: z.ZodOptional<z.ZodString>;
+        new_name_status: z.ZodOptional<z.ZodString>;
+        status: z.ZodOptional<z.ZodEnum<{
+            PENDING: "PENDING";
+            RESTRICTED: "RESTRICTED";
+            UNKNOWN: "UNKNOWN";
+            DELETED: "DELETED";
+            MIGRATED: "MIGRATED";
+            BANNED: "BANNED";
+            RATE_LIMITED: "RATE_LIMITED";
+            FLAGGED: "FLAGGED";
+            CONNECTED: "CONNECTED";
+            DISCONNECTED: "DISCONNECTED";
+        }>>;
+        search_visibility: z.ZodOptional<z.ZodString>;
+        messaging_limit_tier: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>;
+    paging: z.ZodOptional<z.ZodObject<{
+        cursors: z.ZodOptional<z.ZodObject<{
+            before: z.ZodOptional<z.ZodString>;
+            after: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>>;
+        next: z.ZodOptional<z.ZodString>;
+        previous: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+declare const phoneNumberAddSchema: z.ZodObject<{
+    phone_number: z.ZodString;
+    country_code: z.ZodOptional<z.ZodString>;
+    verified_name: z.ZodOptional<z.ZodString>;
+    waba_id: z.ZodString;
+}, z.core.$strip>;
+declare const phoneNumberAddResponseSchema: z.ZodObject<{
+    id: z.ZodString;
+}, z.core.$strip>;
+declare const phoneNumberRegisterSchema: z.ZodObject<{
+    messaging_product: z.ZodLiteral<"whatsapp">;
+    pin: z.ZodString;
+}, z.core.$strip>;
+declare const phoneNumberDeregisterSchema: z.ZodObject<{
+    messaging_product: z.ZodOptional<z.ZodLiteral<"whatsapp">>;
+}, z.core.$strip>;
+declare const phoneNumberRegisterResponseSchema: z.ZodObject<{
+    success: z.ZodBoolean;
+}, z.core.$strip>;
+declare const requestVerificationCodeSchema: z.ZodObject<{
+    code_method: z.ZodEnum<{
+        SMS: "SMS";
+        VOICE: "VOICE";
+    }>;
+    language: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+declare const verifyCodeSchema: z.ZodObject<{
+    code: z.ZodString;
+}, z.core.$strip>;
+declare const verificationResponseSchema: z.ZodObject<{
+    success: z.ZodBoolean;
+}, z.core.$strip>;
+declare const businessProfileSchema: z.ZodObject<{
+    messaging_product: z.ZodOptional<z.ZodLiteral<"whatsapp">>;
+    about: z.ZodOptional<z.ZodString>;
+    address: z.ZodOptional<z.ZodString>;
+    description: z.ZodOptional<z.ZodString>;
+    email: z.ZodOptional<z.ZodString>;
+    profile_picture_url: z.ZodOptional<z.ZodString>;
+    websites: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    vertical: z.ZodOptional<z.ZodEnum<{
+        UNDEFINED: "UNDEFINED";
+        OTHER: "OTHER";
+        AUTO: "AUTO";
+        BEAUTY: "BEAUTY";
+        APPAREL: "APPAREL";
+        EDU: "EDU";
+        ENTERTAIN: "ENTERTAIN";
+        EVENT_PLAN: "EVENT_PLAN";
+        FINANCE: "FINANCE";
+        GROCERY: "GROCERY";
+        GOVT: "GOVT";
+        HOTEL: "HOTEL";
+        HEALTH: "HEALTH";
+        NONPROFIT: "NONPROFIT";
+        PROF_SERVICES: "PROF_SERVICES";
+        RETAIL: "RETAIL";
+        TRAVEL: "TRAVEL";
+        RESTAURANT: "RESTAURANT";
+        NOT_A_BIZ: "NOT_A_BIZ";
+    }>>;
+}, z.core.$strip>;
+declare const businessProfileResponseSchema: z.ZodObject<{
+    data: z.ZodArray<z.ZodObject<{
+        messaging_product: z.ZodOptional<z.ZodLiteral<"whatsapp">>;
+        about: z.ZodOptional<z.ZodString>;
+        address: z.ZodOptional<z.ZodString>;
+        description: z.ZodOptional<z.ZodString>;
+        email: z.ZodOptional<z.ZodString>;
+        profile_picture_url: z.ZodOptional<z.ZodString>;
+        websites: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        vertical: z.ZodOptional<z.ZodEnum<{
+            UNDEFINED: "UNDEFINED";
+            OTHER: "OTHER";
+            AUTO: "AUTO";
+            BEAUTY: "BEAUTY";
+            APPAREL: "APPAREL";
+            EDU: "EDU";
+            ENTERTAIN: "ENTERTAIN";
+            EVENT_PLAN: "EVENT_PLAN";
+            FINANCE: "FINANCE";
+            GROCERY: "GROCERY";
+            GOVT: "GOVT";
+            HOTEL: "HOTEL";
+            HEALTH: "HEALTH";
+            NONPROFIT: "NONPROFIT";
+            PROF_SERVICES: "PROF_SERVICES";
+            RETAIL: "RETAIL";
+            TRAVEL: "TRAVEL";
+            RESTAURANT: "RESTAURANT";
+            NOT_A_BIZ: "NOT_A_BIZ";
+        }>>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+declare const businessProfileUpdateSchema: z.ZodObject<{
+    about: z.ZodOptional<z.ZodString>;
+    address: z.ZodOptional<z.ZodString>;
+    description: z.ZodOptional<z.ZodString>;
+    email: z.ZodOptional<z.ZodString>;
+    profile_picture_url: z.ZodOptional<z.ZodString>;
+    websites: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    vertical: z.ZodOptional<z.ZodEnum<{
+        UNDEFINED: "UNDEFINED";
+        OTHER: "OTHER";
+        AUTO: "AUTO";
+        BEAUTY: "BEAUTY";
+        APPAREL: "APPAREL";
+        EDU: "EDU";
+        ENTERTAIN: "ENTERTAIN";
+        EVENT_PLAN: "EVENT_PLAN";
+        FINANCE: "FINANCE";
+        GROCERY: "GROCERY";
+        GOVT: "GOVT";
+        HOTEL: "HOTEL";
+        HEALTH: "HEALTH";
+        NONPROFIT: "NONPROFIT";
+        PROF_SERVICES: "PROF_SERVICES";
+        RETAIL: "RETAIL";
+        TRAVEL: "TRAVEL";
+        RESTAURANT: "RESTAURANT";
+        NOT_A_BIZ: "NOT_A_BIZ";
+    }>>;
+    messaging_product: z.ZodLiteral<"whatsapp">;
+}, z.core.$strip>;
+declare const businessProfileUpdateResponseSchema: z.ZodObject<{
+    success: z.ZodBoolean;
+}, z.core.$strip>;
+declare const phoneNumberListOptionsSchema: z.ZodObject<{
+    fields: z.ZodOptional<z.ZodString>;
+    limit: z.ZodOptional<z.ZodNumber>;
+    after: z.ZodOptional<z.ZodString>;
+    before: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+
+type PhoneNumberQualityRating = z.infer<typeof phoneNumberQualityRatingSchema>;
+type PhoneNumberStatus = z.infer<typeof phoneNumberStatusSchema>;
+type CodeMethod = z.infer<typeof codeMethodSchema>;
+type Vertical = z.infer<typeof verticalSchema>;
+type PhoneNumber = z.infer<typeof phoneNumberResponseSchema>;
+type PhoneNumberListResponse = z.infer<typeof phoneNumberListResponseSchema>;
+type PhoneNumberListOptions = z.infer<typeof phoneNumberListOptionsSchema>;
+type PhoneNumberAdd = z.infer<typeof phoneNumberAddSchema>;
+type PhoneNumberAddResponse = z.infer<typeof phoneNumberAddResponseSchema>;
+type PhoneNumberRegister = z.infer<typeof phoneNumberRegisterSchema>;
+type PhoneNumberDeregister = z.infer<typeof phoneNumberDeregisterSchema>;
+type PhoneNumberRegisterResponse = z.infer<typeof phoneNumberRegisterResponseSchema>;
+type RequestVerificationCode = z.infer<typeof requestVerificationCodeSchema>;
+type VerifyCode = z.infer<typeof verifyCodeSchema>;
+type VerificationResponse = z.infer<typeof verificationResponseSchema>;
+type BusinessProfile = z.infer<typeof businessProfileSchema>;
+type BusinessProfileResponse = z.infer<typeof businessProfileResponseSchema>;
+type BusinessProfileUpdate = z.infer<typeof businessProfileUpdateSchema>;
+type BusinessProfileUpdateResponse = z.infer<typeof businessProfileUpdateResponseSchema>;
+
+/**
+ * Phone Numbers resource
+ *
+ * Manages WhatsApp phone numbers including registration, verification,
+ * and business profile settings.
+ *
+ * @example
+ * ```typescript
+ * // List phone numbers in a WABA
+ * const numbers = await client.phoneNumbers.list();
+ *
+ * // Register a phone number
+ * await client.phoneNumbers.register({
+ *   messaging_product: "whatsapp",
+ *   pin: "123456"
+ * });
+ *
+ * // Update business profile
+ * await client.phoneNumbers.updateProfile({
+ *   messaging_product: "whatsapp",
+ *   about: "Welcome to our business!"
+ * });
+ * ```
+ */
+declare class PhoneNumbersResource {
+    private readonly httpClient;
+    constructor(httpClient: HttpClient);
+    /**
+     * Get the business ID (from parameter or config)
+     */
+    private getBusinessId;
+    /**
+     * Get the WABA ID (from parameter or config)
+     */
+    private getWabaId;
+    /**
+     * Get the phone number ID (from parameter or config)
+     */
+    private getPhoneNumberId;
+    /**
+     * Build query string from options
+     */
+    private buildQueryString;
+    /**
+     * List phone numbers in a WhatsApp Business Account
+     *
+     * @param options - Query options (fields, pagination)
+     * @param wabaId - WABA ID (overrides config.businessAccountId)
+     * @returns List of phone numbers
+     *
+     * @example
+     * ```typescript
+     * const numbers = await client.phoneNumbers.list();
+     *
+     * // With specific fields
+     * const numbers = await client.phoneNumbers.list({
+     *   fields: "id,display_phone_number,verified_name,quality_rating"
+     * });
+     * ```
+     */
+    list(options?: PhoneNumberListOptions, wabaId?: string): Promise<PhoneNumberListResponse>;
+    /**
+     * Get details of a specific phone number
+     *
+     * @param phoneNumberId - Phone number ID (overrides config)
+     * @param fields - Comma-separated list of fields to return
+     * @returns Phone number details
+     */
+    get(phoneNumberId?: string, fields?: string): Promise<PhoneNumber>;
+    /**
+     * Add a phone number to a Business Portfolio
+     *
+     * This adds a phone number and associates it with a specific WABA.
+     * After adding, you need to verify and register the number.
+     *
+     * @param data - Phone number data (includes waba_id for assignment)
+     * @param businessId - Business Portfolio ID (overrides config)
+     * @returns Created phone number ID
+     *
+     * @example
+     * ```typescript
+     * const result = await client.phoneNumbers.add({
+     *   phone_number: "+14155551234",
+     *   waba_id: "WABA_ID",
+     *   verified_name: "My Business"
+     * });
+     * console.log(result.id); // New phone number ID
+     * ```
+     */
+    add(data: PhoneNumberAdd, businessId?: string): Promise<PhoneNumberAddResponse>;
+    /**
+     * Request a verification code for a phone number
+     *
+     * Meta will send a verification code via SMS or voice call.
+     * Use verifyCode() to submit the received code.
+     *
+     * @param data - Verification method (SMS or VOICE) and optional language
+     * @param phoneNumberId - Phone number ID (overrides config)
+     * @returns Success status
+     *
+     * @example
+     * ```typescript
+     * await client.phoneNumbers.requestVerificationCode({
+     *   code_method: "SMS",
+     *   language: "en"
+     * });
+     * ```
+     */
+    requestVerificationCode(data: RequestVerificationCode, phoneNumberId?: string): Promise<VerificationResponse>;
+    /**
+     * Submit verification code for a phone number
+     *
+     * Submit the code received via SMS or voice call.
+     *
+     * @param data - The verification code
+     * @param phoneNumberId - Phone number ID (overrides config)
+     * @returns Success status
+     *
+     * @example
+     * ```typescript
+     * await client.phoneNumbers.verifyCode({
+     *   code: "123456"
+     * });
+     * ```
+     */
+    verifyCode(data: VerifyCode, phoneNumberId?: string): Promise<VerificationResponse>;
+    /**
+     * Register a phone number with WhatsApp
+     *
+     * This activates the phone number on WhatsApp's servers.
+     * The number must be verified first.
+     *
+     * @param data - Registration data including 6-digit PIN
+     * @param phoneNumberId - Phone number ID (overrides config)
+     * @returns Success status
+     *
+     * @example
+     * ```typescript
+     * await client.phoneNumbers.register({
+     *   messaging_product: "whatsapp",
+     *   pin: "123456"  // 6-digit PIN for 2FA
+     * });
+     * ```
+     */
+    register(data: PhoneNumberRegister, phoneNumberId?: string): Promise<PhoneNumberRegisterResponse>;
+    /**
+     * Deregister a phone number from WhatsApp
+     *
+     * This removes the phone number from WhatsApp's servers.
+     * The number can be re-registered later.
+     *
+     * @param phoneNumberId - Phone number ID (overrides config)
+     * @returns Success status
+     */
+    deregister(phoneNumberId?: string): Promise<PhoneNumberRegisterResponse>;
+    /**
+     * Get the WhatsApp Business Profile for a phone number
+     *
+     * @param phoneNumberId - Phone number ID (overrides config)
+     * @param fields - Comma-separated list of fields
+     * @returns Business profile data
+     *
+     * @example
+     * ```typescript
+     * const profile = await client.phoneNumbers.getProfile();
+     * console.log(profile.data[0].about);
+     * ```
+     */
+    getProfile(phoneNumberId?: string, fields?: string): Promise<BusinessProfileResponse>;
+    /**
+     * Update the WhatsApp Business Profile for a phone number
+     *
+     * @param data - Profile data to update
+     * @param phoneNumberId - Phone number ID (overrides config)
+     * @returns Success status
+     *
+     * @example
+     * ```typescript
+     * await client.phoneNumbers.updateProfile({
+     *   messaging_product: "whatsapp",
+     *   about: "Welcome to our business!",
+     *   description: "We provide excellent service.",
+     *   vertical: "RETAIL"
+     * });
+     * ```
+     */
+    updateProfile(data: BusinessProfileUpdate, phoneNumberId?: string): Promise<BusinessProfileUpdateResponse>;
 }
 
 /**
@@ -612,11 +1427,11 @@ declare const templateStatusSchema: z.ZodEnum<{
     APPROVED: "APPROVED";
     PENDING: "PENDING";
     REJECTED: "REJECTED";
+    DELETED: "DELETED";
     PAUSED: "PAUSED";
     DISABLED: "DISABLED";
     IN_APPEAL: "IN_APPEAL";
     PENDING_DELETION: "PENDING_DELETION";
-    DELETED: "DELETED";
     LIMIT_EXCEEDED: "LIMIT_EXCEEDED";
 }>;
 declare const templateQualityScoreSchema: z.ZodObject<{
@@ -2232,11 +3047,11 @@ declare const templateSchema: z.ZodObject<{
         APPROVED: "APPROVED";
         PENDING: "PENDING";
         REJECTED: "REJECTED";
+        DELETED: "DELETED";
         PAUSED: "PAUSED";
         DISABLED: "DISABLED";
         IN_APPEAL: "IN_APPEAL";
         PENDING_DELETION: "PENDING_DELETION";
-        DELETED: "DELETED";
         LIMIT_EXCEEDED: "LIMIT_EXCEEDED";
     }>;
     category: z.ZodEnum<{
@@ -2299,11 +3114,11 @@ declare const templateCreateResponseSchema: z.ZodObject<{
         APPROVED: "APPROVED";
         PENDING: "PENDING";
         REJECTED: "REJECTED";
+        DELETED: "DELETED";
         PAUSED: "PAUSED";
         DISABLED: "DISABLED";
         IN_APPEAL: "IN_APPEAL";
         PENDING_DELETION: "PENDING_DELETION";
-        DELETED: "DELETED";
         LIMIT_EXCEEDED: "LIMIT_EXCEEDED";
     }>;
     category: z.ZodEnum<{
@@ -2333,11 +3148,11 @@ declare const templateListResponseSchema: z.ZodObject<{
             APPROVED: "APPROVED";
             PENDING: "PENDING";
             REJECTED: "REJECTED";
+            DELETED: "DELETED";
             PAUSED: "PAUSED";
             DISABLED: "DISABLED";
             IN_APPEAL: "IN_APPEAL";
             PENDING_DELETION: "PENDING_DELETION";
-            DELETED: "DELETED";
             LIMIT_EXCEEDED: "LIMIT_EXCEEDED";
         }>;
         category: z.ZodEnum<{
@@ -2924,144 +3739,88 @@ declare class MediaResource {
     delete(mediaId: string, phoneNumberId?: string): Promise<MediaDeleteResponse>;
 }
 
-/**
- * Schema for phone number response
- * Matches WhatsApp API structure for phone number objects
- */
-declare const phoneNumberResponseSchema: z.ZodObject<{
-    verified_name: z.ZodString;
+declare const webhookContactSchema: z.ZodObject<{
+    profile: z.ZodObject<{
+        name: z.ZodString;
+    }, z.core.$strip>;
+    wa_id: z.ZodString;
+}, z.core.$strip>;
+declare const webhookMetadataSchema: z.ZodObject<{
     display_phone_number: z.ZodString;
+    phone_number_id: z.ZodString;
+}, z.core.$strip>;
+/**
+ * Conversation origin type
+ */
+declare const webhookConversationOriginSchema: z.ZodObject<{
+    type: z.ZodEnum<{
+        authentication: "authentication";
+        authentication_international: "authentication_international";
+        marketing: "marketing";
+        marketing_lite: "marketing_lite";
+        referral_conversion: "referral_conversion";
+        service: "service";
+        utility: "utility";
+    }>;
+}, z.core.$strip>;
+/**
+ * Conversation object (conditional - see docs)
+ */
+declare const webhookConversationSchema: z.ZodObject<{
     id: z.ZodString;
-    quality_rating: z.ZodString;
+    expiration_timestamp: z.ZodOptional<z.ZodString>;
+    origin: z.ZodObject<{
+        type: z.ZodEnum<{
+            authentication: "authentication";
+            authentication_international: "authentication_international";
+            marketing: "marketing";
+            marketing_lite: "marketing_lite";
+            referral_conversion: "referral_conversion";
+            service: "service";
+            utility: "utility";
+        }>;
+    }, z.core.$strip>;
 }, z.core.$strip>;
 /**
- * Schema for phone number list response
- * Matches WhatsApp API structure for GET /phone_numbers endpoint
+ * Pricing information
  */
-declare const phoneNumberListResponseSchema: z.ZodObject<{
-    data: z.ZodArray<z.ZodObject<{
-        verified_name: z.ZodString;
-        display_phone_number: z.ZodString;
-        id: z.ZodString;
-        quality_rating: z.ZodString;
-    }, z.core.$strip>>;
-}, z.core.$strip>;
-
-/**
- * Type for phone number list response
- */
-type PhoneNumberListResponse = z.infer<typeof phoneNumberListResponseSchema>;
-
-/**
- * Accounts service for managing WhatsApp Business Accounts
- *
- * This service handles WABA operations like listing phone numbers.
- * It supports both a globally configured businessAccountId (in WhatsAppClient)
- * and per-request businessAccountId overrides.
- */
-declare class AccountsService {
-    private readonly httpClient;
-    constructor(httpClient: HttpClient);
-    /**
-     * Helper to create a Scoped Client (prefer override, fallback to config)
-     */
-    private getClient;
-    /**
-     * List phone numbers for a WhatsApp Business Account
-     *
-     * @param businessAccountId - Optional WABA ID (overrides client config)
-     * @returns List of phone numbers associated with the WABA
-     */
-    listPhoneNumbers(businessAccountId?: string): Promise<PhoneNumberListResponse>;
-}
-
-/**
- * Schema for WhatsApp Business Account (WABA) response
- * Matches WhatsApp API structure for WABA objects
- */
-declare const businessAccountResponseSchema: z.ZodObject<{
-    id: z.ZodString;
-    name: z.ZodOptional<z.ZodString>;
-    account_review_status: z.ZodOptional<z.ZodString>;
-    currency: z.ZodOptional<z.ZodString>;
-    country: z.ZodOptional<z.ZodString>;
-    timezone_id: z.ZodOptional<z.ZodString>;
-    business_verification_status: z.ZodOptional<z.ZodString>;
-    is_enabled_for_insights: z.ZodOptional<z.ZodBoolean>;
-    message_template_namespace: z.ZodOptional<z.ZodString>;
+declare const webhookPricingSchema: z.ZodObject<{
+    billable: z.ZodBoolean;
+    pricing_model: z.ZodEnum<{
+        CBP: "CBP";
+        PMP: "PMP";
+    }>;
+    type: z.ZodEnum<{
+        regular: "regular";
+        free_customer_service: "free_customer_service";
+        free_entry_point: "free_entry_point";
+    }>;
+    category: z.ZodEnum<{
+        authentication: "authentication";
+        marketing: "marketing";
+        marketing_lite: "marketing_lite";
+        referral_conversion: "referral_conversion";
+        service: "service";
+        utility: "utility";
+        "authentication-international": "authentication-international";
+    }>;
 }, z.core.$strip>;
 /**
- * Schema for WhatsApp Business Accounts list response
- * Matches WhatsApp API structure for GET /whatsapp_business_accounts endpoint
- *
- * Note: The API returns data as an object with numeric string keys (e.g., "0", "1")
- * or as an array, plus optional paging information
+ * Status error
  */
-declare const businessAccountsListResponseSchema: z.ZodObject<{
-    data: z.ZodUnion<[z.ZodRecord<z.ZodString, z.ZodObject<{
-        id: z.ZodString;
-        name: z.ZodOptional<z.ZodString>;
-        account_review_status: z.ZodOptional<z.ZodString>;
-        currency: z.ZodOptional<z.ZodString>;
-        country: z.ZodOptional<z.ZodString>;
-        timezone_id: z.ZodOptional<z.ZodString>;
-        business_verification_status: z.ZodOptional<z.ZodString>;
-        is_enabled_for_insights: z.ZodOptional<z.ZodBoolean>;
-        message_template_namespace: z.ZodOptional<z.ZodString>;
-    }, z.core.$strip>>, z.ZodArray<z.ZodObject<{
-        id: z.ZodString;
-        name: z.ZodOptional<z.ZodString>;
-        account_review_status: z.ZodOptional<z.ZodString>;
-        currency: z.ZodOptional<z.ZodString>;
-        country: z.ZodOptional<z.ZodString>;
-        timezone_id: z.ZodOptional<z.ZodString>;
-        business_verification_status: z.ZodOptional<z.ZodString>;
-        is_enabled_for_insights: z.ZodOptional<z.ZodBoolean>;
-        message_template_namespace: z.ZodOptional<z.ZodString>;
-    }, z.core.$strip>>]>;
-    paging: z.ZodOptional<z.ZodObject<{
-        cursors: z.ZodOptional<z.ZodObject<{
-            before: z.ZodOptional<z.ZodString>;
-            after: z.ZodOptional<z.ZodString>;
-        }, z.core.$strip>>;
-        next: z.ZodOptional<z.ZodString>;
-        previous: z.ZodOptional<z.ZodString>;
-    }, z.core.$strip>>;
+declare const webhookStatusErrorSchema: z.ZodObject<{
+    code: z.ZodNumber;
+    title: z.ZodString;
+    message: z.ZodString;
+    error_data: z.ZodObject<{
+        details: z.ZodString;
+    }, z.core.$strip>;
+    href: z.ZodString;
 }, z.core.$strip>;
-
 /**
- * Type for WhatsApp Business Accounts list response
+ * Message status update
  */
-type BusinessAccountsListResponse = z.infer<typeof businessAccountsListResponseSchema>;
-
-/**
- * Business service for managing Business Portfolios
- *
- * This service handles Business Portfolio operations like listing WABAs.
- * It supports both a globally configured businessId (in WhatsAppClient)
- * and per-request businessId overrides.
- */
-declare class BusinessService {
-    private readonly httpClient;
-    constructor(httpClient: HttpClient);
-    /**
-     * Helper to create a Scoped Client (prefer override, fallback to config)
-     */
-    private getClient;
-    /**
-     * List WhatsApp Business Accounts (WABAs) for a Business Portfolio
-     *
-     * @param businessId - Optional Business Portfolio ID (overrides client config)
-     * @returns List of WABAs associated with the Business Portfolio
-     */
-    listAccounts(businessId?: string): Promise<BusinessAccountsListResponse>;
-}
-
-/**
- * Status update schema for webhook payloads
- * Represents the status of a sent message (sent, delivered, read, failed, played)
- */
-declare const statusSchema: z.ZodObject<{
+declare const webhookStatusSchema: z.ZodObject<{
     id: z.ZodString;
     status: z.ZodEnum<{
         sent: "sent";
@@ -3123,7 +3882,331 @@ declare const statusSchema: z.ZodObject<{
     }, z.core.$strip>>>;
 }, z.core.$strip>;
 /**
- * Full webhook payload schema
+ * Webhook value (the actual data)
+ */
+declare const webhookValueSchema: z.ZodObject<{
+    messaging_product: z.ZodLiteral<"whatsapp">;
+    metadata: z.ZodObject<{
+        display_phone_number: z.ZodString;
+        phone_number_id: z.ZodString;
+    }, z.core.$strip>;
+    contacts: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        profile: z.ZodObject<{
+            name: z.ZodString;
+        }, z.core.$strip>;
+        wa_id: z.ZodString;
+    }, z.core.$strip>>>;
+    messages: z.ZodOptional<z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+        from: z.ZodString;
+        id: z.ZodString;
+        timestamp: z.ZodString;
+        type: z.ZodLiteral<"text">;
+        text: z.ZodObject<{
+            body: z.ZodString;
+        }, z.core.$strip>;
+    }, z.core.$strip>, z.ZodObject<{
+        from: z.ZodString;
+        id: z.ZodString;
+        timestamp: z.ZodString;
+        type: z.ZodLiteral<"image">;
+        image: z.ZodObject<{
+            id: z.ZodString;
+            mime_type: z.ZodOptional<z.ZodString>;
+            caption: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>;
+    }, z.core.$strip>, z.ZodObject<{
+        from: z.ZodString;
+        id: z.ZodString;
+        timestamp: z.ZodString;
+        type: z.ZodLiteral<"audio">;
+        audio: z.ZodObject<{
+            id: z.ZodString;
+            mime_type: z.ZodOptional<z.ZodString>;
+        }, z.core.$strip>;
+    }, z.core.$strip>], "type">>>;
+    statuses: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        status: z.ZodEnum<{
+            sent: "sent";
+            delivered: "delivered";
+            read: "read";
+            failed: "failed";
+            played: "played";
+        }>;
+        timestamp: z.ZodString;
+        recipient_id: z.ZodString;
+        recipient_type: z.ZodOptional<z.ZodLiteral<"group">>;
+        recipient_participant_id: z.ZodOptional<z.ZodString>;
+        recipient_identity_key_hash: z.ZodOptional<z.ZodString>;
+        biz_opaque_callback_data: z.ZodOptional<z.ZodString>;
+        conversation: z.ZodOptional<z.ZodObject<{
+            id: z.ZodString;
+            expiration_timestamp: z.ZodOptional<z.ZodString>;
+            origin: z.ZodObject<{
+                type: z.ZodEnum<{
+                    authentication: "authentication";
+                    authentication_international: "authentication_international";
+                    marketing: "marketing";
+                    marketing_lite: "marketing_lite";
+                    referral_conversion: "referral_conversion";
+                    service: "service";
+                    utility: "utility";
+                }>;
+            }, z.core.$strip>;
+        }, z.core.$strip>>;
+        pricing: z.ZodOptional<z.ZodObject<{
+            billable: z.ZodBoolean;
+            pricing_model: z.ZodEnum<{
+                CBP: "CBP";
+                PMP: "PMP";
+            }>;
+            type: z.ZodEnum<{
+                regular: "regular";
+                free_customer_service: "free_customer_service";
+                free_entry_point: "free_entry_point";
+            }>;
+            category: z.ZodEnum<{
+                authentication: "authentication";
+                marketing: "marketing";
+                marketing_lite: "marketing_lite";
+                referral_conversion: "referral_conversion";
+                service: "service";
+                utility: "utility";
+                "authentication-international": "authentication-international";
+            }>;
+        }, z.core.$strip>>;
+        errors: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            code: z.ZodNumber;
+            title: z.ZodString;
+            message: z.ZodString;
+            error_data: z.ZodObject<{
+                details: z.ZodString;
+            }, z.core.$strip>;
+            href: z.ZodString;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>>;
+}, z.core.$strip>;
+/**
+ * Webhook change entry
+ */
+declare const webhookChangeSchema: z.ZodObject<{
+    value: z.ZodObject<{
+        messaging_product: z.ZodLiteral<"whatsapp">;
+        metadata: z.ZodObject<{
+            display_phone_number: z.ZodString;
+            phone_number_id: z.ZodString;
+        }, z.core.$strip>;
+        contacts: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            profile: z.ZodObject<{
+                name: z.ZodString;
+            }, z.core.$strip>;
+            wa_id: z.ZodString;
+        }, z.core.$strip>>>;
+        messages: z.ZodOptional<z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+            from: z.ZodString;
+            id: z.ZodString;
+            timestamp: z.ZodString;
+            type: z.ZodLiteral<"text">;
+            text: z.ZodObject<{
+                body: z.ZodString;
+            }, z.core.$strip>;
+        }, z.core.$strip>, z.ZodObject<{
+            from: z.ZodString;
+            id: z.ZodString;
+            timestamp: z.ZodString;
+            type: z.ZodLiteral<"image">;
+            image: z.ZodObject<{
+                id: z.ZodString;
+                mime_type: z.ZodOptional<z.ZodString>;
+                caption: z.ZodOptional<z.ZodString>;
+            }, z.core.$strip>;
+        }, z.core.$strip>, z.ZodObject<{
+            from: z.ZodString;
+            id: z.ZodString;
+            timestamp: z.ZodString;
+            type: z.ZodLiteral<"audio">;
+            audio: z.ZodObject<{
+                id: z.ZodString;
+                mime_type: z.ZodOptional<z.ZodString>;
+            }, z.core.$strip>;
+        }, z.core.$strip>], "type">>>;
+        statuses: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            id: z.ZodString;
+            status: z.ZodEnum<{
+                sent: "sent";
+                delivered: "delivered";
+                read: "read";
+                failed: "failed";
+                played: "played";
+            }>;
+            timestamp: z.ZodString;
+            recipient_id: z.ZodString;
+            recipient_type: z.ZodOptional<z.ZodLiteral<"group">>;
+            recipient_participant_id: z.ZodOptional<z.ZodString>;
+            recipient_identity_key_hash: z.ZodOptional<z.ZodString>;
+            biz_opaque_callback_data: z.ZodOptional<z.ZodString>;
+            conversation: z.ZodOptional<z.ZodObject<{
+                id: z.ZodString;
+                expiration_timestamp: z.ZodOptional<z.ZodString>;
+                origin: z.ZodObject<{
+                    type: z.ZodEnum<{
+                        authentication: "authentication";
+                        authentication_international: "authentication_international";
+                        marketing: "marketing";
+                        marketing_lite: "marketing_lite";
+                        referral_conversion: "referral_conversion";
+                        service: "service";
+                        utility: "utility";
+                    }>;
+                }, z.core.$strip>;
+            }, z.core.$strip>>;
+            pricing: z.ZodOptional<z.ZodObject<{
+                billable: z.ZodBoolean;
+                pricing_model: z.ZodEnum<{
+                    CBP: "CBP";
+                    PMP: "PMP";
+                }>;
+                type: z.ZodEnum<{
+                    regular: "regular";
+                    free_customer_service: "free_customer_service";
+                    free_entry_point: "free_entry_point";
+                }>;
+                category: z.ZodEnum<{
+                    authentication: "authentication";
+                    marketing: "marketing";
+                    marketing_lite: "marketing_lite";
+                    referral_conversion: "referral_conversion";
+                    service: "service";
+                    utility: "utility";
+                    "authentication-international": "authentication-international";
+                }>;
+            }, z.core.$strip>>;
+            errors: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                code: z.ZodNumber;
+                title: z.ZodString;
+                message: z.ZodString;
+                error_data: z.ZodObject<{
+                    details: z.ZodString;
+                }, z.core.$strip>;
+                href: z.ZodString;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>;
+    field: z.ZodLiteral<"messages">;
+}, z.core.$strip>;
+/**
+ * Webhook entry
+ */
+declare const webhookEntrySchema: z.ZodObject<{
+    id: z.ZodString;
+    changes: z.ZodArray<z.ZodObject<{
+        value: z.ZodObject<{
+            messaging_product: z.ZodLiteral<"whatsapp">;
+            metadata: z.ZodObject<{
+                display_phone_number: z.ZodString;
+                phone_number_id: z.ZodString;
+            }, z.core.$strip>;
+            contacts: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                profile: z.ZodObject<{
+                    name: z.ZodString;
+                }, z.core.$strip>;
+                wa_id: z.ZodString;
+            }, z.core.$strip>>>;
+            messages: z.ZodOptional<z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+                from: z.ZodString;
+                id: z.ZodString;
+                timestamp: z.ZodString;
+                type: z.ZodLiteral<"text">;
+                text: z.ZodObject<{
+                    body: z.ZodString;
+                }, z.core.$strip>;
+            }, z.core.$strip>, z.ZodObject<{
+                from: z.ZodString;
+                id: z.ZodString;
+                timestamp: z.ZodString;
+                type: z.ZodLiteral<"image">;
+                image: z.ZodObject<{
+                    id: z.ZodString;
+                    mime_type: z.ZodOptional<z.ZodString>;
+                    caption: z.ZodOptional<z.ZodString>;
+                }, z.core.$strip>;
+            }, z.core.$strip>, z.ZodObject<{
+                from: z.ZodString;
+                id: z.ZodString;
+                timestamp: z.ZodString;
+                type: z.ZodLiteral<"audio">;
+                audio: z.ZodObject<{
+                    id: z.ZodString;
+                    mime_type: z.ZodOptional<z.ZodString>;
+                }, z.core.$strip>;
+            }, z.core.$strip>], "type">>>;
+            statuses: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                id: z.ZodString;
+                status: z.ZodEnum<{
+                    sent: "sent";
+                    delivered: "delivered";
+                    read: "read";
+                    failed: "failed";
+                    played: "played";
+                }>;
+                timestamp: z.ZodString;
+                recipient_id: z.ZodString;
+                recipient_type: z.ZodOptional<z.ZodLiteral<"group">>;
+                recipient_participant_id: z.ZodOptional<z.ZodString>;
+                recipient_identity_key_hash: z.ZodOptional<z.ZodString>;
+                biz_opaque_callback_data: z.ZodOptional<z.ZodString>;
+                conversation: z.ZodOptional<z.ZodObject<{
+                    id: z.ZodString;
+                    expiration_timestamp: z.ZodOptional<z.ZodString>;
+                    origin: z.ZodObject<{
+                        type: z.ZodEnum<{
+                            authentication: "authentication";
+                            authentication_international: "authentication_international";
+                            marketing: "marketing";
+                            marketing_lite: "marketing_lite";
+                            referral_conversion: "referral_conversion";
+                            service: "service";
+                            utility: "utility";
+                        }>;
+                    }, z.core.$strip>;
+                }, z.core.$strip>>;
+                pricing: z.ZodOptional<z.ZodObject<{
+                    billable: z.ZodBoolean;
+                    pricing_model: z.ZodEnum<{
+                        CBP: "CBP";
+                        PMP: "PMP";
+                    }>;
+                    type: z.ZodEnum<{
+                        regular: "regular";
+                        free_customer_service: "free_customer_service";
+                        free_entry_point: "free_entry_point";
+                    }>;
+                    category: z.ZodEnum<{
+                        authentication: "authentication";
+                        marketing: "marketing";
+                        marketing_lite: "marketing_lite";
+                        referral_conversion: "referral_conversion";
+                        service: "service";
+                        utility: "utility";
+                        "authentication-international": "authentication-international";
+                    }>;
+                }, z.core.$strip>>;
+                errors: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                    code: z.ZodNumber;
+                    title: z.ZodString;
+                    message: z.ZodString;
+                    error_data: z.ZodObject<{
+                        details: z.ZodString;
+                    }, z.core.$strip>;
+                    href: z.ZodString;
+                }, z.core.$strip>>>;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>;
+        field: z.ZodLiteral<"messages">;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+/**
+ * Full webhook payload from Meta
  */
 declare const webhookPayloadSchema: z.ZodObject<{
     object: z.ZodLiteral<"whatsapp_business_account">;
@@ -3154,20 +4237,20 @@ declare const webhookPayloadSchema: z.ZodObject<{
                     from: z.ZodString;
                     id: z.ZodString;
                     timestamp: z.ZodString;
-                    type: z.ZodLiteral<"audio">;
-                    audio: z.ZodObject<{
-                        id: z.ZodString;
-                        mime_type: z.ZodOptional<z.ZodString>;
-                    }, z.core.$strip>;
-                }, z.core.$strip>, z.ZodObject<{
-                    from: z.ZodString;
-                    id: z.ZodString;
-                    timestamp: z.ZodString;
                     type: z.ZodLiteral<"image">;
                     image: z.ZodObject<{
                         id: z.ZodString;
                         mime_type: z.ZodOptional<z.ZodString>;
                         caption: z.ZodOptional<z.ZodString>;
+                    }, z.core.$strip>;
+                }, z.core.$strip>, z.ZodObject<{
+                    from: z.ZodString;
+                    id: z.ZodString;
+                    timestamp: z.ZodString;
+                    type: z.ZodLiteral<"audio">;
+                    audio: z.ZodObject<{
+                        id: z.ZodString;
+                        mime_type: z.ZodOptional<z.ZodString>;
                     }, z.core.$strip>;
                 }, z.core.$strip>], "type">>>;
                 statuses: z.ZodOptional<z.ZodArray<z.ZodObject<{
@@ -3236,110 +4319,25 @@ declare const webhookPayloadSchema: z.ZodObject<{
         }, z.core.$strip>>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
-
 /**
- * Type for webhook payload
+ * Query parameters for webhook verification GET request
  */
+declare const webhookVerifyQuerySchema: z.ZodObject<{
+    "hub.mode": z.ZodOptional<z.ZodString>;
+    "hub.verify_token": z.ZodOptional<z.ZodString>;
+    "hub.challenge": z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+
+type WebhookContact = z.infer<typeof webhookContactSchema>;
+type WebhookMetadata = z.infer<typeof webhookMetadataSchema>;
+type WebhookStatus = z.infer<typeof webhookStatusSchema>;
 type WebhookPayload = z.infer<typeof webhookPayloadSchema>;
+type WebhookVerifyQuery = z.infer<typeof webhookVerifyQuerySchema>;
+type WebhookConversation = z.infer<typeof webhookConversationSchema>;
+type WebhookPricing = z.infer<typeof webhookPricingSchema>;
+type WebhookStatusError = z.infer<typeof webhookStatusErrorSchema>;
 /**
- * Type for status update in webhook payload
- */
-type Status = z.infer<typeof statusSchema>;
-
-/**
- * Incoming text message schema
- * Uses discriminated union pattern (type: "text")
- */
-declare const incomingTextMessageSchema: z.ZodObject<{
-    from: z.ZodString;
-    id: z.ZodString;
-    timestamp: z.ZodString;
-    type: z.ZodLiteral<"text">;
-    text: z.ZodObject<{
-        body: z.ZodString;
-    }, z.core.$strip>;
-}, z.core.$strip>;
-/**
- * Incoming audio message schema
- * Uses discriminated union pattern (type: "audio")
- */
-declare const incomingAudioMessageSchema: z.ZodObject<{
-    from: z.ZodString;
-    id: z.ZodString;
-    timestamp: z.ZodString;
-    type: z.ZodLiteral<"audio">;
-    audio: z.ZodObject<{
-        id: z.ZodString;
-        mime_type: z.ZodOptional<z.ZodString>;
-    }, z.core.$strip>;
-}, z.core.$strip>;
-/**
- * Incoming image message schema
- * Uses discriminated union pattern (type: "image")
- */
-declare const incomingImageMessageSchema: z.ZodObject<{
-    from: z.ZodString;
-    id: z.ZodString;
-    timestamp: z.ZodString;
-    type: z.ZodLiteral<"image">;
-    image: z.ZodObject<{
-        id: z.ZodString;
-        mime_type: z.ZodOptional<z.ZodString>;
-        caption: z.ZodOptional<z.ZodString>;
-    }, z.core.$strip>;
-}, z.core.$strip>;
-/**
- * Union of all incoming message types
- */
-declare const incomingMessageSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
-    from: z.ZodString;
-    id: z.ZodString;
-    timestamp: z.ZodString;
-    type: z.ZodLiteral<"text">;
-    text: z.ZodObject<{
-        body: z.ZodString;
-    }, z.core.$strip>;
-}, z.core.$strip>, z.ZodObject<{
-    from: z.ZodString;
-    id: z.ZodString;
-    timestamp: z.ZodString;
-    type: z.ZodLiteral<"audio">;
-    audio: z.ZodObject<{
-        id: z.ZodString;
-        mime_type: z.ZodOptional<z.ZodString>;
-    }, z.core.$strip>;
-}, z.core.$strip>, z.ZodObject<{
-    from: z.ZodString;
-    id: z.ZodString;
-    timestamp: z.ZodString;
-    type: z.ZodLiteral<"image">;
-    image: z.ZodObject<{
-        id: z.ZodString;
-        mime_type: z.ZodOptional<z.ZodString>;
-        caption: z.ZodOptional<z.ZodString>;
-    }, z.core.$strip>;
-}, z.core.$strip>], "type">;
-
-/**
- * Type for incoming text message
- */
-type IncomingTextMessage = z.infer<typeof incomingTextMessageSchema>;
-/**
- * Type for incoming audio message
- */
-type IncomingAudioMessage = z.infer<typeof incomingAudioMessageSchema>;
-/**
- * Type for incoming image message
- */
-type IncomingImageMessage = z.infer<typeof incomingImageMessageSchema>;
-/**
- * Union type for all incoming message types
- */
-type IncomingMessage = z.infer<typeof incomingMessageSchema>;
-
-/**
- * WhatsApp webhook context - data from Meta's webhook payload
- * This is the "domain" of WhatsApp, not your application
+ * Context provided to webhook handlers
  */
 type WebhookContext = {
     metadata: {
@@ -3353,164 +4351,175 @@ type WebhookContext = {
     };
 };
 /**
- * @deprecated Use `WebhookContext` instead. This alias is kept for backward compatibility.
- */
-type MessageContext = WebhookContext;
-/**
  * Handler functions for different message types
- *
- * The `beforeHandler` return type is automatically inferred and passed
- * as the third argument to message handlers for full type safety.
  *
  * @example
  * ```typescript
- * client.webhooks.handle(req.body, {
- *   beforeHandler: async (message, webhook) => {
- *     return { customerIds: ["123", "456"] };
+ * client.webhooks.handle(payload, {
+ *   beforeHandler: async (message, ctx) => {
+ *     const user = await db.findUser(message.from);
+ *     return { user };
  *   },
- *   text: async (message, webhook, before) => {
- *     // before is TBefore | undefined
- *     // - undefined = beforeHandler not set or failed
- *     // - object = beforeHandler succeeded (even if empty {})
- *     if (before) {
- *       // before.customerIds is typed as string[] ✅
- *       console.log(before.customerIds);
+ *   text: async (message, ctx, before) => {
+ *     if (before?.user) {
+ *       console.log(`Message from ${before.user.name}`);
  *     }
  *   },
  * });
  * ```
  */
-type MessageHandlers<TBefore = Record<string, never>> = {
+type WebhookHandlers<TBefore = Record<string, never>> = {
     /**
-     * Resolves webhook data to application entities
-     * ALWAYS runs first if defined, before any message handler.
-     * The return type is automatically inferred and passed to message handlers.
+     * Runs before message handlers. Return value is passed to handlers.
      */
-    beforeHandler?: (message: IncomingMessage, webhook: WebhookContext) => Promise<TBefore> | TBefore;
-    text?: (message: IncomingTextMessage, webhook: WebhookContext, before: TBefore | undefined) => Promise<void> | void;
-    audio?: (message: IncomingAudioMessage, webhook: WebhookContext, before: TBefore | undefined) => Promise<void> | void;
-    image?: (message: IncomingImageMessage, webhook: WebhookContext, before: TBefore | undefined) => Promise<void> | void;
+    beforeHandler?: (message: MessageIncoming, ctx: WebhookContext) => Promise<TBefore> | TBefore;
+    text?: (message: MessageIncomingText, ctx: WebhookContext, before: TBefore | undefined) => Promise<void> | void;
+    audio?: (message: MessageIncomingAudio, ctx: WebhookContext, before: TBefore | undefined) => Promise<void> | void;
+    image?: (message: MessageIncomingImage, ctx: WebhookContext, before: TBefore | undefined) => Promise<void> | void;
 };
 /**
- * Options for handle() method
+ * Options for the handle() method
  */
-type HandleOptions = {
+type WebhookHandleOptions = {
     /**
-     * Error handler called when a message handler throws an error
-     * If not provided, errors are logged and processing continues
+     * Called when a handler throws an error
      */
-    onError?: (error: Error, message: IncomingMessage) => void;
+    onError?: (error: Error, message: MessageIncoming) => void;
 };
+
 /**
- * Webhooks service for handling incoming webhook payloads
+ * Webhooks resource for handling incoming webhook payloads from Meta
  *
- * Provides utilities for extracting messages and a convenience handler
- * for type-safe message processing.
+ * @example
+ * ```typescript
+ * // Verify webhook (GET request)
+ * const challenge = client.webhooks.verify(req.query, VERIFY_TOKEN);
+ * if (challenge) return res.send(challenge);
+ *
+ * // Handle webhook (POST request)
+ * client.webhooks.handle(req.body, {
+ *   text: async (message, ctx) => {
+ *     console.log(`Text from ${message.from}: ${message.text.body}`);
+ *   },
+ *   image: async (message, ctx) => {
+ *     const buffer = await client.media.download(message.image.id);
+ *   },
+ * });
+ * ```
  */
-declare class WebhooksService {
-    private readonly httpClient;
-    constructor(httpClient: HttpClient);
+declare class WebhooksResource {
     /**
      * Verify webhook GET request from Meta
      *
-     * Meta sends GET requests to verify webhook endpoints during setup.
-     * Returns the challenge string if valid, null if invalid.
-     *
      * @param query - Query parameters from GET request
-     * @param verifyToken - Your verification token (stored on your server)
+     * @param verifyToken - Your verification token
      * @returns Challenge string if valid, null if invalid
      */
-    verify(query: {
-        "hub.mode"?: string;
-        "hub.verify_token"?: string;
-        "hub.challenge"?: string;
-    }, verifyToken: string): string | null;
+    verify(query: WebhookVerifyQuery, verifyToken: string): string | null;
     /**
      * Extract all incoming messages from webhook payload
-     *
-     * Low-level utility that flattens the nested webhook structure
-     * and returns messages directly.
      *
      * @param payload - Webhook payload from Meta
      * @returns Flat array of incoming messages
      */
-    extractMessages(payload: WebhookPayload): IncomingMessage[];
+    extractMessages(payload: WebhookPayload): MessageIncoming[];
     /**
      * Extract status updates from webhook payload
-     *
-     * Low-level utility for extracting status updates for outgoing messages.
      *
      * @param payload - Webhook payload from Meta
      * @returns Flat array of status updates
      */
-    extractStatuses(payload: WebhookPayload): Status[];
+    extractStatuses(payload: WebhookPayload): WebhookStatus[];
     /**
-     * Validate webhook payload structure
-     *
-     * Validates the payload against the schema. Logs errors if malformed
-     * but doesn't throw, allowing processing to continue.
+     * Validate and parse webhook payload
      *
      * @param payload - Raw payload to validate
-     * @returns Validated payload if valid, original payload if invalid (with logged error)
+     * @returns Parsed payload, or original if invalid (with console error)
      */
-    private validatePayload;
+    private parsePayload;
     /**
      * Handle webhook payload with type-safe callbacks
      *
-     * High-level convenience method that extracts messages and dispatches
-     * them to appropriate handlers based on message type.
+     * Handlers run asynchronously - this method returns immediately
+     * to allow fast webhook responses to Meta.
      *
-     * **Important**: This method returns quickly to allow fast webhook responses.
-     * Handlers are processed asynchronously. If you need to await handler completion,
-     * use the low-level `extractMessages()` method instead.
+     * @param payload - Webhook payload from Meta
+     * @param handlers - Handler functions for each message type
+     * @param options - Error handling options
      *
-     * The `beforeHandler` return type is automatically inferred and provides
-     * full type safety in message handlers.
-     *
-     * @param payload - Webhook payload from Meta (will be validated)
-     * @param handlers - Object with handler functions for each message type
-     * @param options - Optional error handling configuration
+     * @example
+     * ```typescript
+     * // With beforeHandler for dependency injection
+     * client.webhooks.handle(payload, {
+     *   beforeHandler: async (message, ctx) => {
+     *     const user = await db.users.findByPhone(message.from);
+     *     return { user };
+     *   },
+     *   text: async (message, ctx, before) => {
+     *     if (before?.user) {
+     *       await saveMessage(before.user.id, message.text.body);
+     *     }
+     *   },
+     * });
+     * ```
      */
-    handle<THandlers extends MessageHandlers<any>>(payload: unknown, handlers: THandlers, options?: HandleOptions): void;
+    handle<THandlers extends WebhookHandlers<any>>(payload: unknown, handlers: THandlers, options?: WebhookHandleOptions): void;
 }
 
 /**
- * Schema for debug token response
- * Matches Graph API debug_token endpoint response structure
+ * Verify webhook GET request from Meta
+ *
+ * Meta sends GET requests to verify webhook endpoints:
+ * GET /webhook?hub.mode=subscribe&hub.challenge=<CHALLENGE>&hub.verify_token=<TOKEN>
+ *
+ * @param query - Query parameters from GET request
+ * @param verifyToken - Your verification token
+ * @returns Challenge string if valid, null if invalid
+ *
+ * @example
+ * ```typescript
+ * // Express/Next.js route handler
+ * app.get('/webhook', (req, res) => {
+ *   const challenge = verifyWebhook(req.query, process.env.WEBHOOK_VERIFY_TOKEN);
+ *   if (challenge) {
+ *     res.send(challenge);
+ *   } else {
+ *     res.status(403).send('Forbidden');
+ *   }
+ * });
+ * ```
  */
-declare const debugTokenResponseSchema: z.ZodObject<{
-    data: z.ZodObject<{
-        app_id: z.ZodOptional<z.ZodString>;
-        type: z.ZodOptional<z.ZodString>;
-        application: z.ZodOptional<z.ZodString>;
-        data_access_expires_at: z.ZodOptional<z.ZodNumber>;
-        expires_at: z.ZodOptional<z.ZodNumber>;
-        is_valid: z.ZodOptional<z.ZodBoolean>;
-        issued_at: z.ZodOptional<z.ZodNumber>;
-        metadata: z.ZodOptional<z.ZodObject<{
-            auth_type: z.ZodOptional<z.ZodString>;
-            sso: z.ZodOptional<z.ZodString>;
-        }, z.core.$strip>>;
-        scopes: z.ZodOptional<z.ZodArray<z.ZodString>>;
-        user_id: z.ZodOptional<z.ZodString>;
-    }, z.core.$strip>;
-}, z.core.$strip>;
-
+declare function verifyWebhook(query: WebhookVerifyQuery, verifyToken: string): string | null;
 /**
- * Type for debug token response
+ * Extract all incoming messages from webhook payload
+ *
+ * Flattens: entry[].changes[].value.messages[]
+ *
+ * @param payload - Webhook payload from Meta
+ * @returns Flat array of incoming messages
  */
-type DebugTokenResponse = z.infer<typeof debugTokenResponseSchema>;
+declare function extractMessages(payload: WebhookPayload): MessageIncoming[];
+/**
+ * Extract status updates from webhook payload
+ *
+ * Flattens: entry[].changes[].value.statuses[]
+ *
+ * @param payload - Webhook payload from Meta
+ * @returns Flat array of status updates
+ */
+declare function extractStatuses(payload: WebhookPayload): WebhookStatus[];
 
 /**
  * WhatsApp Cloud API client
  */
 declare class WhatsAppClient {
+    readonly business: BusinessResource;
+    readonly wabas: WabasResource;
+    readonly phoneNumbers: PhoneNumbersResource;
     readonly messages: MessagesResource;
-    readonly accounts: AccountsService;
-    readonly business: BusinessService;
     readonly templates: TemplatesResource;
-    readonly webhooks: WebhooksService;
     readonly media: MediaResource;
+    readonly webhooks: WebhooksResource;
     private readonly httpClient;
     constructor(config: ClientConfig);
     /**
@@ -3578,4 +4587,4 @@ declare class GraphAPIError extends Error {
     statusCode: number);
 }
 
-export { type BusinessAccountsListResponse, type ClientConfig, type DebugTokenResponse, GraphAPIError, type GraphAPIErrorResponse, type HandleOptions, type MediaDeleteResponse, type MediaMetadata, MediaResource, type MediaType, type MediaUpload, type MediaUploadResponse, type MessageContext, type MessageHandlers, type MessageImage, type MessageImageContent, type MessageIncoming, type MessageIncomingAudio, type MessageIncomingImage, type MessageIncomingText, type MessageLocation, type MessageLocationContent, type MessageOutgoing, type MessageReaction, type MessageReactionContent, type MessageSendImage, type MessageSendLocation, type MessageSendReaction, type MessageSendResponse, type MessageSendText, type MessageText, type MessageTextContent, MessagesResource, type PhoneNumberListResponse, type Status, type Template, type TemplateBodyComponentInput, type TemplateBodyExample, type TemplateButton, type TemplateButtonInput, type TemplateButtonsComponentInput, type TemplateCategory, type TemplateComponent, type TemplateComponentInput, type TemplateCopyCodeButtonInput, type TemplateCreate, type TemplateCreateResponse, type TemplateDelete, type TemplateDeleteResponse, type TemplateFlowButtonInput, type TemplateFooterComponentInput, type TemplateHeaderComponentInput, type TemplateHeaderLocationInput, type TemplateHeaderMediaInput, type TemplateHeaderTextExample, type TemplateHeaderTextInput, type TemplateLanguage, type TemplateList, type TemplateListResponse, type TemplateNamedParamExample, type TemplatePaging, type TemplatePagingCursors, type TemplateParameterFormat, type TemplatePhoneNumberButtonInput, type TemplateQualityScore, type TemplateQuickReplyButtonInput, type TemplateStatus, type TemplateUpdate, type TemplateUpdateResponse, type TemplateUrlButtonInput, TemplatesResource, type WebhookContext, type WebhookPayload, WhatsAppClient, buildMessagePayload, businessAccountResponseSchema, businessAccountsListResponseSchema, clientConfigSchema, debugTokenResponseSchema, mediaDeleteResponseSchema, mediaMetadataSchema, mediaMimeTypeSchema, mediaTypeSchema, mediaUploadResponseSchema, mediaUploadSchema, messageImageContentSchema, messageImageSchema, messageIncomingAudioSchema, messageIncomingImageSchema, messageIncomingSchema, messageIncomingTextSchema, messageLocationContentSchema, messageLocationSchema, messageOutgoingSchema, messageReactionContentSchema, messageReactionSchema, messageSendImageSchema, messageSendLocationSchema, messageSendReactionSchema, messageSendResponseSchema, messageSendTextSchema, messageTextContentSchema, messageTextSchema, phoneNumberListResponseSchema, phoneNumberResponseSchema, phoneNumberSchema, statusSchema, templateBodyComponentInputSchema, templateBodyExampleSchema, templateButtonInputSchema, templateButtonSchema, templateButtonsComponentInputSchema, templateCategorySchema, templateComponentInputSchema, templateComponentSchema, templateCopyCodeButtonInputSchema, templateCreateAuthenticationSchema, templateCreateMarketingSchema, templateCreateResponseSchema, templateCreateSchema, templateCreateUtilitySchema, templateDeleteResponseSchema, templateDeleteSchema, templateFlowButtonInputSchema, templateFooterComponentInputSchema, templateHeaderComponentInputSchema, templateHeaderLocationInputSchema, templateHeaderMediaInputSchema, templateHeaderTextExampleSchema, templateHeaderTextInputSchema, templateLanguageSchema, templateListResponseSchema, templateListSchema, templateNamedParamExampleSchema, templatePagingCursorsSchema, templatePagingSchema, templateParameterFormatSchema, templatePhoneNumberButtonInputSchema, templateQualityScoreSchema, templateQuickReplyButtonInputSchema, templateSchema, templateStatusSchema, templateUpdateResponseSchema, templateUpdateSchema, templateUrlButtonInputSchema, toTemplateName, webhookPayloadSchema };
+export { type AccountReviewStatus, type Business, type BusinessGetOptions, type BusinessProfile, type BusinessProfileResponse, type BusinessProfileUpdate, type BusinessProfileUpdateResponse, BusinessResource, type BusinessVerificationStatus, type ClientConfig, type CodeMethod, type CursorPaging, type DebugTokenResponse, GraphAPIError, type GraphAPIErrorResponse, HttpClient, type MediaDeleteResponse, type MediaMetadata, MediaResource, type MediaType, type MediaUpload, type MediaUploadResponse, type MessageImage, type MessageImageContent, type MessageIncoming, type MessageIncomingAudio, type MessageIncomingImage, type MessageIncomingText, type MessageLocation, type MessageLocationContent, type MessageOutgoing, type MessageReaction, type MessageReactionContent, type MessageSendImage, type MessageSendLocation, type MessageSendReaction, type MessageSendResponse, type MessageSendText, type MessageText, type MessageTextContent, MessagesResource, type OnBehalfOfBusinessInfo, type PhoneNumber, type PhoneNumberAdd, type PhoneNumberAddResponse, type PhoneNumberDeregister, type PhoneNumberListOptions, type PhoneNumberListResponse, type PhoneNumberQualityRating, type PhoneNumberRegister, type PhoneNumberRegisterResponse, type PhoneNumberStatus, PhoneNumbersResource, type RequestVerificationCode, type SubscribeAppResponse, type SubscribedApp, type SubscribedAppsListResponse, type Template, type TemplateBodyComponentInput, type TemplateBodyExample, type TemplateButton, type TemplateButtonInput, type TemplateButtonsComponentInput, type TemplateCategory, type TemplateComponent, type TemplateComponentInput, type TemplateCopyCodeButtonInput, type TemplateCreate, type TemplateCreateResponse, type TemplateDelete, type TemplateDeleteResponse, type TemplateFlowButtonInput, type TemplateFooterComponentInput, type TemplateHeaderComponentInput, type TemplateHeaderLocationInput, type TemplateHeaderMediaInput, type TemplateHeaderTextExample, type TemplateHeaderTextInput, type TemplateLanguage, type TemplateList, type TemplateListResponse, type TemplateNamedParamExample, type TemplatePaging, type TemplatePagingCursors, type TemplateParameterFormat, type TemplatePhoneNumberButtonInput, type TemplateQualityScore, type TemplateQuickReplyButtonInput, type TemplateStatus, type TemplateUpdate, type TemplateUpdateResponse, type TemplateUrlButtonInput, TemplatesResource, type UnsubscribeAppResponse, type VerificationResponse, type VerifyCode, type Vertical, type Waba, type WabaBusinessType, type WabaCreate, type WabaCreateResponse, type WabaListOptions, type WabaListResponse, WabasResource, type WebhookContact, type WebhookContext, type WebhookConversation, type WebhookHandleOptions, type WebhookHandlers, type WebhookMetadata, type WebhookPayload, type WebhookPricing, type WebhookStatus, type WebhookStatusError, type WebhookVerifyQuery, WebhooksResource, WhatsAppClient, accountReviewStatusSchema, buildMessagePayload, businessGetOptionsSchema, businessProfileResponseSchema, businessProfileSchema, businessProfileUpdateResponseSchema, businessProfileUpdateSchema, businessSchema, businessVerificationStatusSchema, clientConfigSchema, codeMethodSchema, cursorPagingSchema, debugTokenResponseSchema, extractMessages, extractStatuses, mediaDeleteResponseSchema, mediaMetadataSchema, mediaMimeTypeSchema, mediaTypeSchema, mediaUploadResponseSchema, mediaUploadSchema, messageImageContentSchema, messageImageSchema, messageIncomingAudioSchema, messageIncomingImageSchema, messageIncomingSchema, messageIncomingTextSchema, messageLocationContentSchema, messageLocationSchema, messageOutgoingSchema, messageReactionContentSchema, messageReactionSchema, messageSendImageSchema, messageSendLocationSchema, messageSendReactionSchema, messageSendResponseSchema, messageSendTextSchema, messageTextContentSchema, messageTextSchema, onBehalfOfBusinessInfoSchema, phoneNumberAddResponseSchema, phoneNumberAddSchema, phoneNumberDeregisterSchema, phoneNumberListOptionsSchema, phoneNumberListResponseSchema, phoneNumberQualityRatingSchema, phoneNumberRegisterResponseSchema, phoneNumberRegisterSchema, phoneNumberResponseSchema, phoneNumberSchema, phoneNumberStatusSchema, requestVerificationCodeSchema, subscribeAppResponseSchema, subscribedAppSchema, subscribedAppsListResponseSchema, templateBodyComponentInputSchema, templateBodyExampleSchema, templateButtonInputSchema, templateButtonSchema, templateButtonsComponentInputSchema, templateCategorySchema, templateComponentInputSchema, templateComponentSchema, templateCopyCodeButtonInputSchema, templateCreateAuthenticationSchema, templateCreateMarketingSchema, templateCreateResponseSchema, templateCreateSchema, templateCreateUtilitySchema, templateDeleteResponseSchema, templateDeleteSchema, templateFlowButtonInputSchema, templateFooterComponentInputSchema, templateHeaderComponentInputSchema, templateHeaderLocationInputSchema, templateHeaderMediaInputSchema, templateHeaderTextExampleSchema, templateHeaderTextInputSchema, templateLanguageSchema, templateListResponseSchema, templateListSchema, templateNamedParamExampleSchema, templatePagingCursorsSchema, templatePagingSchema, templateParameterFormatSchema, templatePhoneNumberButtonInputSchema, templateQualityScoreSchema, templateQuickReplyButtonInputSchema, templateSchema, templateStatusSchema, templateUpdateResponseSchema, templateUpdateSchema, templateUrlButtonInputSchema, toTemplateName, unsubscribeAppResponseSchema, verificationResponseSchema, verifyCodeSchema, verifyWebhook, verticalSchema, wabaBusinessTypeSchema, wabaCreateResponseSchema, wabaCreateSchema, wabaListOptionsSchema, wabaListResponseSchema, wabaSchema, webhookChangeSchema, webhookContactSchema, webhookConversationOriginSchema, webhookConversationSchema, webhookEntrySchema, webhookMetadataSchema, webhookPayloadSchema, webhookPricingSchema, webhookStatusErrorSchema, webhookStatusSchema, webhookValueSchema, webhookVerifyQuerySchema };

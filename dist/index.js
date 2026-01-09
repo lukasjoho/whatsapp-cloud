@@ -1,4 +1,4 @@
-// src/schemas/client.ts
+// src/client/schema.ts
 import { z } from "zod";
 var ACCESS_TOKEN_HELP_MESSAGE = "Get your access token from Meta for Developers: https://developers.facebook.com/docs/whatsapp/cloud-api/get-started";
 var accessTokenSchema = z.string({
@@ -23,8 +23,32 @@ var clientConfigSchema = z.object({
   baseURL: z.string().url().default("https://graph.facebook.com").optional(),
   timeout: z.number().positive().optional()
 });
+var debugTokenResponseSchema = z.object({
+  data: z.object({
+    app_id: z.string().optional(),
+    type: z.string().optional(),
+    application: z.string().optional(),
+    data_access_expires_at: z.number().optional(),
+    expires_at: z.number().optional(),
+    is_valid: z.boolean().optional(),
+    issued_at: z.number().optional(),
+    metadata: z.object({
+      auth_type: z.string().optional(),
+      sso: z.string().optional()
+    }).optional(),
+    scopes: z.array(z.string()).optional(),
+    granular_scopes: z.array(
+      z.object({
+        scope: z.string().optional(),
+        target_ids: z.array(z.string()).optional()
+      })
+    ).optional(),
+    user_id: z.string().optional(),
+    profile_id: z.string().optional()
+  })
+});
 
-// src/errors.ts
+// src/common/errors.ts
 var GraphAPIError = class extends Error {
   constructor(response, statusCode) {
     super(response.error.message);
@@ -170,104 +194,814 @@ var HttpClient = class {
   }
 };
 
-// src/resources/messages/schema.ts
+// src/resources/business/resource.ts
+var BusinessResource = class {
+  constructor(httpClient) {
+    this.httpClient = httpClient;
+  }
+  /**
+   * Get the business ID (from parameter or config)
+   */
+  getBusinessId(overrideId) {
+    const id = overrideId ?? this.httpClient.businessId;
+    if (!id) {
+      throw new Error(
+        "businessId is required. Provide it in WhatsAppClient config or as a parameter."
+      );
+    }
+    return id;
+  }
+  /**
+   * Get Business Portfolio information
+   *
+   * @param options - Query options (fields)
+   * @param businessId - Business Portfolio ID (overrides config)
+   * @returns Business portfolio details
+   *
+   * @example
+   * ```typescript
+   * const business = await client.business.get();
+   * console.log(business.id, business.name, business.timezone_id);
+   *
+   * // With specific fields
+   * const business = await client.business.get({ fields: "id,name" });
+   *
+   * // Override business ID
+   * const business = await client.business.get({}, "other-business-id");
+   * ```
+   */
+  async get(options, businessId) {
+    const id = this.getBusinessId(businessId);
+    const query = options?.fields ? `?fields=${options.fields}` : "";
+    return this.httpClient.get(`/${id}${query}`);
+  }
+};
+
+// src/resources/business/schema.ts
 import { z as z2 } from "zod";
-var phoneNumberSchema = z2.string().regex(/^\+[1-9]\d{1,14}$/, "Invalid phone number format (use E.164: +1234567890)");
-var messageTextContentSchema = z2.object({
-  body: z2.string().min(1).max(4096),
-  preview_url: z2.boolean().optional()
-});
-var messageImageContentSchema = z2.object({
-  id: z2.string().optional(),
-  link: z2.string().url().optional(),
-  caption: z2.string().max(1024).optional()
-}).refine((data) => data.link || data.id, "Either link or id must be provided");
-var messageLocationContentSchema = z2.object({
-  longitude: z2.number().min(-180).max(180),
-  latitude: z2.number().min(-90).max(90),
+var businessSchema = z2.object({
+  id: z2.string(),
   name: z2.string().optional(),
-  address: z2.string().optional()
+  timezone_id: z2.number().optional()
 });
-var messageReactionContentSchema = z2.object({
-  message_id: z2.string().min(1),
-  emoji: z2.string().min(1).max(1)
+var businessGetOptionsSchema = z2.object({
+  fields: z2.string().optional()
 });
-var messageSendTextSchema = z2.object({
+
+// src/resources/wabas/resource.ts
+var WabasResource = class {
+  constructor(httpClient) {
+    this.httpClient = httpClient;
+  }
+  /**
+   * Get the business ID (from parameter or config)
+   */
+  getBusinessId(overrideId) {
+    const id = overrideId ?? this.httpClient.businessId;
+    if (!id) {
+      throw new Error(
+        "businessId is required. Provide it in WhatsAppClient config or as a parameter."
+      );
+    }
+    return id;
+  }
+  /**
+   * Get the WABA ID (from parameter or config)
+   */
+  getWabaId(overrideId) {
+    const id = overrideId ?? this.httpClient.businessAccountId;
+    if (!id) {
+      throw new Error(
+        "wabaId (businessAccountId) is required. Provide it in WhatsAppClient config or as a parameter."
+      );
+    }
+    return id;
+  }
+  /**
+   * Build query string from options
+   */
+  buildQueryString(options) {
+    if (!options) return "";
+    const params = new URLSearchParams();
+    if (options.fields) params.set("fields", options.fields);
+    if (options.limit) params.set("limit", options.limit.toString());
+    if (options.after) params.set("after", options.after);
+    if (options.before) params.set("before", options.before);
+    if (options.business_type) {
+      options.business_type.forEach(
+        (type) => params.append("business_type", type)
+      );
+    }
+    const queryString = params.toString();
+    return queryString ? `?${queryString}` : "";
+  }
+  /**
+   * List WhatsApp Business Accounts owned by a business
+   *
+   * @param options - Query options (fields, pagination, filters)
+   * @param businessId - Business Portfolio ID (overrides config)
+   * @returns List of WABAs
+   *
+   * @example
+   * ```typescript
+   * // List all WABAs
+   * const wabas = await client.wabas.list();
+   *
+   * // With pagination
+   * const wabas = await client.wabas.list({ limit: 10 });
+   *
+   * // Override business ID
+   * const wabas = await client.wabas.list({}, "other-business-id");
+   * ```
+   */
+  async list(options, businessId) {
+    const id = this.getBusinessId(businessId);
+    const query = this.buildQueryString(options);
+    return this.httpClient.get(
+      `/${id}/whatsapp_business_accounts${query}`
+    );
+  }
+  /**
+   * List client (shared) WhatsApp Business Accounts
+   *
+   * These are WABAs that have been shared with the business (agency model).
+   *
+   * @param options - Query options (fields, pagination, filters)
+   * @param businessId - Business Portfolio ID (overrides config)
+   * @returns List of client WABAs
+   */
+  async listClient(options, businessId) {
+    const id = this.getBusinessId(businessId);
+    const query = this.buildQueryString(options);
+    return this.httpClient.get(
+      `/${id}/client_whatsapp_business_accounts${query}`
+    );
+  }
+  /**
+   * Create a new WhatsApp Business Account
+   *
+   * @param data - WABA creation data
+   * @param businessId - Business Portfolio ID (overrides config)
+   * @returns Created WABA ID and payment account ID
+   *
+   * @example
+   * ```typescript
+   * const waba = await client.wabas.create({
+   *   name: "My Business WABA",
+   *   currency: "USD",
+   *   timezone_id: 1,
+   * });
+   * console.log(waba.id);
+   * ```
+   */
+  async create(data, businessId) {
+    const id = this.getBusinessId(businessId);
+    return this.httpClient.post(
+      `/${id}/whatsapp_business_accounts`,
+      data
+    );
+  }
+  /**
+   * Get details of a specific WhatsApp Business Account
+   *
+   * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @param fields - Comma-separated list of fields to return
+   * @returns WABA details
+   *
+   * @example
+   * ```typescript
+   * const waba = await client.wabas.get();
+   *
+   * // With specific fields
+   * const waba = await client.wabas.get(undefined, "id,name,currency");
+   * ```
+   */
+  async get(wabaId, fields) {
+    const id = this.getWabaId(wabaId);
+    const query = fields ? `?fields=${fields}` : "";
+    return this.httpClient.get(`/${id}${query}`);
+  }
+  // ===========================================================================
+  // Subscribed Apps
+  // ===========================================================================
+  /**
+   * List apps subscribed to this WABA
+   *
+   * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @returns List of subscribed apps
+   */
+  async listSubscribedApps(wabaId) {
+    const id = this.getWabaId(wabaId);
+    return this.httpClient.get(
+      `/${id}/subscribed_apps`
+    );
+  }
+  /**
+   * Subscribe an app to this WABA
+   *
+   * This is required to receive webhooks (incoming messages, status updates).
+   * Without subscribing, your app won't receive any webhook events.
+   *
+   * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @returns Success status
+   *
+   * @example
+   * ```typescript
+   * // Subscribe your app to receive webhooks
+   * await client.wabas.subscribeApp();
+   * ```
+   */
+  async subscribeApp(wabaId) {
+    const id = this.getWabaId(wabaId);
+    return this.httpClient.post(
+      `/${id}/subscribed_apps`,
+      {}
+    );
+  }
+  /**
+   * Unsubscribe an app from this WABA
+   *
+   * After unsubscribing, your app will no longer receive webhooks for this WABA.
+   *
+   * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @returns Success status
+   */
+  async unsubscribeApp(wabaId) {
+    const id = this.getWabaId(wabaId);
+    return this.httpClient.delete(
+      `/${id}/subscribed_apps`
+    );
+  }
+};
+
+// src/resources/wabas/schema.ts
+import { z as z3 } from "zod";
+var accountReviewStatusSchema = z3.enum([
+  "APPROVED",
+  "PENDING",
+  "REJECTED",
+  "RESTRICTED"
+]);
+var businessVerificationStatusSchema = z3.enum([
+  "VERIFIED",
+  "UNVERIFIED",
+  "PENDING",
+  "REJECTED"
+]);
+var wabaBusinessTypeSchema = z3.enum(["ENTERPRISE", "SMB"]);
+var onBehalfOfBusinessInfoSchema = z3.object({
+  id: z3.string().optional(),
+  name: z3.string().optional()
+});
+var cursorPagingSchema = z3.object({
+  cursors: z3.object({
+    before: z3.string().optional(),
+    after: z3.string().optional()
+  }).optional(),
+  previous: z3.string().optional(),
+  next: z3.string().optional()
+});
+var wabaSchema = z3.object({
+  id: z3.string(),
+  name: z3.string().optional(),
+  account_review_status: accountReviewStatusSchema.optional(),
+  purchase_order_number: z3.string().optional(),
+  currency: z3.string().optional(),
+  timezone_id: z3.string().optional(),
+  business_verification_status: businessVerificationStatusSchema.optional(),
+  country: z3.string().optional(),
+  on_behalf_of_business_info: onBehalfOfBusinessInfoSchema.optional(),
+  is_enabled_for_insights: z3.boolean().optional(),
+  message_template_namespace: z3.string().optional()
+});
+var wabaListResponseSchema = z3.object({
+  data: z3.array(wabaSchema),
+  paging: cursorPagingSchema.optional()
+});
+var wabaCreateSchema = z3.object({
+  name: z3.string(),
+  primary_funding_id: z3.string().optional(),
+  purchase_order_number: z3.string().optional(),
+  currency: z3.string().optional(),
+  timezone_id: z3.number().optional(),
+  business_type: wabaBusinessTypeSchema.optional(),
+  on_behalf_of_business_id: z3.string().optional()
+});
+var wabaCreateResponseSchema = z3.object({
+  id: z3.string(),
+  payment_account_id: z3.string().optional()
+});
+var wabaListOptionsSchema = z3.object({
+  fields: z3.string().optional(),
+  business_type: z3.array(wabaBusinessTypeSchema).optional(),
+  limit: z3.number().min(1).max(100).optional(),
+  after: z3.string().optional(),
+  before: z3.string().optional()
+});
+var subscribedAppSchema = z3.object({
+  whatsapp_business_api_data: z3.object({
+    id: z3.string().optional(),
+    link: z3.string().optional(),
+    name: z3.string().optional()
+  }).optional()
+});
+var subscribedAppsListResponseSchema = z3.object({
+  data: z3.array(subscribedAppSchema)
+});
+var subscribeAppResponseSchema = z3.object({
+  success: z3.boolean()
+});
+var unsubscribeAppResponseSchema = z3.object({
+  success: z3.boolean()
+});
+
+// src/resources/phoneNumbers/resource.ts
+var PhoneNumbersResource = class {
+  constructor(httpClient) {
+    this.httpClient = httpClient;
+  }
+  /**
+   * Get the business ID (from parameter or config)
+   */
+  getBusinessId(overrideId) {
+    const id = overrideId ?? this.httpClient.businessId;
+    if (!id) {
+      throw new Error(
+        "businessId is required. Provide it in WhatsAppClient config or as a parameter."
+      );
+    }
+    return id;
+  }
+  /**
+   * Get the WABA ID (from parameter or config)
+   */
+  getWabaId(overrideId) {
+    const id = overrideId ?? this.httpClient.businessAccountId;
+    if (!id) {
+      throw new Error(
+        "wabaId (businessAccountId) is required. Provide it in WhatsAppClient config or as a parameter."
+      );
+    }
+    return id;
+  }
+  /**
+   * Get the phone number ID (from parameter or config)
+   */
+  getPhoneNumberId(overrideId) {
+    const id = overrideId ?? this.httpClient.phoneNumberId;
+    if (!id) {
+      throw new Error(
+        "phoneNumberId is required. Provide it in WhatsAppClient config or as a parameter."
+      );
+    }
+    return id;
+  }
+  /**
+   * Build query string from options
+   */
+  buildQueryString(options) {
+    if (!options) return "";
+    const params = new URLSearchParams();
+    if (options.fields) params.set("fields", options.fields);
+    if (options.limit) params.set("limit", options.limit.toString());
+    if (options.after) params.set("after", options.after);
+    if (options.before) params.set("before", options.before);
+    const queryString = params.toString();
+    return queryString ? `?${queryString}` : "";
+  }
+  // ===========================================================================
+  // List & Get
+  // ===========================================================================
+  /**
+   * List phone numbers in a WhatsApp Business Account
+   *
+   * @param options - Query options (fields, pagination)
+   * @param wabaId - WABA ID (overrides config.businessAccountId)
+   * @returns List of phone numbers
+   *
+   * @example
+   * ```typescript
+   * const numbers = await client.phoneNumbers.list();
+   *
+   * // With specific fields
+   * const numbers = await client.phoneNumbers.list({
+   *   fields: "id,display_phone_number,verified_name,quality_rating"
+   * });
+   * ```
+   */
+  async list(options, wabaId) {
+    const id = this.getWabaId(wabaId);
+    const query = this.buildQueryString(options);
+    return this.httpClient.get(
+      `/${id}/phone_numbers${query}`
+    );
+  }
+  /**
+   * Get details of a specific phone number
+   *
+   * @param phoneNumberId - Phone number ID (overrides config)
+   * @param fields - Comma-separated list of fields to return
+   * @returns Phone number details
+   */
+  async get(phoneNumberId, fields) {
+    const id = this.getPhoneNumberId(phoneNumberId);
+    const query = fields ? `?fields=${fields}` : "";
+    return this.httpClient.get(`/${id}${query}`);
+  }
+  // ===========================================================================
+  // Add Phone Number
+  // ===========================================================================
+  /**
+   * Add a phone number to a Business Portfolio
+   *
+   * This adds a phone number and associates it with a specific WABA.
+   * After adding, you need to verify and register the number.
+   *
+   * @param data - Phone number data (includes waba_id for assignment)
+   * @param businessId - Business Portfolio ID (overrides config)
+   * @returns Created phone number ID
+   *
+   * @example
+   * ```typescript
+   * const result = await client.phoneNumbers.add({
+   *   phone_number: "+14155551234",
+   *   waba_id: "WABA_ID",
+   *   verified_name: "My Business"
+   * });
+   * console.log(result.id); // New phone number ID
+   * ```
+   */
+  async add(data, businessId) {
+    const id = this.getBusinessId(businessId);
+    return this.httpClient.post(
+      `/${id}/add_phone_numbers`,
+      data
+    );
+  }
+  // ===========================================================================
+  // Verification
+  // ===========================================================================
+  /**
+   * Request a verification code for a phone number
+   *
+   * Meta will send a verification code via SMS or voice call.
+   * Use verifyCode() to submit the received code.
+   *
+   * @param data - Verification method (SMS or VOICE) and optional language
+   * @param phoneNumberId - Phone number ID (overrides config)
+   * @returns Success status
+   *
+   * @example
+   * ```typescript
+   * await client.phoneNumbers.requestVerificationCode({
+   *   code_method: "SMS",
+   *   language: "en"
+   * });
+   * ```
+   */
+  async requestVerificationCode(data, phoneNumberId) {
+    const id = this.getPhoneNumberId(phoneNumberId);
+    return this.httpClient.post(
+      `/${id}/request_code`,
+      data
+    );
+  }
+  /**
+   * Submit verification code for a phone number
+   *
+   * Submit the code received via SMS or voice call.
+   *
+   * @param data - The verification code
+   * @param phoneNumberId - Phone number ID (overrides config)
+   * @returns Success status
+   *
+   * @example
+   * ```typescript
+   * await client.phoneNumbers.verifyCode({
+   *   code: "123456"
+   * });
+   * ```
+   */
+  async verifyCode(data, phoneNumberId) {
+    const id = this.getPhoneNumberId(phoneNumberId);
+    return this.httpClient.post(`/${id}/verify_code`, data);
+  }
+  // ===========================================================================
+  // Registration
+  // ===========================================================================
+  /**
+   * Register a phone number with WhatsApp
+   *
+   * This activates the phone number on WhatsApp's servers.
+   * The number must be verified first.
+   *
+   * @param data - Registration data including 6-digit PIN
+   * @param phoneNumberId - Phone number ID (overrides config)
+   * @returns Success status
+   *
+   * @example
+   * ```typescript
+   * await client.phoneNumbers.register({
+   *   messaging_product: "whatsapp",
+   *   pin: "123456"  // 6-digit PIN for 2FA
+   * });
+   * ```
+   */
+  async register(data, phoneNumberId) {
+    const id = this.getPhoneNumberId(phoneNumberId);
+    return this.httpClient.post(
+      `/${id}/register`,
+      data
+    );
+  }
+  /**
+   * Deregister a phone number from WhatsApp
+   *
+   * This removes the phone number from WhatsApp's servers.
+   * The number can be re-registered later.
+   *
+   * @param phoneNumberId - Phone number ID (overrides config)
+   * @returns Success status
+   */
+  async deregister(phoneNumberId) {
+    const id = this.getPhoneNumberId(phoneNumberId);
+    return this.httpClient.post(
+      `/${id}/deregister`,
+      { messaging_product: "whatsapp" }
+    );
+  }
+  // ===========================================================================
+  // Business Profile
+  // ===========================================================================
+  /**
+   * Get the WhatsApp Business Profile for a phone number
+   *
+   * @param phoneNumberId - Phone number ID (overrides config)
+   * @param fields - Comma-separated list of fields
+   * @returns Business profile data
+   *
+   * @example
+   * ```typescript
+   * const profile = await client.phoneNumbers.getProfile();
+   * console.log(profile.data[0].about);
+   * ```
+   */
+  async getProfile(phoneNumberId, fields) {
+    const id = this.getPhoneNumberId(phoneNumberId);
+    const defaultFields = "about,address,description,email,profile_picture_url,websites,vertical";
+    const query = `?fields=${fields ?? defaultFields}`;
+    return this.httpClient.get(
+      `/${id}/whatsapp_business_profile${query}`
+    );
+  }
+  /**
+   * Update the WhatsApp Business Profile for a phone number
+   *
+   * @param data - Profile data to update
+   * @param phoneNumberId - Phone number ID (overrides config)
+   * @returns Success status
+   *
+   * @example
+   * ```typescript
+   * await client.phoneNumbers.updateProfile({
+   *   messaging_product: "whatsapp",
+   *   about: "Welcome to our business!",
+   *   description: "We provide excellent service.",
+   *   vertical: "RETAIL"
+   * });
+   * ```
+   */
+  async updateProfile(data, phoneNumberId) {
+    const id = this.getPhoneNumberId(phoneNumberId);
+    return this.httpClient.post(
+      `/${id}/whatsapp_business_profile`,
+      data
+    );
+  }
+};
+
+// src/resources/phoneNumbers/schema.ts
+import { z as z4 } from "zod";
+var phoneNumberQualityRatingSchema = z4.enum([
+  "GREEN",
+  "YELLOW",
+  "RED",
+  "UNKNOWN"
+]);
+var phoneNumberStatusSchema = z4.enum([
+  "PENDING",
+  "DELETED",
+  "MIGRATED",
+  "BANNED",
+  "RESTRICTED",
+  "RATE_LIMITED",
+  "FLAGGED",
+  "CONNECTED",
+  "DISCONNECTED",
+  "UNKNOWN"
+]);
+var codeMethodSchema = z4.enum(["SMS", "VOICE"]);
+var verticalSchema = z4.enum([
+  "UNDEFINED",
+  "OTHER",
+  "AUTO",
+  "BEAUTY",
+  "APPAREL",
+  "EDU",
+  "ENTERTAIN",
+  "EVENT_PLAN",
+  "FINANCE",
+  "GROCERY",
+  "GOVT",
+  "HOTEL",
+  "HEALTH",
+  "NONPROFIT",
+  "PROF_SERVICES",
+  "RETAIL",
+  "TRAVEL",
+  "RESTAURANT",
+  "NOT_A_BIZ"
+]);
+var phoneNumberResponseSchema = z4.object({
+  id: z4.string(),
+  display_phone_number: z4.string(),
+  verified_name: z4.string(),
+  quality_rating: phoneNumberQualityRatingSchema.optional(),
+  code_verification_status: z4.string().optional(),
+  is_official_business_account: z4.boolean().optional(),
+  account_mode: z4.string().optional(),
+  eligibility_for_api_business_global_search: z4.string().optional(),
+  is_pin_enabled: z4.boolean().optional(),
+  name_status: z4.string().optional(),
+  new_name_status: z4.string().optional(),
+  status: phoneNumberStatusSchema.optional(),
+  search_visibility: z4.string().optional(),
+  messaging_limit_tier: z4.string().optional()
+});
+var phoneNumberListResponseSchema = z4.object({
+  data: z4.array(phoneNumberResponseSchema),
+  paging: z4.object({
+    cursors: z4.object({
+      before: z4.string().optional(),
+      after: z4.string().optional()
+    }).optional(),
+    next: z4.string().optional(),
+    previous: z4.string().optional()
+  }).optional()
+});
+var phoneNumberAddSchema = z4.object({
+  phone_number: z4.string(),
+  country_code: z4.string().optional(),
+  verified_name: z4.string().optional(),
+  waba_id: z4.string()
+});
+var phoneNumberAddResponseSchema = z4.object({
+  id: z4.string()
+});
+var phoneNumberRegisterSchema = z4.object({
+  messaging_product: z4.literal("whatsapp"),
+  pin: z4.string().min(6).max(6)
+});
+var phoneNumberDeregisterSchema = z4.object({
+  messaging_product: z4.literal("whatsapp").optional()
+});
+var phoneNumberRegisterResponseSchema = z4.object({
+  success: z4.boolean()
+});
+var requestVerificationCodeSchema = z4.object({
+  code_method: codeMethodSchema,
+  language: z4.string().optional()
+});
+var verifyCodeSchema = z4.object({
+  code: z4.string()
+});
+var verificationResponseSchema = z4.object({
+  success: z4.boolean()
+});
+var businessProfileSchema = z4.object({
+  messaging_product: z4.literal("whatsapp").optional(),
+  about: z4.string().max(139).optional(),
+  address: z4.string().max(256).optional(),
+  description: z4.string().max(512).optional(),
+  email: z4.string().email().optional(),
+  profile_picture_url: z4.string().url().optional(),
+  websites: z4.array(z4.string().url()).max(2).optional(),
+  vertical: verticalSchema.optional()
+});
+var businessProfileResponseSchema = z4.object({
+  data: z4.array(businessProfileSchema)
+});
+var businessProfileUpdateSchema = businessProfileSchema.extend({
+  messaging_product: z4.literal("whatsapp")
+});
+var businessProfileUpdateResponseSchema = z4.object({
+  success: z4.boolean()
+});
+var phoneNumberListOptionsSchema = z4.object({
+  fields: z4.string().optional(),
+  limit: z4.number().min(1).max(100).optional(),
+  after: z4.string().optional(),
+  before: z4.string().optional()
+});
+
+// src/resources/messages/schema.ts
+import { z as z5 } from "zod";
+var phoneNumberSchema = z5.string().regex(/^\+[1-9]\d{1,14}$/, "Invalid phone number format (use E.164: +1234567890)");
+var messageTextContentSchema = z5.object({
+  body: z5.string().min(1).max(4096),
+  preview_url: z5.boolean().optional()
+});
+var messageImageContentSchema = z5.object({
+  id: z5.string().optional(),
+  link: z5.string().url().optional(),
+  caption: z5.string().max(1024).optional()
+}).refine((data) => data.link || data.id, "Either link or id must be provided");
+var messageLocationContentSchema = z5.object({
+  longitude: z5.number().min(-180).max(180),
+  latitude: z5.number().min(-90).max(90),
+  name: z5.string().optional(),
+  address: z5.string().optional()
+});
+var messageReactionContentSchema = z5.object({
+  message_id: z5.string().min(1),
+  emoji: z5.string().min(1).max(1)
+});
+var messageSendTextSchema = z5.object({
   to: phoneNumberSchema,
   text: messageTextContentSchema
 });
-var messageSendImageSchema = z2.object({
+var messageSendImageSchema = z5.object({
   to: phoneNumberSchema,
   image: messageImageContentSchema
 });
-var messageSendLocationSchema = z2.object({
+var messageSendLocationSchema = z5.object({
   to: phoneNumberSchema,
   location: messageLocationContentSchema
 });
-var messageSendReactionSchema = z2.object({
+var messageSendReactionSchema = z5.object({
   to: phoneNumberSchema,
   reaction: messageReactionContentSchema
 });
 var messageTextSchema = messageSendTextSchema.extend({
-  type: z2.literal("text")
+  type: z5.literal("text")
 });
 var messageImageSchema = messageSendImageSchema.extend({
-  type: z2.literal("image")
+  type: z5.literal("image")
 });
 var messageLocationSchema = messageSendLocationSchema.extend({
-  type: z2.literal("location")
+  type: z5.literal("location")
 });
 var messageReactionSchema = messageSendReactionSchema.extend({
-  type: z2.literal("reaction")
+  type: z5.literal("reaction")
 });
-var messageOutgoingSchema = z2.discriminatedUnion("type", [
+var messageOutgoingSchema = z5.discriminatedUnion("type", [
   messageTextSchema,
   messageImageSchema,
   messageLocationSchema,
   messageReactionSchema
 ]);
-var messageSendResponseSchema = z2.object({
-  messaging_product: z2.literal("whatsapp"),
-  contacts: z2.array(
-    z2.object({
-      input: z2.string(),
-      wa_id: z2.string()
+var messageSendResponseSchema = z5.object({
+  messaging_product: z5.literal("whatsapp"),
+  contacts: z5.array(
+    z5.object({
+      input: z5.string(),
+      wa_id: z5.string()
     })
   ),
-  messages: z2.array(
-    z2.object({
-      id: z2.string(),
-      message_status: z2.string().optional()
+  messages: z5.array(
+    z5.object({
+      id: z5.string(),
+      message_status: z5.string().optional()
     })
   )
 });
-var incomingMessageBaseSchema = z2.object({
-  from: z2.string(),
-  id: z2.string(),
-  timestamp: z2.string()
+var incomingMessageBaseSchema = z5.object({
+  from: z5.string(),
+  id: z5.string(),
+  timestamp: z5.string()
 });
 var messageIncomingTextSchema = incomingMessageBaseSchema.extend({
-  type: z2.literal("text"),
-  text: z2.object({
-    body: z2.string()
+  type: z5.literal("text"),
+  text: z5.object({
+    body: z5.string()
   })
 });
 var messageIncomingImageSchema = incomingMessageBaseSchema.extend({
-  type: z2.literal("image"),
-  image: z2.object({
-    id: z2.string(),
-    mime_type: z2.string().optional(),
-    caption: z2.string().optional()
+  type: z5.literal("image"),
+  image: z5.object({
+    id: z5.string(),
+    mime_type: z5.string().optional(),
+    caption: z5.string().optional()
   })
 });
 var messageIncomingAudioSchema = incomingMessageBaseSchema.extend({
-  type: z2.literal("audio"),
-  audio: z2.object({
-    id: z2.string(),
-    mime_type: z2.string().optional()
+  type: z5.literal("audio"),
+  audio: z5.object({
+    id: z5.string(),
+    mime_type: z5.string().optional()
   })
 });
-var messageIncomingSchema = z2.discriminatedUnion("type", [
+var messageIncomingSchema = z5.discriminatedUnion("type", [
   messageIncomingTextSchema,
   messageIncomingImageSchema,
   messageIncomingAudioSchema
@@ -434,8 +1168,8 @@ var MessagesResource = class {
 };
 
 // src/resources/templates/schema.ts
-import { z as z3 } from "zod";
-var templateLanguageSchema = z3.enum([
+import { z as z6 } from "zod";
+var templateLanguageSchema = z6.enum([
   "af",
   // Afrikaans
   "sq",
@@ -659,13 +1393,13 @@ var templateLanguageSchema = z3.enum([
   "zu"
   // Zulu
 ]);
-var templateCategorySchema = z3.enum([
+var templateCategorySchema = z6.enum([
   "AUTHENTICATION",
   "MARKETING",
   "UTILITY"
 ]);
-var templateParameterFormatSchema = z3.enum(["positional", "named"]);
-var templateStatusSchema = z3.enum([
+var templateParameterFormatSchema = z6.enum(["positional", "named"]);
+var templateStatusSchema = z6.enum([
   "APPROVED",
   "PENDING",
   "REJECTED",
@@ -676,71 +1410,71 @@ var templateStatusSchema = z3.enum([
   "DELETED",
   "LIMIT_EXCEEDED"
 ]);
-var templateQualityScoreSchema = z3.object({
-  score: z3.enum(["GREEN", "YELLOW", "RED", "UNKNOWN"]).optional(),
-  date: z3.number().optional()
+var templateQualityScoreSchema = z6.object({
+  score: z6.enum(["GREEN", "YELLOW", "RED", "UNKNOWN"]).optional(),
+  date: z6.number().optional()
 });
-var templateNamedParamExampleSchema = z3.object({
-  param_name: z3.string(),
-  example: z3.string()
+var templateNamedParamExampleSchema = z6.object({
+  param_name: z6.string(),
+  example: z6.string()
 });
-var templateQuickReplyButtonInputSchema = z3.object({
-  type: z3.literal("QUICK_REPLY"),
-  text: z3.string().min(1).max(25, "Button text must be 25 characters or less")
+var templateQuickReplyButtonInputSchema = z6.object({
+  type: z6.literal("QUICK_REPLY"),
+  text: z6.string().min(1).max(25, "Button text must be 25 characters or less")
 });
-var templateUrlButtonInputSchema = z3.object({
-  type: z3.literal("URL"),
-  text: z3.string().min(1).max(25, "Button text must be 25 characters or less"),
-  url: z3.string().url().max(2e3, "URL must be 2000 characters or less"),
-  example: z3.array(z3.string()).optional()
+var templateUrlButtonInputSchema = z6.object({
+  type: z6.literal("URL"),
+  text: z6.string().min(1).max(25, "Button text must be 25 characters or less"),
+  url: z6.string().url().max(2e3, "URL must be 2000 characters or less"),
+  example: z6.array(z6.string()).optional()
 });
-var templatePhoneNumberButtonInputSchema = z3.object({
-  type: z3.literal("PHONE_NUMBER"),
-  text: z3.string().min(1).max(25, "Button text must be 25 characters or less"),
-  phone_number: z3.string().min(1).max(20, "Phone number must be 20 characters or less")
+var templatePhoneNumberButtonInputSchema = z6.object({
+  type: z6.literal("PHONE_NUMBER"),
+  text: z6.string().min(1).max(25, "Button text must be 25 characters or less"),
+  phone_number: z6.string().min(1).max(20, "Phone number must be 20 characters or less")
 });
-var templateCopyCodeButtonInputSchema = z3.object({
-  type: z3.literal("COPY_CODE"),
-  example: z3.string().max(15).optional()
+var templateCopyCodeButtonInputSchema = z6.object({
+  type: z6.literal("COPY_CODE"),
+  example: z6.string().max(15).optional()
 });
-var templateFlowButtonInputSchema = z3.object({
-  type: z3.literal("FLOW"),
-  text: z3.string().min(1).max(25, "Button text must be 25 characters or less"),
-  flow_id: z3.string().optional(),
-  flow_action: z3.enum(["navigate", "data_exchange"]).optional(),
-  navigate_screen: z3.string().optional()
+var templateFlowButtonInputSchema = z6.object({
+  type: z6.literal("FLOW"),
+  text: z6.string().min(1).max(25, "Button text must be 25 characters or less"),
+  flow_id: z6.string().optional(),
+  flow_action: z6.enum(["navigate", "data_exchange"]).optional(),
+  navigate_screen: z6.string().optional()
 });
-var templateButtonInputSchema = z3.discriminatedUnion("type", [
+var templateButtonInputSchema = z6.discriminatedUnion("type", [
   templateQuickReplyButtonInputSchema,
   templateUrlButtonInputSchema,
   templatePhoneNumberButtonInputSchema,
   templateCopyCodeButtonInputSchema,
   templateFlowButtonInputSchema
 ]);
-var templateHeaderTextExampleSchema = z3.object({
+var templateHeaderTextExampleSchema = z6.object({
   // Positional: header_text: ["value1"]
-  header_text: z3.array(z3.string()).optional(),
+  header_text: z6.array(z6.string()).optional(),
   // Named: header_text_named_params: [{ param_name: "name", example: "value" }]
-  header_text_named_params: z3.array(templateNamedParamExampleSchema).optional()
+  header_text_named_params: z6.array(templateNamedParamExampleSchema).optional()
 });
-var templateHeaderTextInputSchema = z3.object({
-  type: z3.literal("HEADER"),
-  format: z3.literal("TEXT"),
-  text: z3.string().min(1).max(60, "Header text must be 60 characters or less"),
+var templateHeaderTextInputSchema = z6.object({
+  type: z6.literal("HEADER"),
+  format: z6.literal("TEXT"),
+  text: z6.string().min(1).max(60, "Header text must be 60 characters or less"),
   example: templateHeaderTextExampleSchema.optional()
 });
-var templateHeaderMediaInputSchema = z3.object({
-  type: z3.literal("HEADER"),
-  format: z3.enum(["IMAGE", "VIDEO", "DOCUMENT"]),
-  example: z3.object({
-    header_handle: z3.array(z3.string()).min(1, "At least one header_handle is required")
+var templateHeaderMediaInputSchema = z6.object({
+  type: z6.literal("HEADER"),
+  format: z6.enum(["IMAGE", "VIDEO", "DOCUMENT"]),
+  example: z6.object({
+    header_handle: z6.array(z6.string()).min(1, "At least one header_handle is required")
   })
 });
-var templateHeaderLocationInputSchema = z3.object({
-  type: z3.literal("HEADER"),
-  format: z3.literal("LOCATION")
+var templateHeaderLocationInputSchema = z6.object({
+  type: z6.literal("HEADER"),
+  format: z6.literal("LOCATION")
 });
-var templateHeaderComponentInputSchema = z3.discriminatedUnion(
+var templateHeaderComponentInputSchema = z6.discriminatedUnion(
   "format",
   [
     templateHeaderTextInputSchema,
@@ -748,141 +1482,141 @@ var templateHeaderComponentInputSchema = z3.discriminatedUnion(
     templateHeaderLocationInputSchema
   ]
 );
-var templateBodyExampleSchema = z3.object({
+var templateBodyExampleSchema = z6.object({
   // Positional: body_text: [["value1", "value2"]]
-  body_text: z3.array(z3.array(z3.string())).optional(),
+  body_text: z6.array(z6.array(z6.string())).optional(),
   // Named: body_text_named_params: [{ param_name: "name", example: "value" }]
-  body_text_named_params: z3.array(templateNamedParamExampleSchema).optional()
+  body_text_named_params: z6.array(templateNamedParamExampleSchema).optional()
 });
-var templateBodyComponentInputSchema = z3.object({
-  type: z3.literal("BODY"),
-  text: z3.string().min(1).max(1024, "Body text must be 1024 characters or less"),
+var templateBodyComponentInputSchema = z6.object({
+  type: z6.literal("BODY"),
+  text: z6.string().min(1).max(1024, "Body text must be 1024 characters or less"),
   example: templateBodyExampleSchema.optional()
 });
-var templateFooterComponentInputSchema = z3.object({
-  type: z3.literal("FOOTER"),
-  text: z3.string().min(1).max(60, "Footer text must be 60 characters or less")
+var templateFooterComponentInputSchema = z6.object({
+  type: z6.literal("FOOTER"),
+  text: z6.string().min(1).max(60, "Footer text must be 60 characters or less")
 });
-var templateButtonsComponentInputSchema = z3.object({
-  type: z3.literal("BUTTONS"),
-  buttons: z3.array(templateButtonInputSchema).min(1).max(10, "Maximum 10 buttons allowed")
+var templateButtonsComponentInputSchema = z6.object({
+  type: z6.literal("BUTTONS"),
+  buttons: z6.array(templateButtonInputSchema).min(1).max(10, "Maximum 10 buttons allowed")
 });
-var templateComponentInputSchema = z3.union([
+var templateComponentInputSchema = z6.union([
   templateHeaderComponentInputSchema,
   templateBodyComponentInputSchema,
   templateFooterComponentInputSchema,
   templateButtonsComponentInputSchema
 ]);
-var templateButtonSchema = z3.object({
-  type: z3.string(),
-  text: z3.string().optional(),
-  url: z3.string().optional(),
-  phone_number: z3.string().optional(),
-  example: z3.union([z3.array(z3.string()), z3.string()]).optional(),
-  flow_id: z3.string().optional(),
-  flow_action: z3.string().optional(),
-  navigate_screen: z3.string().optional()
+var templateButtonSchema = z6.object({
+  type: z6.string(),
+  text: z6.string().optional(),
+  url: z6.string().optional(),
+  phone_number: z6.string().optional(),
+  example: z6.union([z6.array(z6.string()), z6.string()]).optional(),
+  flow_id: z6.string().optional(),
+  flow_action: z6.string().optional(),
+  navigate_screen: z6.string().optional()
 });
-var templateComponentSchema = z3.object({
-  type: z3.enum(["HEADER", "BODY", "FOOTER", "BUTTONS"]),
-  format: z3.string().optional(),
-  text: z3.string().optional(),
-  buttons: z3.array(templateButtonSchema).optional(),
-  example: z3.object({
-    header_text: z3.array(z3.string()).optional(),
-    header_text_named_params: z3.array(templateNamedParamExampleSchema).optional(),
-    header_handle: z3.array(z3.string()).optional(),
-    body_text: z3.array(z3.array(z3.string())).optional(),
-    body_text_named_params: z3.array(templateNamedParamExampleSchema).optional()
+var templateComponentSchema = z6.object({
+  type: z6.enum(["HEADER", "BODY", "FOOTER", "BUTTONS"]),
+  format: z6.string().optional(),
+  text: z6.string().optional(),
+  buttons: z6.array(templateButtonSchema).optional(),
+  example: z6.object({
+    header_text: z6.array(z6.string()).optional(),
+    header_text_named_params: z6.array(templateNamedParamExampleSchema).optional(),
+    header_handle: z6.array(z6.string()).optional(),
+    body_text: z6.array(z6.array(z6.string())).optional(),
+    body_text_named_params: z6.array(templateNamedParamExampleSchema).optional()
   }).optional()
 });
 var hasBody = (components) => components.some((c) => c.type === "BODY");
 var hasMaxOneHeader = (components) => components.filter((c) => c.type === "HEADER").length <= 1;
 var hasMaxOneFooter = (components) => components.filter((c) => c.type === "FOOTER").length <= 1;
 var hasMaxOneButtons = (components) => components.filter((c) => c.type === "BUTTONS").length <= 1;
-var baseComponentsSchema = z3.array(templateComponentInputSchema).min(1, "At least one component is required").refine(hasBody, { message: "BODY component is required" }).refine(hasMaxOneHeader, { message: "Only one HEADER component is allowed" }).refine(hasMaxOneFooter, { message: "Only one FOOTER component is allowed" }).refine(hasMaxOneButtons, {
+var baseComponentsSchema = z6.array(templateComponentInputSchema).min(1, "At least one component is required").refine(hasBody, { message: "BODY component is required" }).refine(hasMaxOneHeader, { message: "Only one HEADER component is allowed" }).refine(hasMaxOneFooter, { message: "Only one FOOTER component is allowed" }).refine(hasMaxOneButtons, {
   message: "Only one BUTTONS component is allowed"
 });
-var templateNameSchema = z3.string().min(1, "Template name is required").max(512, "Template name must be 512 characters or less");
-var templateCreateMarketingSchema = z3.object({
+var templateNameSchema = z6.string().min(1, "Template name is required").max(512, "Template name must be 512 characters or less");
+var templateCreateMarketingSchema = z6.object({
   name: templateNameSchema,
   language: templateLanguageSchema,
-  category: z3.literal("MARKETING"),
+  category: z6.literal("MARKETING"),
   parameter_format: templateParameterFormatSchema.optional(),
   components: baseComponentsSchema
 });
-var templateCreateUtilitySchema = z3.object({
+var templateCreateUtilitySchema = z6.object({
   name: templateNameSchema,
   language: templateLanguageSchema,
-  category: z3.literal("UTILITY"),
+  category: z6.literal("UTILITY"),
   parameter_format: templateParameterFormatSchema.optional(),
   components: baseComponentsSchema
 });
-var templateCreateAuthenticationSchema = z3.object({
+var templateCreateAuthenticationSchema = z6.object({
   name: templateNameSchema,
   language: templateLanguageSchema,
-  category: z3.literal("AUTHENTICATION"),
+  category: z6.literal("AUTHENTICATION"),
   parameter_format: templateParameterFormatSchema.optional(),
-  components: z3.array(templateComponentInputSchema).min(1, "At least one component is required").refine(hasBody, { message: "BODY component is required" })
+  components: z6.array(templateComponentInputSchema).min(1, "At least one component is required").refine(hasBody, { message: "BODY component is required" })
 });
-var templateCreateSchema = z3.discriminatedUnion("category", [
+var templateCreateSchema = z6.discriminatedUnion("category", [
   templateCreateMarketingSchema,
   templateCreateUtilitySchema,
   templateCreateAuthenticationSchema
 ]);
-var templateUpdateSchema = z3.object({
+var templateUpdateSchema = z6.object({
   category: templateCategorySchema.optional(),
-  components: z3.array(templateComponentInputSchema).optional(),
+  components: z6.array(templateComponentInputSchema).optional(),
   language: templateLanguageSchema.optional(),
-  name: z3.string().min(1).max(512).optional()
+  name: z6.string().min(1).max(512).optional()
 });
-var templateListSchema = z3.object({
-  name: z3.string().optional(),
-  limit: z3.number().min(1).max(1e3).optional(),
-  after: z3.string().optional(),
-  before: z3.string().optional()
+var templateListSchema = z6.object({
+  name: z6.string().optional(),
+  limit: z6.number().min(1).max(1e3).optional(),
+  after: z6.string().optional(),
+  before: z6.string().optional()
 });
-var templateDeleteSchema = z3.object({
-  name: z3.string().optional(),
-  hsm_id: z3.string().optional()
+var templateDeleteSchema = z6.object({
+  name: z6.string().optional(),
+  hsm_id: z6.string().optional()
 }).refine((data) => data.name || data.hsm_id, {
   message: "Either name or hsm_id must be provided"
 });
-var templateSchema = z3.object({
-  id: z3.string(),
-  name: z3.string(),
-  language: z3.string(),
+var templateSchema = z6.object({
+  id: z6.string(),
+  name: z6.string(),
+  language: z6.string(),
   status: templateStatusSchema,
   category: templateCategorySchema,
-  components: z3.array(templateComponentSchema),
+  components: z6.array(templateComponentSchema),
   parameter_format: templateParameterFormatSchema.optional(),
   quality_score: templateQualityScoreSchema.optional(),
-  rejected_reason: z3.string().optional(),
-  previous_category: z3.string().optional()
+  rejected_reason: z6.string().optional(),
+  previous_category: z6.string().optional()
 });
-var templateCreateResponseSchema = z3.object({
-  id: z3.string(),
+var templateCreateResponseSchema = z6.object({
+  id: z6.string(),
   status: templateStatusSchema,
   category: templateCategorySchema
 });
-var templatePagingCursorsSchema = z3.object({
-  before: z3.string().optional(),
-  after: z3.string().optional()
+var templatePagingCursorsSchema = z6.object({
+  before: z6.string().optional(),
+  after: z6.string().optional()
 });
-var templatePagingSchema = z3.object({
+var templatePagingSchema = z6.object({
   cursors: templatePagingCursorsSchema.optional(),
-  next: z3.string().optional(),
-  previous: z3.string().optional()
+  next: z6.string().optional(),
+  previous: z6.string().optional()
 });
-var templateListResponseSchema = z3.object({
-  data: z3.array(templateSchema),
+var templateListResponseSchema = z6.object({
+  data: z6.array(templateSchema),
   paging: templatePagingSchema.optional()
 });
-var templateUpdateResponseSchema = z3.object({
-  success: z3.boolean()
+var templateUpdateResponseSchema = z6.object({
+  success: z6.boolean()
 });
-var templateDeleteResponseSchema = z3.object({
-  success: z3.boolean()
+var templateDeleteResponseSchema = z6.object({
+  success: z6.boolean()
 });
 
 // src/resources/templates/resource.ts
@@ -1049,42 +1783,42 @@ function toTemplateName(input) {
 }
 
 // src/resources/media/schema.ts
-import { z as z4 } from "zod";
-var mediaTypeSchema = z4.enum([
+import { z as z7 } from "zod";
+var mediaTypeSchema = z7.enum([
   "image",
   "video",
   "audio",
   "document",
   "sticker"
 ]);
-var mediaMimeTypeSchema = z4.string();
-var mediaUploadSchema = z4.object({
+var mediaMimeTypeSchema = z7.string();
+var mediaUploadSchema = z7.object({
   /**
    * The file to upload - can be Buffer, Blob, or File
    */
-  file: z4.union([z4.instanceof(Blob), z4.instanceof(ArrayBuffer)]),
+  file: z7.union([z7.instanceof(Blob), z7.instanceof(ArrayBuffer)]),
   /**
    * MIME type of the file (e.g., "image/jpeg", "video/mp4")
    */
-  mimeType: z4.string().min(1),
+  mimeType: z7.string().min(1),
   /**
    * Optional filename
    */
-  filename: z4.string().optional()
+  filename: z7.string().optional()
 });
-var mediaUploadResponseSchema = z4.object({
-  id: z4.string()
+var mediaUploadResponseSchema = z7.object({
+  id: z7.string()
 });
-var mediaMetadataSchema = z4.object({
-  messaging_product: z4.literal("whatsapp"),
-  url: z4.string(),
-  mime_type: z4.string(),
-  sha256: z4.string(),
-  file_size: z4.string(),
-  id: z4.string()
+var mediaMetadataSchema = z7.object({
+  messaging_product: z7.literal("whatsapp"),
+  url: z7.string(),
+  mime_type: z7.string(),
+  sha256: z7.string(),
+  file_size: z7.string(),
+  id: z7.string()
 });
-var mediaDeleteResponseSchema = z4.object({
-  success: z4.boolean()
+var mediaDeleteResponseSchema = z7.object({
+  success: z7.boolean()
 });
 
 // src/resources/media/resource.ts
@@ -1251,129 +1985,106 @@ var MediaResource = class {
   }
 };
 
-// src/services/accounts/AccountsClient.ts
-var AccountsClient = class {
-  constructor(httpClient, businessAccountId) {
-    this.httpClient = httpClient;
-    this.businessAccountId = businessAccountId;
-  }
-  /**
-   * Make a GET request with WABA ID prefix
-   */
-  async get(path) {
-    return this.httpClient.get(`/${this.businessAccountId}${path}`);
-  }
-  /**
-   * Make a POST request with WABA ID prefix
-   */
-  async post(path, body) {
-    return this.httpClient.post(`/${this.businessAccountId}${path}`, body);
-  }
-  /**
-   * Make a PATCH request with WABA ID prefix
-   */
-  async patch(path, body) {
-    return this.httpClient.patch(`/${this.businessAccountId}${path}`, body);
-  }
-};
+// src/resources/webhooks/schema.ts
+import { z as z8 } from "zod";
+var webhookContactSchema = z8.object({
+  profile: z8.object({
+    name: z8.string()
+  }),
+  wa_id: z8.string()
+});
+var webhookMetadataSchema = z8.object({
+  display_phone_number: z8.string(),
+  phone_number_id: z8.string()
+});
+var webhookConversationOriginSchema = z8.object({
+  type: z8.enum([
+    "authentication",
+    "authentication_international",
+    "marketing",
+    "marketing_lite",
+    "referral_conversion",
+    "service",
+    "utility"
+  ])
+});
+var webhookConversationSchema = z8.object({
+  id: z8.string(),
+  expiration_timestamp: z8.string().optional(),
+  origin: webhookConversationOriginSchema
+});
+var webhookPricingSchema = z8.object({
+  billable: z8.boolean(),
+  pricing_model: z8.enum(["CBP", "PMP"]),
+  type: z8.enum(["regular", "free_customer_service", "free_entry_point"]),
+  category: z8.enum([
+    "authentication",
+    "authentication-international",
+    "marketing",
+    "marketing_lite",
+    "referral_conversion",
+    "service",
+    "utility"
+  ])
+});
+var webhookStatusErrorSchema = z8.object({
+  code: z8.number(),
+  title: z8.string(),
+  message: z8.string(),
+  error_data: z8.object({
+    details: z8.string()
+  }),
+  href: z8.string()
+});
+var webhookStatusSchema = z8.object({
+  id: z8.string(),
+  status: z8.enum(["sent", "delivered", "read", "failed", "played"]),
+  timestamp: z8.string(),
+  recipient_id: z8.string(),
+  recipient_type: z8.literal("group").optional(),
+  recipient_participant_id: z8.string().optional(),
+  recipient_identity_key_hash: z8.string().optional(),
+  biz_opaque_callback_data: z8.string().optional(),
+  conversation: webhookConversationSchema.optional(),
+  pricing: webhookPricingSchema.optional(),
+  errors: z8.array(webhookStatusErrorSchema).optional()
+});
+var webhookValueSchema = z8.object({
+  messaging_product: z8.literal("whatsapp"),
+  metadata: webhookMetadataSchema,
+  contacts: z8.array(webhookContactSchema).optional(),
+  messages: z8.array(messageIncomingSchema).optional(),
+  statuses: z8.array(webhookStatusSchema).optional()
+});
+var webhookChangeSchema = z8.object({
+  value: webhookValueSchema,
+  field: z8.literal("messages")
+});
+var webhookEntrySchema = z8.object({
+  id: z8.string(),
+  // WABA ID
+  changes: z8.array(webhookChangeSchema)
+});
+var webhookPayloadSchema = z8.object({
+  object: z8.literal("whatsapp_business_account"),
+  entry: z8.array(webhookEntrySchema)
+});
+var webhookVerifyQuerySchema = z8.object({
+  "hub.mode": z8.string().optional(),
+  "hub.verify_token": z8.string().optional(),
+  "hub.challenge": z8.string().optional()
+});
 
-// src/services/accounts/methods/list-phone-numbers.ts
-async function listPhoneNumbers(accountsClient) {
-  return accountsClient.get("/phone_numbers");
+// src/resources/webhooks/utils.ts
+function verifyWebhook(query, verifyToken) {
+  const mode = query["hub.mode"];
+  const token = query["hub.verify_token"];
+  const challenge = query["hub.challenge"];
+  if (mode === "subscribe" && token === verifyToken && challenge) {
+    return challenge;
+  }
+  return null;
 }
-
-// src/services/accounts/AccountsService.ts
-var AccountsService = class {
-  constructor(httpClient) {
-    this.httpClient = httpClient;
-  }
-  /**
-   * Helper to create a Scoped Client (prefer override, fallback to config)
-   */
-  getClient(overrideId) {
-    const id = overrideId || this.httpClient.businessAccountId;
-    if (!id) {
-      throw new Error(
-        "businessAccountId (WABA ID) is required. Provide it in WhatsAppClient config or as a parameter."
-      );
-    }
-    return new AccountsClient(this.httpClient, id);
-  }
-  /**
-   * List phone numbers for a WhatsApp Business Account
-   *
-   * @param businessAccountId - Optional WABA ID (overrides client config)
-   * @returns List of phone numbers associated with the WABA
-   */
-  async listPhoneNumbers(businessAccountId) {
-    const client = this.getClient(businessAccountId);
-    return listPhoneNumbers(client);
-  }
-};
-
-// src/services/business/BusinessClient.ts
-var BusinessClient = class {
-  constructor(httpClient, businessId) {
-    this.httpClient = httpClient;
-    this.businessId = businessId;
-  }
-  /**
-   * Make a GET request with Business Portfolio ID prefix
-   */
-  async get(path) {
-    return this.httpClient.get(`/${this.businessId}${path}`);
-  }
-  /**
-   * Make a POST request with Business Portfolio ID prefix
-   */
-  async post(path, body) {
-    return this.httpClient.post(`/${this.businessId}${path}`, body);
-  }
-  /**
-   * Make a PATCH request with Business Portfolio ID prefix
-   */
-  async patch(path, body) {
-    return this.httpClient.patch(`/${this.businessId}${path}`, body);
-  }
-};
-
-// src/services/business/methods/list-accounts.ts
-async function listAccounts(businessClient) {
-  return businessClient.get(
-    "/whatsapp_business_accounts"
-  );
-}
-
-// src/services/business/BusinessService.ts
-var BusinessService = class {
-  constructor(httpClient) {
-    this.httpClient = httpClient;
-  }
-  /**
-   * Helper to create a Scoped Client (prefer override, fallback to config)
-   */
-  getClient(overrideId) {
-    const id = overrideId || this.httpClient.businessId;
-    if (!id) {
-      throw new Error(
-        "businessId (Business Portfolio ID) is required. Provide it in WhatsAppClient config or as a parameter."
-      );
-    }
-    return new BusinessClient(this.httpClient, id);
-  }
-  /**
-   * List WhatsApp Business Accounts (WABAs) for a Business Portfolio
-   *
-   * @param businessId - Optional Business Portfolio ID (overrides client config)
-   * @returns List of WABAs associated with the Business Portfolio
-   */
-  async listAccounts(businessId) {
-    const client = this.getClient(businessId);
-    return listAccounts(client);
-  }
-};
-
-// src/services/webhooks/utils/extract-messages.ts
 function extractMessages(payload) {
   const messages = [];
   for (const entry of payload.entry) {
@@ -1385,8 +2096,6 @@ function extractMessages(payload) {
   }
   return messages;
 }
-
-// src/services/webhooks/utils/extract-statuses.ts
 function extractStatuses(payload) {
   const statuses = [];
   for (const entry of payload.entry) {
@@ -1399,179 +2108,13 @@ function extractStatuses(payload) {
   return statuses;
 }
 
-// src/services/webhooks/utils/verify.ts
-function verifyWebhook(query, verifyToken) {
-  const mode = query["hub.mode"];
-  const token = query["hub.verify_token"];
-  const challenge = query["hub.challenge"];
-  if (mode === "subscribe" && token === verifyToken && challenge) {
-    return challenge;
-  }
-  return null;
-}
-
-// src/schemas/webhooks/payload.ts
-import { z as z6 } from "zod";
-
-// src/schemas/messages/incoming.ts
-import { z as z5 } from "zod";
-var baseIncomingMessageSchema = z5.object({
-  from: z5.string(),
-  // WhatsApp ID (phone number without +)
-  id: z5.string(),
-  // Message ID (wamid.*)
-  timestamp: z5.string(),
-  // Unix timestamp as string
-  type: z5.string()
-  // Message type discriminator
-});
-var incomingTextContentSchema = z5.object({
-  body: z5.string()
-});
-var incomingAudioContentSchema = z5.object({
-  id: z5.string(),
-  // Media ID for downloading
-  mime_type: z5.string().optional()
-  // e.g., "audio/ogg; codecs=opus"
-});
-var incomingImageContentSchema = z5.object({
-  id: z5.string(),
-  // Media ID for downloading
-  mime_type: z5.string().optional(),
-  // e.g., "image/jpeg"
-  caption: z5.string().optional()
-  // Optional caption text
-});
-var incomingTextMessageSchema = baseIncomingMessageSchema.extend({
-  type: z5.literal("text"),
-  text: incomingTextContentSchema
-});
-var incomingAudioMessageSchema = baseIncomingMessageSchema.extend({
-  type: z5.literal("audio"),
-  audio: incomingAudioContentSchema
-});
-var incomingImageMessageSchema = baseIncomingMessageSchema.extend({
-  type: z5.literal("image"),
-  image: incomingImageContentSchema
-});
-var incomingMessageSchema = z5.discriminatedUnion("type", [
-  incomingTextMessageSchema,
-  incomingAudioMessageSchema,
-  incomingImageMessageSchema
-]);
-
-// src/schemas/webhooks/payload.ts
-var contactSchema = z6.object({
-  profile: z6.object({
-    name: z6.string()
-  }),
-  wa_id: z6.string()
-});
-var webhookMetadataSchema = z6.object({
-  display_phone_number: z6.string(),
-  phone_number_id: z6.string()
-});
-var conversationOriginSchema = z6.object({
-  type: z6.enum([
-    "authentication",
-    "authentication_international",
-    "marketing",
-    "marketing_lite",
-    "referral_conversion",
-    "service",
-    "utility"
-  ])
-});
-var conversationSchema = z6.object({
-  id: z6.string(),
-  expiration_timestamp: z6.string().optional(),
-  // Only for sent status
-  origin: conversationOriginSchema
-});
-var pricingSchema = z6.object({
-  billable: z6.boolean(),
-  // Deprecated but still present
-  pricing_model: z6.enum(["CBP", "PMP"]),
-  type: z6.enum(["regular", "free_customer_service", "free_entry_point"]),
-  category: z6.enum([
-    "authentication",
-    "authentication-international",
-    "marketing",
-    "marketing_lite",
-    "referral_conversion",
-    "service",
-    "utility"
-  ])
-});
-var statusErrorSchema = z6.object({
-  code: z6.number(),
-  title: z6.string(),
-  message: z6.string(),
-  error_data: z6.object({
-    details: z6.string()
-  }),
-  href: z6.string()
-});
-var statusSchema = z6.object({
-  id: z6.string(),
-  // WhatsApp message ID
-  status: z6.enum(["sent", "delivered", "read", "failed", "played"]),
-  timestamp: z6.string(),
-  // Unix timestamp
-  recipient_id: z6.string(),
-  // User phone number or group ID
-  recipient_type: z6.literal("group").optional(),
-  // Only included if message sent to a group
-  recipient_participant_id: z6.string().optional(),
-  // Only included if message sent to a group
-  recipient_identity_key_hash: z6.string().optional(),
-  // Only included if identity change check enabled
-  biz_opaque_callback_data: z6.string().optional(),
-  // Only included if message sent with biz_opaque_callback_data
-  conversation: conversationSchema.optional(),
-  // Conditional inclusion (see conversationSchema docs)
-  pricing: pricingSchema.optional(),
-  // Conditional inclusion (see pricingSchema docs)
-  errors: z6.array(statusErrorSchema).optional()
-  // Only included if failure to send or deliver message
-});
-var webhookValueSchema = z6.object({
-  messaging_product: z6.literal("whatsapp"),
-  metadata: webhookMetadataSchema,
-  contacts: z6.array(contactSchema).optional(),
-  messages: z6.array(incomingMessageSchema).optional(),
-  // Incoming messages
-  statuses: z6.array(statusSchema).optional()
-  // Status updates
-});
-var webhookChangeSchema = z6.object({
-  value: webhookValueSchema,
-  field: z6.literal("messages")
-  // For now: only messages field
-});
-var webhookEntrySchema = z6.object({
-  id: z6.string(),
-  // WABA ID
-  changes: z6.array(webhookChangeSchema)
-});
-var webhookPayloadSchema = z6.object({
-  object: z6.literal("whatsapp_business_account"),
-  entry: z6.array(webhookEntrySchema)
-});
-
-// src/services/webhooks/WebhooksService.ts
-var WebhooksService = class {
-  constructor(httpClient) {
-    this.httpClient = httpClient;
-  }
+// src/resources/webhooks/resource.ts
+var WebhooksResource = class {
   /**
    * Verify webhook GET request from Meta
    *
-   * Meta sends GET requests to verify webhook endpoints during setup.
-   * Returns the challenge string if valid, null if invalid.
-   *
    * @param query - Query parameters from GET request
-   * @param verifyToken - Your verification token (stored on your server)
+   * @param verifyToken - Your verification token
    * @returns Challenge string if valid, null if invalid
    */
   verify(query, verifyToken) {
@@ -1579,9 +2122,6 @@ var WebhooksService = class {
   }
   /**
    * Extract all incoming messages from webhook payload
-   *
-   * Low-level utility that flattens the nested webhook structure
-   * and returns messages directly.
    *
    * @param payload - Webhook payload from Meta
    * @returns Flat array of incoming messages
@@ -1592,8 +2132,6 @@ var WebhooksService = class {
   /**
    * Extract status updates from webhook payload
    *
-   * Low-level utility for extracting status updates for outgoing messages.
-   *
    * @param payload - Webhook payload from Meta
    * @returns Flat array of status updates
    */
@@ -1601,21 +2139,15 @@ var WebhooksService = class {
     return extractStatuses(payload);
   }
   /**
-   * Validate webhook payload structure
-   *
-   * Validates the payload against the schema. Logs errors if malformed
-   * but doesn't throw, allowing processing to continue.
+   * Validate and parse webhook payload
    *
    * @param payload - Raw payload to validate
-   * @returns Validated payload if valid, original payload if invalid (with logged error)
+   * @returns Parsed payload, or original if invalid (with console error)
    */
-  validatePayload(payload) {
+  parsePayload(payload) {
     const result = webhookPayloadSchema.safeParse(payload);
     if (!result.success) {
-      console.error(
-        "Webhook payload validation failed:",
-        result.error.format()
-      );
+      console.error("Webhook payload validation failed:", result.error.format());
       return payload;
     }
     return result.data;
@@ -1623,92 +2155,83 @@ var WebhooksService = class {
   /**
    * Handle webhook payload with type-safe callbacks
    *
-   * High-level convenience method that extracts messages and dispatches
-   * them to appropriate handlers based on message type.
+   * Handlers run asynchronously - this method returns immediately
+   * to allow fast webhook responses to Meta.
    *
-   * **Important**: This method returns quickly to allow fast webhook responses.
-   * Handlers are processed asynchronously. If you need to await handler completion,
-   * use the low-level `extractMessages()` method instead.
+   * @param payload - Webhook payload from Meta
+   * @param handlers - Handler functions for each message type
+   * @param options - Error handling options
    *
-   * The `beforeHandler` return type is automatically inferred and provides
-   * full type safety in message handlers.
-   *
-   * @param payload - Webhook payload from Meta (will be validated)
-   * @param handlers - Object with handler functions for each message type
-   * @param options - Optional error handling configuration
+   * @example
+   * ```typescript
+   * // With beforeHandler for dependency injection
+   * client.webhooks.handle(payload, {
+   *   beforeHandler: async (message, ctx) => {
+   *     const user = await db.users.findByPhone(message.from);
+   *     return { user };
+   *   },
+   *   text: async (message, ctx, before) => {
+   *     if (before?.user) {
+   *       await saveMessage(before.user.id, message.text.body);
+   *     }
+   *   },
+   * });
+   * ```
    */
   handle(payload, handlers, options) {
-    const validatedPayload = this.validatePayload(payload);
-    for (const entry of validatedPayload.entry) {
+    const parsed = this.parsePayload(payload);
+    for (const entry of parsed.entry) {
       for (const change of entry.changes) {
-        if (change.field === "messages" && change.value.messages) {
-          const metadata = {
-            phoneNumberId: change.value.metadata.phone_number_id,
-            displayPhoneNumber: change.value.metadata.display_phone_number,
-            wabaId: entry.id
+        if (change.field !== "messages" || !change.value.messages) continue;
+        const metadata = {
+          phoneNumberId: change.value.metadata.phone_number_id,
+          displayPhoneNumber: change.value.metadata.display_phone_number,
+          wabaId: entry.id
+        };
+        const contacts = change.value.contacts || [];
+        for (const message of change.value.messages) {
+          const contact = contacts.find((c) => c.wa_id === message.from);
+          const ctx = {
+            metadata,
+            ...contact && {
+              contact: {
+                name: contact.profile.name,
+                waId: contact.wa_id
+              }
+            }
           };
-          const contacts = change.value.contacts || [];
-          for (const message of change.value.messages) {
-            const contact = contacts.find((c) => c.wa_id === message.from);
-            const webhook = {
-              metadata,
-              ...contact && {
-                contact: {
-                  name: contact.profile.name,
-                  waId: contact.wa_id
+          Promise.resolve().then(async () => {
+            let before;
+            if (handlers.beforeHandler) {
+              try {
+                before = await handlers.beforeHandler(message, ctx);
+              } catch (error) {
+                if (options?.onError) {
+                  options.onError(error, message);
+                } else {
+                  console.error(`beforeHandler error for ${message.id}:`, error);
                 }
+                before = void 0;
               }
-            };
-            Promise.resolve().then(async () => {
-              let before = void 0;
-              if (handlers.beforeHandler) {
-                try {
-                  before = await handlers.beforeHandler(
-                    message,
-                    webhook
-                  );
-                } catch (error) {
-                  if (options?.onError) {
-                    options.onError(error, message);
-                  } else {
-                    console.error(
-                      `Error in beforeHandler for message ${message.id}:`,
-                      error
-                    );
-                  }
-                  before = void 0;
-                }
-              }
-              switch (message.type) {
-                case "text":
-                  if (handlers.text) {
-                    await handlers.text(message, webhook, before);
-                  }
-                  break;
-                case "audio":
-                  if (handlers.audio) {
-                    await handlers.audio(message, webhook, before);
-                  }
-                  break;
-                case "image":
-                  if (handlers.image) {
-                    await handlers.image(message, webhook, before);
-                  }
-                  break;
-                default:
-                  break;
-              }
-            }).catch((error) => {
-              if (options?.onError) {
-                options.onError(error, message);
-              } else {
-                console.error(
-                  `Error handling ${message.type} message ${message.id}:`,
-                  error
-                );
-              }
-            });
-          }
+            }
+            switch (message.type) {
+              case "text":
+                if (handlers.text) await handlers.text(message, ctx, before);
+                break;
+              case "audio":
+                if (handlers.audio) await handlers.audio(message, ctx, before);
+                break;
+              case "image":
+                if (handlers.image) await handlers.image(message, ctx, before);
+                break;
+            }
+          }).catch((error) => {
+            if (options?.onError) {
+              options.onError(error, message);
+            } else {
+              console.error(`Handler error for ${message.type} ${message.id}:`, error);
+            }
+          });
         }
       }
     }
@@ -1717,22 +2240,24 @@ var WebhooksService = class {
 
 // src/client/WhatsAppClient.ts
 var WhatsAppClient = class {
-  messages;
-  accounts;
   business;
+  wabas;
+  phoneNumbers;
+  messages;
   templates;
-  webhooks;
   media;
+  webhooks;
   httpClient;
   constructor(config) {
     const validated = clientConfigSchema.parse(config);
     this.httpClient = new HttpClient(validated);
+    this.business = new BusinessResource(this.httpClient);
+    this.wabas = new WabasResource(this.httpClient);
+    this.phoneNumbers = new PhoneNumbersResource(this.httpClient);
     this.messages = new MessagesResource(this.httpClient);
-    this.accounts = new AccountsService(this.httpClient);
-    this.business = new BusinessService(this.httpClient);
     this.templates = new TemplatesResource(this.httpClient);
-    this.webhooks = new WebhooksService(this.httpClient);
     this.media = new MediaResource(this.httpClient);
+    this.webhooks = new WebhooksResource();
   }
   /**
    * Debug the current access token
@@ -1748,76 +2273,32 @@ var WhatsAppClient = class {
     );
   }
 };
-
-// src/schemas/accounts/phone-number.ts
-import { z as z7 } from "zod";
-var phoneNumberResponseSchema = z7.object({
-  verified_name: z7.string(),
-  display_phone_number: z7.string(),
-  id: z7.string(),
-  quality_rating: z7.string()
-});
-var phoneNumberListResponseSchema = z7.object({
-  data: z7.array(phoneNumberResponseSchema)
-});
-
-// src/schemas/business/account.ts
-import { z as z8 } from "zod";
-var businessAccountResponseSchema = z8.object({
-  id: z8.string(),
-  name: z8.string().optional(),
-  account_review_status: z8.string().optional(),
-  currency: z8.string().optional(),
-  country: z8.string().optional(),
-  timezone_id: z8.string().optional(),
-  business_verification_status: z8.string().optional(),
-  is_enabled_for_insights: z8.boolean().optional(),
-  message_template_namespace: z8.string().optional()
-});
-var businessAccountsListResponseSchema = z8.object({
-  data: z8.record(z8.string(), businessAccountResponseSchema).or(
-    z8.array(businessAccountResponseSchema)
-  ),
-  paging: z8.object({
-    cursors: z8.object({
-      before: z8.string().optional(),
-      after: z8.string().optional()
-    }).optional(),
-    next: z8.string().url().optional(),
-    previous: z8.string().url().optional()
-  }).optional()
-});
-
-// src/schemas/debug.ts
-import { z as z9 } from "zod";
-var debugTokenResponseSchema = z9.object({
-  data: z9.object({
-    app_id: z9.string().optional(),
-    type: z9.string().optional(),
-    application: z9.string().optional(),
-    data_access_expires_at: z9.number().optional(),
-    expires_at: z9.number().optional(),
-    is_valid: z9.boolean().optional(),
-    issued_at: z9.number().optional(),
-    metadata: z9.object({
-      auth_type: z9.string().optional(),
-      sso: z9.string().optional()
-    }).optional(),
-    scopes: z9.array(z9.string()).optional(),
-    user_id: z9.string().optional()
-  })
-});
 export {
+  BusinessResource,
   GraphAPIError,
+  HttpClient,
   MediaResource,
   MessagesResource,
+  PhoneNumbersResource,
   TemplatesResource,
+  WabasResource,
+  WebhooksResource,
   WhatsAppClient,
+  accountReviewStatusSchema,
   buildMessagePayload,
-  businessAccountResponseSchema,
-  businessAccountsListResponseSchema,
+  businessGetOptionsSchema,
+  businessProfileResponseSchema,
+  businessProfileSchema,
+  businessProfileUpdateResponseSchema,
+  businessProfileUpdateSchema,
+  businessSchema,
+  businessVerificationStatusSchema,
   clientConfigSchema,
+  codeMethodSchema,
+  cursorPagingSchema,
   debugTokenResponseSchema,
+  extractMessages,
+  extractStatuses,
   mediaDeleteResponseSchema,
   mediaMetadataSchema,
   mediaMimeTypeSchema,
@@ -1842,10 +2323,22 @@ export {
   messageSendTextSchema,
   messageTextContentSchema,
   messageTextSchema,
+  onBehalfOfBusinessInfoSchema,
+  phoneNumberAddResponseSchema,
+  phoneNumberAddSchema,
+  phoneNumberDeregisterSchema,
+  phoneNumberListOptionsSchema,
   phoneNumberListResponseSchema,
+  phoneNumberQualityRatingSchema,
+  phoneNumberRegisterResponseSchema,
+  phoneNumberRegisterSchema,
   phoneNumberResponseSchema,
   phoneNumberSchema,
-  statusSchema,
+  phoneNumberStatusSchema,
+  requestVerificationCodeSchema,
+  subscribeAppResponseSchema,
+  subscribedAppSchema,
+  subscribedAppsListResponseSchema,
   templateBodyComponentInputSchema,
   templateBodyExampleSchema,
   templateButtonInputSchema,
@@ -1885,5 +2378,27 @@ export {
   templateUpdateSchema,
   templateUrlButtonInputSchema,
   toTemplateName,
-  webhookPayloadSchema
+  unsubscribeAppResponseSchema,
+  verificationResponseSchema,
+  verifyCodeSchema,
+  verifyWebhook,
+  verticalSchema,
+  wabaBusinessTypeSchema,
+  wabaCreateResponseSchema,
+  wabaCreateSchema,
+  wabaListOptionsSchema,
+  wabaListResponseSchema,
+  wabaSchema,
+  webhookChangeSchema,
+  webhookContactSchema,
+  webhookConversationOriginSchema,
+  webhookConversationSchema,
+  webhookEntrySchema,
+  webhookMetadataSchema,
+  webhookPayloadSchema,
+  webhookPricingSchema,
+  webhookStatusErrorSchema,
+  webhookStatusSchema,
+  webhookValueSchema,
+  webhookVerifyQuerySchema
 };

@@ -1,5 +1,5 @@
 import type { HttpClient } from "../../client/HttpClient";
-import { GraphAPIError, type GraphAPIErrorResponse } from "../../errors";
+import { GraphAPIError, type GraphAPIErrorResponse } from "../../common/errors";
 import { mediaUploadSchema } from "./schema";
 import type {
   MediaUpload,

@@ -1,5 +1,5 @@
-import type { ClientConfig } from "../types/client";
-import { GraphAPIError, type GraphAPIErrorResponse } from "../errors";
+import type { ClientConfig } from "./types";
+import { GraphAPIError, type GraphAPIErrorResponse } from "../common/errors";
 
 /**
  * HTTP client for making requests to the WhatsApp Cloud API

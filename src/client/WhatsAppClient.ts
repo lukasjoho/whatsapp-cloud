@@ -1,24 +1,25 @@
-import { clientConfigSchema } from "../schemas/client";
-import type { ClientConfig } from "../types/client";
+import { clientConfigSchema } from "./schema";
+import type { ClientConfig, DebugTokenResponse } from "./types";
 import { HttpClient } from "./HttpClient";
+import { BusinessResource } from "../resources/business";
+import { WabasResource } from "../resources/wabas";
+import { PhoneNumbersResource } from "../resources/phoneNumbers";
 import { MessagesResource } from "../resources/messages";
 import { TemplatesResource } from "../resources/templates";
 import { MediaResource } from "../resources/media";
-import { AccountsService } from "../services/accounts/index";
-import { BusinessService } from "../services/business/index";
-import { WebhooksService } from "../services/webhooks/index";
-import type { DebugTokenResponse } from "../types/debug";
+import { WebhooksResource } from "../resources/webhooks";
 
 /**
  * WhatsApp Cloud API client
  */
 export class WhatsAppClient {
+  public readonly business: BusinessResource;
+  public readonly wabas: WabasResource;
+  public readonly phoneNumbers: PhoneNumbersResource;
   public readonly messages: MessagesResource;
-  public readonly accounts: AccountsService;
-  public readonly business: BusinessService;
   public readonly templates: TemplatesResource;
-  public readonly webhooks: WebhooksService;
   public readonly media: MediaResource;
+  public readonly webhooks: WebhooksResource;
 
   private readonly httpClient: HttpClient;
 
@@ -30,12 +31,13 @@ export class WhatsAppClient {
     this.httpClient = new HttpClient(validated);
 
     // Initialize resources
+    this.business = new BusinessResource(this.httpClient);
+    this.wabas = new WabasResource(this.httpClient);
+    this.phoneNumbers = new PhoneNumbersResource(this.httpClient);
     this.messages = new MessagesResource(this.httpClient);
-    this.accounts = new AccountsService(this.httpClient);
-    this.business = new BusinessService(this.httpClient);
     this.templates = new TemplatesResource(this.httpClient);
-    this.webhooks = new WebhooksService(this.httpClient);
     this.media = new MediaResource(this.httpClient);
+    this.webhooks = new WebhooksResource();
   }
 
   /**
